@@ -1,0 +1,46 @@
+[package]
+name = "core-daemon"
+version = "0.1.0"
+authors = ["xmm <wxdwfc@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["staticlib"]
+
+[build-dependencies]
+bindgen = "0.54"
+cc = "1.0"
+shlex = "0.1"
+
+[features]
+default = ["KRdmaKit"]
+
+[dependencies]
+KRdmaKit = { path = "../deps/rust-kernel-rdma/KRdmaKit", optional = true, features = ["dct"] }
+bitflags = "1"
+
+[dependencies.lazy_static]
+version = "1.0"
+features = ["spin_no_std"]
+
+
+# Default profile for this project
+# Always enable all the optimizations except overflow-checks, disable debug print
+[profile.dev]
+opt-level = 2
+debug = false
+split-debuginfo = '...'  # Platform-specific.
+debug-assertions = false # Set to false to disable debug print
+overflow-checks = true   # overflow-checks is currently not a bottleneck
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false
+
+# Comment the above default profile and uncomment the follow lines, then re-make the project to enable non-release mode
+# Reference: https://doc.rust-lang.org/cargo/reference/profiles.html
+
+# [profile.dev]
+# opt-level = 1
