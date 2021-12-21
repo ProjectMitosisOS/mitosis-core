@@ -40,3 +40,9 @@ impl crate::linux_kernel_module::file_operations::FileOperations for MitosisMana
         0
     }
 }
+
+impl Drop for MitosisManager {
+    fn drop(&mut self) {
+        println!("MitosisManager dropped");
+    }
+}
