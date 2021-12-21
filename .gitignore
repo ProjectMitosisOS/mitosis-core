@@ -1,4 +1,5 @@
 **/target
+**/target-test
 Cargo.lock
 Module.symvers
 .cache.mk
