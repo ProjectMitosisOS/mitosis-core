@@ -1,11 +1,11 @@
-obj-m := coredaemon.o
-coredaemon-objs := core_daemon.rust.o
+obj-m := mitosis.o
+mitosis-objs := mitosis.rust.o
 
 CARGO ?= cargo
 
 export c_flags
 
-$(src)/target/x86_64-linux-kernel/debug/libcore_daemon.a: cargo_will_determine_dependencies
+$(src)/target/x86_64-linux-kernel/debug/libmitosis.a: cargo_will_determine_dependencies
 	cd $(src); $(CARGO) build -Z build-std=core,alloc --target=x86_64-linux-kernel
 
 .PHONY: cargo_will_determine_dependencies
