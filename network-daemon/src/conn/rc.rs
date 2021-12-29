@@ -60,7 +60,7 @@ impl<'a> RDMAConn for RCConn<'a> {
 
 impl<'a> RCConn<'a> {
     pub fn new(target_gid: &'a str, ctx: &'a RContext<'a>, remote_service_id: u64, qd_hint: u64) -> Option<Self> {
-        let rc = RC::new(&ctx, core::ptr::null_mut(), core::ptr::null_mut());
+        let rc = RC::new(ctx, core::ptr::null_mut(), core::ptr::null_mut());
         if rc.is_none() {
             println!("unable to create RC qp");
             return None;
@@ -80,9 +80,9 @@ impl<'a> RCConn<'a> {
 
 impl<'a> RCService<'a> {
     pub fn new(service_id: usize, ctx: &'a RContext<'a>) -> Option<Arc<Self>> {
-        let ctrl = RCtrl::create(service_id, &ctx).unwrap();
+        let ctrl = RCtrl::create(service_id, ctx).unwrap();
         Some(Arc::new(Self {
-            rcontext: &ctx,
+            rcontext: ctx,
             service_id: service_id,
             rcontrol: ctrl
         }))
