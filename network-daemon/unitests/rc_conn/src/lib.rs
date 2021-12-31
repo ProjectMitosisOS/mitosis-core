@@ -17,7 +17,7 @@ use lazy_static::lazy_static;
 
 type UnsafeGlobal<T> = ThreadLocal<T>;
 
-use network_daemon::conn::RDMAConn;
+use network_daemon::conn::{RDMAConn, ConnTarget, ConnState};
 use network_daemon::conn::rc::{RCService, RCConn};
 
 struct RCConnTestModule {
@@ -95,22 +95,40 @@ fn test_connection() {
     let remote_service_id = service_id as u64;
     let test_ctx = &ALLRCONTEXTS.get_mut()[0];
     let qd_hint = 666;
+
+    // create rc service to receive connection requests
     let rc_service = RCService::new(service_id, test_ctx);
     if rc_service.is_none() {
         println!("BUG: RCService failed to initialize");
         return
     }
-    let rc_conn = RCConn::new(&target_gid, test_ctx, remote_service_id, qd_hint);
+    
+    // create local connection qp
+    let rc_conn = RCConn::new(&target_gid, test_ctx);
     if rc_conn.is_none() {
         println!("BUG: RCConn failed to initialize");
         return;
     }
     let mut rc_conn = rc_conn.unwrap();
-    let res = rc_conn.connect(&target_gid);
+
+    // create connection target and connection to remote target
+    let conn_target = ConnTarget {
+        target_gid: &target_gid,
+        remote_service_id: remote_service_id,
+        qd_hint: qd_hint
+    };
+    let res = rc_conn.conn(&conn_target);
     if res.is_err() {
         println!("BUG: connect failed for RCConn");
         return;
     }
+
+    // check connection state
+    if rc_conn.get_conn_state() != ConnState::CONNECTED {
+        println!("BUG: error connection state");
+        return;
+    }
+
     println!("test_connection passed!");
 }
 
