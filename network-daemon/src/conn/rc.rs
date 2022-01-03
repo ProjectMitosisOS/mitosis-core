@@ -52,6 +52,7 @@ impl<'a> RCConn<'a> {
     }    
 }
 
+// data-path operation
 impl<'a> RDMAConn for RCConn<'a> {
     fn ready(&self) -> IOResult<()> { 
         // XD: TODO: how to implement it without storing a conn state? 
