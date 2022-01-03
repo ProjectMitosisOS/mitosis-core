@@ -6,4 +6,6 @@ target="wxd@val01:~/projects/mos"
 ## this script will sync the project to the remote server
 rsync -i -rtuv \
       $PWD/../ \
-      $target
+      $target \
+       --exclude 'network-daemon/target/' \
+       --exclude 'mitosis/target' \

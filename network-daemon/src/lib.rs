@@ -29,6 +29,6 @@ pub fn deinit_sa_client() {
     unsafe { SA_CLIENT.as_ref().unwrap().reset() };
 }
 
-pub(crate) fn get_inner_sa_client() -> *mut ib_sa_client {
-    unsafe {SA_CLIENT.as_ref().unwrap().get_inner_sa_client() }
+pub(crate) unsafe fn get_inner_sa_client() -> *mut ib_sa_client {
+    SA_CLIENT.as_ref().unwrap().get_inner_sa_client()
 }
