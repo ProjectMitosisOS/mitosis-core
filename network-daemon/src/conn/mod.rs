@@ -2,6 +2,11 @@ pub mod rc;
 pub mod dc;
 pub mod ud;
 
+use alloc::string::String;
+use KRdmaKit::ib_path_explorer::IBExplorer;
+use KRdmaKit::device::RContext;
+use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::println;
+
 pub type PathResult = KRdmaKit::rust_kernel_rdma_base::sa_path_rec;
 
 #[derive(Debug)]
@@ -64,4 +69,25 @@ pub trait RDMAConn {
     fn one_sided_write(&self, local_addr: u64, remote_addr: u64) -> IOResult<()>;
     fn send_msg(&self, local_addr: u64) -> IOResult<()>;
     fn recv_msg(&self, local_addr: u64) -> IOResult<()>;
+}
+
+/// get_path_result is a common-used function in this module
+pub fn get_path_result(addr: &str, ctx: &RContext) -> IOResult<PathResult> {
+    let inner_sa_client = unsafe { crate::get_inner_sa_client() }.ok_or_else(|| {
+        println!("BUG: sa client not initialized");
+        IOErr::Other
+    })?;
+
+    let mut explorer = IBExplorer::new();
+    let _ = explorer.resolve(
+        1,
+        ctx,
+        &String::from(addr),
+        inner_sa_client,
+    );
+    let path_res = explorer.get_path_result().ok_or_else(|| {
+        println!("BUG: path not found for {}", addr);
+        IOErr::ConnErr(ConnErr::PathNotFound)
+    })?;
+    Ok(path_res)
 }
