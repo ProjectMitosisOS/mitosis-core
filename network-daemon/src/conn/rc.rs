@@ -3,7 +3,8 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use core::pin::Pin;
 
-use crate::conn::{ConnErr, ConnTarget, IOResult, PathResult, RDMAConn};
+use crate::conn::{IOErr, ConnErr};
+use crate::conn::{ConnTarget, IOResult, PathResult, RDMAConn};
 
 use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::device::RContext;
@@ -30,13 +31,13 @@ impl<'a> RCConn<'a> {
             &String::from(target.target_gid),
             inner_sa_client,
         );
-        let path_res = explorer.get_path_result().ok_or(ConnErr::PathNotFound)?;
+        let path_res = explorer.get_path_result().ok_or(IOErr::ConnErr(ConnErr::PathNotFound))?;
         Self::create_w_path(target, path_res, ctx) 
     }
 
     pub fn create_w_path(target: &ConnTarget,path_res: PathResult, ctx: &'a RContext<'a>) -> IOResult<Self> {
         let mut rc = RC::new(ctx, core::ptr::null_mut(), core::ptr::null_mut()).
-            ok_or(ConnErr::Operation)?;
+            ok_or(IOErr::Other)?;
 
         // connect the RC 
         let mrc = unsafe { Arc::get_mut_unchecked(&mut rc) }; 
@@ -46,7 +47,7 @@ impl<'a> RCConn<'a> {
             target.remote_service_id as u64,
         ) {
             Ok(_) => Ok(Self { rc : rc, rcontext : ctx}), 
-            Err(_) => Err(ConnErr::CONNErr) // XD: TODO, should distinguish
+            Err(_) => Err(IOErr::ConnErr(ConnErr::ConnErr)) // XD: TODO, should distinguish
         }
     }    
 }
@@ -54,9 +55,9 @@ impl<'a> RCConn<'a> {
 // data-path operation
 impl<'a> RDMAConn for RCConn<'a> {
     fn ready(&self) -> IOResult<()> { 
-        let status = self.rc.get_status().ok_or(ConnErr::Operation)?;
+        let status = self.rc.get_status().ok_or(IOErr::Other)?;
         if status != ib_qp_state::IB_QPS_RTS {
-            Err(ConnErr::QPNotReady)
+            Err(IOErr::ConnErr(ConnErr::QPNotReady))
         } else {
             Ok(())
         }

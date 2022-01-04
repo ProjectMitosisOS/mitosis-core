@@ -115,7 +115,7 @@ fn test_connection() {
     if rc_conn.is_err() {
         println!("err create & connect RCQP")
     }
-    let mut rc_conn = rc_conn.unwrap();
+    let rc_conn = rc_conn.unwrap();
 
     assert_eq!(rc_conn.ready().is_ok(), true);
     println!("test_connection passed!");
