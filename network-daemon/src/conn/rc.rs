@@ -3,14 +3,15 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use core::pin::Pin;
 
-use crate::conn::{ConnErr, ConnTarget, IOResult, PathResult, RDMAConn};
+use crate::conn::{IOErr, ConnErr};
+use crate::conn::{ConnTarget, IOResult, PathResult, RDMAConn};
 
 use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::device::RContext;
 use KRdmaKit::ib_path_explorer::IBExplorer;
 use KRdmaKit::qp::RC;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::{println, KernelResult};
-use KRdmaKit::SAClient;
+use KRdmaKit::rust_kernel_rdma_base::ib_qp_state;
+use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::println;
 
 /// client-side connection
 pub struct RCConn<'a> {
@@ -23,7 +24,11 @@ impl<'a> RCConn<'a> {
 
     pub fn create(target: &ConnTarget, ctx: &'a RContext<'a>) -> IOResult<Self> {
         // first establish path 
-        let inner_sa_client = unsafe { crate::get_inner_sa_client() };
+        let inner_sa_client = unsafe { crate::get_inner_sa_client() }.ok_or_else(|| {
+            println!("BUG: sa_client not initialized");
+            IOErr::Other
+        })?;
+        
         let mut explorer = IBExplorer::new();
         let _ = explorer.resolve(
             1,
@@ -31,13 +36,13 @@ impl<'a> RCConn<'a> {
             &String::from(target.target_gid),
             inner_sa_client,
         );
-        let path_res = explorer.get_path_result().ok_or(ConnErr::PATH_NOT_FOUND)?;
+        let path_res = explorer.get_path_result().ok_or(IOErr::ConnErr(ConnErr::PathNotFound))?;
         Self::create_w_path(target, path_res, ctx) 
     }
 
     pub fn create_w_path(target: &ConnTarget,path_res: PathResult, ctx: &'a RContext<'a>) -> IOResult<Self> {
         let mut rc = RC::new(ctx, core::ptr::null_mut(), core::ptr::null_mut()).
-            ok_or(ConnErr::OPERATION)?;
+            ok_or(IOErr::Other)?;
 
         // connect the RC 
         let mrc = unsafe { Arc::get_mut_unchecked(&mut rc) }; 
@@ -47,7 +52,7 @@ impl<'a> RCConn<'a> {
             target.remote_service_id as u64,
         ) {
             Ok(_) => Ok(Self { rc : rc, rcontext : ctx}), 
-            Err(_) => Err(ConnErr::CONNErr) // XD: TODO, should distinguish
+            Err(_) => Err(IOErr::ConnErr(ConnErr::ConnErr)) // XD: TODO, should distinguish
         }
     }    
 }
@@ -55,8 +60,12 @@ impl<'a> RCConn<'a> {
 // data-path operation
 impl<'a> RDMAConn for RCConn<'a> {
     fn ready(&self) -> IOResult<()> { 
-        // XD: TODO: how to implement it without storing a conn state? 
-        unimplemented!()
+        let status = self.rc.get_status().ok_or(IOErr::Other)?;
+        if status != ib_qp_state::IB_QPS_RTS {
+            Err(IOErr::ConnErr(ConnErr::QPNotReady))
+        } else {
+            Ok(())
+        }
     }
 
     fn one_sided_read(&self, local_addr: u64, remote_addr: u64) -> IOResult<()> {
@@ -85,7 +94,7 @@ pub struct RCService<'a> {
 
 impl<'a> RCService<'a> {
     pub fn new(service_id: usize, ctx: &'a RContext<'a>) -> Option<Arc<Self>> {
-        let ctrl = RCtrl::create(service_id, ctx).unwrap();
+        let ctrl = RCtrl::create(service_id, ctx)?;
         Some(Arc::new(Self {
             rcontext: ctx,
             service_id: service_id,
