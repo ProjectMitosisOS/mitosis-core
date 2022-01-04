@@ -2,19 +2,30 @@ pub mod rc;
 pub mod dc;
 pub mod ud;
 
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::KernelResult;
-
 pub type PathResult = KRdmaKit::rust_kernel_rdma_base::sa_path_rec;
-
 
 #[derive(Debug)]
 pub enum ConnErr {
-    OPERATION = 0, // XD: what does it mean? 
-    PATH_NOT_FOUND,
-    TIMEOUT,
-    TRY_AGAIN,
-    CONN_STATE, // XD: what does it mean? 
+    /// Any error in unclassied operations will
+    /// return in this error
+    /// E.g.: an error from the "get qp status" operation
+    Operation = 0,
+    
+    /// Error in finding the path whiling connecting
+    /// with raw gid
+    PathNotFound,
+
+    /// Timeout error
+    Timeout,
+    
+    /// General error in the rdma operations
     CONNErr,
+
+    /// Error happens and the kernel indicates EAGAIN
+    TryAgain,
+
+    /// Error when the qp is not ready a.k.a. RTS state
+    QPNotReady,
 }
 
 pub type IOResult<T> = Result<T, ConnErr>;

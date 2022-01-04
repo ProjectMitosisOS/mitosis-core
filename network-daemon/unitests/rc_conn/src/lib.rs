@@ -117,7 +117,7 @@ fn test_connection() {
     }
     let mut rc_conn = rc_conn.unwrap();
 
-    // TODO: should check the basic operations
+    assert_eq!(rc_conn.ready().is_ok(), true);
     println!("test_connection passed!");
 }
 
