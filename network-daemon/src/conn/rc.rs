@@ -11,6 +11,7 @@ use KRdmaKit::device::RContext;
 use KRdmaKit::ib_path_explorer::IBExplorer;
 use KRdmaKit::qp::RC;
 use KRdmaKit::rust_kernel_rdma_base::ib_qp_state;
+use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::println;
 
 /// client-side connection
 pub struct RCConn<'a> {
@@ -23,7 +24,11 @@ impl<'a> RCConn<'a> {
 
     pub fn create(target: &ConnTarget, ctx: &'a RContext<'a>) -> IOResult<Self> {
         // first establish path 
-        let inner_sa_client = unsafe { crate::get_inner_sa_client() };
+        let inner_sa_client = unsafe { crate::get_inner_sa_client() }.ok_or_else(|| {
+            println!("BUG: sa_client not initialized");
+            IOErr::Other
+        })?;
+        
         let mut explorer = IBExplorer::new();
         let _ = explorer.resolve(
             1,
