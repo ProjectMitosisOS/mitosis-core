@@ -70,19 +70,15 @@ impl<'a> RDMAConn for RCConn<'a> {
     }
 }
 
-/// server-side service to handle in-coming connections
+/// server-side service to handle in-coming connections, a simple wrapper over RCtrl
 pub struct RCService<'a> {
-    rcontext: &'a RContext<'a>,
     rcontrol: Pin<Box<RCtrl<'a>>>,
-    service_id: usize,
 }
 
 impl<'a> RCService<'a> {
     pub fn new(service_id: usize, ctx: &'a RContext<'a>) -> Option<Arc<Self>> {
         let ctrl = RCtrl::create(service_id, ctx)?;
         Some(Arc::new(Self {
-            rcontext: ctx,
-            service_id: service_id,
             rcontrol: ctrl,
         }))
     }
