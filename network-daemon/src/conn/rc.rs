@@ -1,17 +1,15 @@
 use alloc::boxed::Box;
-use alloc::string::String;
 use alloc::sync::Arc;
 use core::pin::Pin;
 
 use crate::conn::{IOErr, ConnErr};
 use crate::conn::{ConnTarget, IOResult, PathResult, RDMAConn};
+use crate::conn::get_path_result;
 
 use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::device::RContext;
-use KRdmaKit::ib_path_explorer::IBExplorer;
 use KRdmaKit::qp::RC;
 use KRdmaKit::rust_kernel_rdma_base::ib_qp_state;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::println;
 
 /// client-side connection
 pub struct RCConn<'a> {
@@ -23,20 +21,7 @@ pub struct RCConn<'a> {
 impl<'a> RCConn<'a> {
 
     pub fn create(target: &ConnTarget, ctx: &'a RContext<'a>) -> IOResult<Self> {
-        // first establish path 
-        let inner_sa_client = unsafe { crate::get_inner_sa_client() }.ok_or_else(|| {
-            println!("BUG: sa_client not initialized");
-            IOErr::Other
-        })?;
-        
-        let mut explorer = IBExplorer::new();
-        let _ = explorer.resolve(
-            1,
-            ctx,
-            &String::from(target.target_gid),
-            inner_sa_client,
-        );
-        let path_res = explorer.get_path_result().ok_or(IOErr::ConnErr(ConnErr::PathNotFound))?;
+        let path_res = get_path_result(target.target_gid, ctx)?;
         Self::create_w_path(target, path_res, ctx) 
     }
 
@@ -85,19 +70,15 @@ impl<'a> RDMAConn for RCConn<'a> {
     }
 }
 
-/// server-side service to handle in-coming connections
+/// server-side service to handle in-coming connections, a simple wrapper over RCtrl
 pub struct RCService<'a> {
-    rcontext: &'a RContext<'a>,
     rcontrol: Pin<Box<RCtrl<'a>>>,
-    service_id: usize,
 }
 
 impl<'a> RCService<'a> {
     pub fn new(service_id: usize, ctx: &'a RContext<'a>) -> Option<Arc<Self>> {
         let ctrl = RCtrl::create(service_id, ctx)?;
         Some(Arc::new(Self {
-            rcontext: ctx,
-            service_id: service_id,
             rcontrol: ctrl,
         }))
     }
