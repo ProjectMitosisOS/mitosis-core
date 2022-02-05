@@ -7,6 +7,12 @@ pub struct RCFactory<'a> {
     rcontext: &'a RContext<'a>,
 }
 
+impl<'a> RCFactory<'a> { 
+    pub fn new() -> Self { 
+        unimplemented!();
+    }
+}
+
 impl crate::ConnFactory for RCFactory<'_> { 
     type ConnMeta = super::ConnMeta;
     type ConnType = RCConn; 
