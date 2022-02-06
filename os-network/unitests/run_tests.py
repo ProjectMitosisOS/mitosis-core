@@ -1,7 +1,8 @@
+#!/usr/bin/env python
+
 import os
 import subprocess
 import sys
-
 
 BASE_DIR = os.path.realpath(os.path.dirname(__file__))
 
