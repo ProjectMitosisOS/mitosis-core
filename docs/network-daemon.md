@@ -17,7 +17,7 @@ flowchart LR
 A[Device]
 A-->B[Local]
 A-->C[RDMA]
-A-->C[RPC] 
+A-->D[RPC] 
 ```
 
 We may not implement the RPC device, if the time does not permit. 
