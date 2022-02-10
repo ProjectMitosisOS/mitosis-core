@@ -1,14 +1,28 @@
-pub struct LocalDevice;
+use core::marker::PhantomData;
 
 use crate::bytes::BytesMut;
 
-impl super::Device for LocalDevice {
+pub struct LocalDevice<KeyType, LocationType> {
+    phantom: PhantomData<KeyType>,
+    phantom_1: PhantomData<LocationType>,
+}
+
+impl<KeyType, LocationType> LocalDevice<KeyType, LocationType> {
+    pub fn new() -> Self {
+        Self {
+            phantom: PhantomData,
+            phantom_1: PhantomData,
+        }
+    }
+}
+
+impl<KeyType, LocationType> super::Device for LocalDevice<KeyType, LocationType> {
     // local memory read/write should succeed or crash
-    type IOResult<T> = Result<T, ()>;
+    type IOResult<T> = crate::rdma::IOResult<T>;
 
     type Address = u64;
-    type Location = ();
-    type Key = ();
+    type Location = LocationType;
+    type Key = KeyType;
 
     /// the addr must be a valid virtual address that can be read by the kernel
     fn read(

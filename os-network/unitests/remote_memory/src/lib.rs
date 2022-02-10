@@ -15,6 +15,7 @@ use os_network::remote_memory::Device;
 struct SampleTestModule;
 
 fn test_local() {
+
     // init context
     let max_buf_len = 32; 
 
@@ -30,7 +31,7 @@ fn test_local() {
     assert_ne!(src,dst); 
 
     use os_network::remote_memory::local::LocalDevice;    
-    let mut dev = LocalDevice; 
+    let mut dev = LocalDevice::<(),()>::new(); 
 
     log::info!("pre check dst {:?}", dst);     
     dev.read(&(), &src.get_raw(), &(), &mut dst).unwrap(); 
