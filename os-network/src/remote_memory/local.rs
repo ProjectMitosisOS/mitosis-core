@@ -26,9 +26,9 @@ impl super::Device for LocalDevice {
     /// the addr must be a valid virtual address that can be written by the kernel
     unsafe fn write(
         &mut self,
-        loc: &Self::Location,
+        _loc: &Self::Location,
         addr: &Self::Address,
-        key: &Self::Key,
+        _key: &Self::Key,
         payload: &BytesMut,
     ) -> Self::IOResult<()> {
         BytesMut::from_raw(*addr as _, payload.len()).copy(payload, 0);
