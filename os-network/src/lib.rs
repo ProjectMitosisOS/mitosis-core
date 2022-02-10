@@ -6,7 +6,7 @@
 extern crate alloc;
 
 pub mod bytes;
-//pub mod remote_memory;
+pub mod remote_memory;
 
 pub trait Conn {
     type IOResult<T>;

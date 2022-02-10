@@ -29,6 +29,10 @@ impl BytesMut {
         false
     }
 
+    pub fn len(&self) -> usize { 
+        self.len
+    }
+
     pub unsafe fn at_unchecked(&self, offset : usize) -> u8 { 
         core::ptr::read(self.ptr.offset(offset as isize)) 
     }
