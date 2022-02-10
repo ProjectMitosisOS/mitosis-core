@@ -29,6 +29,10 @@ impl BytesMut {
         false
     }
 
+    pub fn get_raw(&self) -> u64 { 
+        self.ptr as u64
+    }
+
     pub fn len(&self) -> usize { 
         self.len
     }

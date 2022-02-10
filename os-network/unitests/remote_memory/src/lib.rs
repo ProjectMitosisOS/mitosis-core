@@ -2,51 +2,46 @@
 
 extern crate alloc;
 
+use alloc::vec;
+use core::fmt::Write;
+
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 use rust_kernel_linux_util as log;
 
 use os_network::bytes::*;
+use os_network::remote_memory::Device;
 
 struct SampleTestModule;
 
-fn test_bytes() {
-    use alloc::vec;
-    use core::fmt::Write;
-
+fn test_local() {
+    // init context
     let max_buf_len = 32; 
 
-    let mut buf = vec![0; max_buf_len];
+    let mut buf0 = vec![0; max_buf_len];
 
     // this is dangerous!! just for the test
-    let mut bytes = unsafe { BytesMut::from_raw(buf.as_mut_ptr(), buf.len())}; 
+    let mut src = unsafe { BytesMut::from_raw(buf0.as_mut_ptr(), buf0.len())}; 
 
-    write!(&mut bytes, "hello world").unwrap();
+    write!(&mut src, "hello world").unwrap();
 
-    log::info!("{:?}", bytes);
+    let mut buf1 = vec![0; max_buf_len];
+    let mut dst = unsafe { BytesMut::from_raw(buf1.as_mut_ptr(), buf1.len())}; 
+    assert_ne!(src,dst); 
 
-    let mut buf2 = vec![0; max_buf_len]; 
-    let mut bytes_2 = unsafe { BytesMut::from_raw(buf2.as_mut_ptr(), buf2.len())}; 
+    use os_network::remote_memory::local::LocalDevice;    
+    let mut dev = LocalDevice; 
 
-    if bytes != bytes_2 { 
-        log::info!("not equal before the copy"); 
-    }
-    assert_ne!(bytes, bytes_2); 
-
-    assert_eq!(bytes_2.copy(&bytes, 0),true);
-    
-    log::info!("check copied bytes: {:?}", bytes_2);
-    
-    if bytes == bytes_2 { 
-        log::info!("equal after copy"); 
-    }
-    assert_eq!(bytes, bytes_2);
+    log::info!("pre check dst {:?}", dst);     
+    dev.read(&(), &src.get_raw(), &(), &mut dst).unwrap(); 
+    log::info!("after check dst {:?}", dst); 
+    assert_eq!(src,dst); 
 }
 
 impl linux_kernel_module::KernelModule for SampleTestModule {
     fn init() -> linux_kernel_module::KernelResult<Self> {
         log::info!("test started");
-        test_bytes();
+        test_local();
         Ok(Self {})
     }
 }

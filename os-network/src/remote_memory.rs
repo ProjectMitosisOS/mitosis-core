@@ -12,6 +12,7 @@ pub trait Device {
     type IOResult<T>;
 
     fn read(
+        &mut self,
         loc: &Self::Location,
         addr: &Self::Address,
         key: &Self::Key,
@@ -19,11 +20,13 @@ pub trait Device {
     ) -> Self::IOResult<()>;
 
     unsafe fn write(
-        loc: Self::Location,
-        addr: Self::Address,
-        key: Self::Key,
+        &mut self,
+        loc: &Self::Location,
+        addr: &Self::Address,
+        key: &Self::Key,
         payload: &BytesMut,
     ) -> Self::IOResult<()>;
 }
 
 pub mod local;
+// pub mod rdma; 
