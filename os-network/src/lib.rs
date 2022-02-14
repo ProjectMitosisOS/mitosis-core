@@ -9,15 +9,15 @@ pub mod bytes;
 pub mod remote_memory;
 
 pub trait Conn {
-    type IOResult<T>;
-    type ReqPayload;
-    type CompPayload;
+    type IOResult;    // result of IO rm -
+    type ReqPayload;  // the request format 
+    type CompPayload; // the completion (comp) format 
 
     // post the request to the underlying device
-    fn post(&mut self, req: &Self::ReqPayload) -> Self::IOResult<()>;
+    fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult>;
 
     // poll the completion of the sent request
-    fn poll(&mut self) -> Self::IOResult<Self::CompPayload>;
+    fn poll(&mut self) -> Result<Self::CompPayload,Self::IOResult>;
 }
 
 pub trait ConnFactory {
@@ -25,10 +25,10 @@ pub trait ConnFactory {
     type ConnType<'a>
     where
         Self::ConnType<'a>: Conn, Self: 'a;
-    type ConnResult<T>;
+    type ConnResult;
 
     // create and connect the connection
-    fn create<'a>(&'a mut self, meta: Self::ConnMeta) -> Self::ConnResult<Self::ConnType<'a>>
+    fn create<'a>(&'a mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'a>, Self::ConnResult>
     where
         Self::ConnType<'a>: Conn;
 }

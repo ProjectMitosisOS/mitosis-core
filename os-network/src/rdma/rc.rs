@@ -1,9 +1,9 @@
 use alloc::sync::Arc;
 
 use core::option::Option;
+use core::marker::PhantomData;
 
 use KRdmaKit::rust_kernel_rdma_base::ib_qp_state;
-
 
 use KRdmaKit::device::{RContext, RNIC};
 use KRdmaKit::qp::RC;
@@ -20,14 +20,16 @@ impl<'a> RCFactory<'a> {
     }
 }
 
-impl<'a> crate::ConnFactory for RCFactory<'a> {
+impl crate::ConnFactory for RCFactory<'_> {
     type ConnMeta = super::ConnMeta;
-    type ConnType<'b> where Self: 'b = RCConn<'b, Self>;
-    type ConnResult<T> = super::ConnResult<T>;
+    type ConnType<'a> 
+        where Self: 'a 
+        = RCConn<'a>;
+    type ConnResult = super::ConnErr;
 
-    fn create<'b>(&'b mut self, meta: Self::ConnMeta) -> Self::ConnResult<Self::ConnType<'b>>
+    fn create<'a>(&'a mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'a>, ConnErr>
     where
-        Self::ConnType<'b>: crate::Conn,
+        Self::ConnType<'a>: crate::Conn,
     {
         let path_res = self
             .rctx
@@ -40,7 +42,7 @@ impl<'a> crate::ConnFactory for RCFactory<'a> {
         // connect the RC
         let mrc = unsafe { Arc::get_mut_unchecked(&mut rc) };
         match mrc.connect(meta.qd_hint, path_res, meta.service_id as u64) {
-            Ok(_) => Ok(RCConn { rc: rc, factory: self }),
+            Ok(_) => Ok(RCConn::<'a> { rc: rc, phantom : PhantomData } ),
             Err(_) => Err(ConnErr::ConnErr),
         }
     }
@@ -60,35 +62,40 @@ impl<'a> RCFactoryWPath<'a> {
     }
 }
 
-impl<'a> crate::ConnFactory for RCFactoryWPath<'a> {
+impl crate::ConnFactory for RCFactoryWPath<'_> {
     type ConnMeta = super::ConnMetaWPath;
-    type ConnType<'b> where Self: 'b = RCConn<'b, Self>;
-    type ConnResult<T> = super::ConnResult<T>;
+    type ConnType<'a> 
+        where Self: 'a 
+        = RCConn<'a>;
+
+    type ConnResult = super::ConnErr;
 
     // Note: the path_res in the meta is recommended to be generated via the context of RCFactoryWPath.rctx
-    fn create<'b>(&'b mut self, meta: Self::ConnMeta) -> Self::ConnResult<Self::ConnType<'b>>
+    fn create<'a>(&'a mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'a>, super::ConnErr>
     where
-        Self::ConnType<'b>: crate::Conn,
+        Self::ConnType<'a>: crate::Conn,
     {
         let mut rc = RC::new(&self.rctx, core::ptr::null_mut(), core::ptr::null_mut())
             .ok_or(ConnErr::CreateQPErr)?;
 
         // connect the RC
         let mrc = unsafe { Arc::get_mut_unchecked(&mut rc) };
-        match mrc.connect(meta.qd_hint, meta.path, meta.service_id as u64) {
-            Ok(_) => Ok(RCConn { rc: rc, factory: self } ),
+        match mrc.connect(meta.qd_hint, meta.path, meta.service_id as u64) {       
+            Ok(_) => Ok(RCConn::<'a> { rc: rc, phantom : PhantomData } ),
             Err(_) => Err(ConnErr::ConnErr),
         }
     }
 }
 
 
-pub struct RCConn<'a, T: crate::ConnFactory> {
+// Connection 
+
+pub struct RCConn<'a> {
     rc: Arc<RC>,
-    factory: &'a T,
+    phantom : PhantomData<&'a ()>,
 }
 
-impl<T: crate::ConnFactory> RCConn<'_, T> { 
+impl RCConn<'_> { 
     pub fn get_status(&mut self) -> Option<super::QPStatus> { 
         self.rc.get_status().map(|status| { 
             match status { 
@@ -100,16 +107,17 @@ impl<T: crate::ConnFactory> RCConn<'_, T> {
     }
 }
 
-impl<S: crate::ConnFactory> crate::Conn for RCConn<'_, S> {
-    type IOResult<T> = super::IOResult<T>;
+impl crate::Conn for RCConn<'_> {
+
     type ReqPayload = u64;
     type CompPayload = u64;
+    type IOResult = super::Err; 
 
-    fn post(&mut self, req: &Self::ReqPayload) -> Self::IOResult<()> {
+    fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult> {
         unimplemented!();
     }
 
-    fn poll(&mut self) -> Self::IOResult<Self::CompPayload> {
+    fn poll(&mut self) -> Result<Self::CompPayload,Self::IOResult> {
         unimplemented!();
     }
 }
