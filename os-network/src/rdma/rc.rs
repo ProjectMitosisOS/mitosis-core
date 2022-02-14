@@ -82,7 +82,7 @@ impl crate::ConnFactory for RCFactoryWPath<'_> {
         let mrc = unsafe { Arc::get_mut_unchecked(&mut rc) };
         match mrc.connect(meta.qd_hint, meta.path, meta.service_id as u64) {       
             Ok(_) => Ok(RCConn::<'a> { rc: rc, phantom : PhantomData } ),
-            Err(_) => Err(ConnErr::ConnErr),
+            Err(_) => Err(ConnErr::ConnErr), // TODO: need to filter against the connection results
         }
     }
 }
