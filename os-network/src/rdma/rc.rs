@@ -4,7 +4,6 @@ use core::option::Option;
 
 use KRdmaKit::rust_kernel_rdma_base::ib_qp_state;
 
-
 use KRdmaKit::device::{RContext, RNIC};
 use KRdmaKit::qp::RC;
 
@@ -23,9 +22,9 @@ impl<'a> RCFactory<'a> {
 impl crate::ConnFactory for RCFactory<'_> {
     type ConnMeta = super::ConnMeta;
     type ConnType = RCConn;
-    type ConnResult<T> = super::ConnResult<T>;
+    type ConnResult = super::ConnErr;
 
-    fn create(&mut self, meta: Self::ConnMeta) -> Self::ConnResult<Self::ConnType>
+    fn create(&mut self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult>
     where
         Self::ConnType: crate::Conn,
     {
@@ -63,10 +62,10 @@ impl<'a> RCFactoryWPath<'a> {
 impl crate::ConnFactory for RCFactoryWPath<'_> {
     type ConnMeta = super::ConnMetaWPath;
     type ConnType = RCConn;
-    type ConnResult<T> = super::ConnResult<T>;
+    type ConnResult = super::ConnErr;
 
     // Note: the path_res in the meta is recommended to be generated via the context of RCFactoryWPath.rctx
-    fn create(&mut self, meta: Self::ConnMeta) -> Self::ConnResult<Self::ConnType>
+    fn create(&mut self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult>
     where
         Self::ConnType: crate::Conn,
     {
@@ -100,15 +99,15 @@ impl RCConn {
 }
 
 impl crate::Conn for RCConn {
-    type IOResult<T> = super::IOResult<T>;
+    type IOResult = super::Err;
     type ReqPayload = u64;
     type CompPayload = u64;
 
-    fn post(&mut self, req: &Self::ReqPayload) -> Self::IOResult<()> {
+    fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult> {
         unimplemented!();
     }
 
-    fn poll(&mut self) -> Self::IOResult<Self::CompPayload> {
+    fn poll(&mut self) -> Result<Self::CompPayload,Self::IOResult> {
         unimplemented!();
     }
 }

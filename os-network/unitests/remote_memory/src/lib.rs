@@ -31,7 +31,7 @@ fn test_local() {
     assert_ne!(src,dst); 
 
     use os_network::remote_memory::local::LocalDevice;    
-    let mut dev = LocalDevice::<(),()>::new(); 
+    let mut dev = LocalDevice::<(),(), os_network::rdma::Err>::new(); 
 
     log::info!("pre check dst {:?}", dst);     
     dev.read(&(), &src.get_raw(), &(), &mut dst).unwrap(); 

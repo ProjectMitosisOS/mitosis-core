@@ -9,7 +9,7 @@ pub trait Device {
     // memory address
     type Address;
 
-    type IOResult<T>;
+    type IOResult; 
 
     fn read(
         &mut self,
@@ -17,7 +17,7 @@ pub trait Device {
         addr: &Self::Address,
         key: &Self::Key,
         to: &mut BytesMut,
-    ) -> Self::IOResult<()>;
+    ) -> Result<(), Self::IOResult>;
 
     unsafe fn write(
         &mut self,
@@ -25,7 +25,7 @@ pub trait Device {
         addr: &Self::Address,
         key: &Self::Key,
         payload: &BytesMut,
-    ) -> Self::IOResult<()>;
+    ) -> Result<(), Self::IOResult>;
 }
 
 pub mod local;

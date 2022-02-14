@@ -41,8 +41,6 @@ pub enum ConnErr {
     ConnErr,
 }
 
-pub type ConnResult<T> = Result<T, ConnErr>;
-
 #[derive(Debug)]
 pub enum Err {
     // TODO: Need to be refined, should be more detailed
@@ -59,8 +57,6 @@ pub enum QPStatus {
     RTS, 
     Other, 
 }
-
-pub type IOResult<T> = Result<T, Err>;
 
 pub mod rc;
 // pub mod ud;
