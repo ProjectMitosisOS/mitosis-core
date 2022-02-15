@@ -1,3 +1,3 @@
 [submodule "deps/rust-kernel-rdma"]
 	path = deps/rust-kernel-rdma
-	url = https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/kernel-rdma/rust-kernel-rdma
+	url = https://gitlab-runner-ci:zjpcT5ust2CfE6PNRsXB@ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/kernel-rdma/rust-kernel-rdma
