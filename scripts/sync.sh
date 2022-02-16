@@ -5,7 +5,7 @@ target="wxd@val01"
 #target = "wxd@cube1"
 ## this script will sync the project to the remote server
 rsync -i -rtuv \
-      $PWD/. \
+      $PWD/../ \
       $target:~/projects/mos \
       --exclude 'CMakeCache.txt' \
       --exclude 'target' \

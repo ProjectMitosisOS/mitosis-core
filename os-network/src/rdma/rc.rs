@@ -22,14 +22,12 @@ impl<'a> RCFactory<'a> {
 
 impl crate::ConnFactory for RCFactory<'_> {
     type ConnMeta = super::ConnMeta;
-    type ConnType<'a> 
-        where Self: 'a 
+    type ConnType<'a>
+	where Self: 'a
         = RCConn<'a>;
     type ConnResult = super::ConnErr;
 
-    fn create<'a>(&'a mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'a>, ConnErr>
-    where
-        Self::ConnType<'a>: crate::Conn,
+    fn create(&mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, ConnErr>
     {
         let path_res = self
             .rctx
@@ -42,7 +40,7 @@ impl crate::ConnFactory for RCFactory<'_> {
         // connect the RC
         let mrc = unsafe { Arc::get_mut_unchecked(&mut rc) };
         match mrc.connect(meta.qd_hint, path_res, meta.service_id as u64) {
-            Ok(_) => Ok(RCConn::<'a> { rc: rc, phantom : PhantomData } ),
+            Ok(_) => Ok(RCConn::<'_> { rc: rc, phantom : PhantomData } ),
             Err(_) => Err(ConnErr::ConnErr),
         }
     }
@@ -64,16 +62,13 @@ impl<'a> RCFactoryWPath<'a> {
 
 impl crate::ConnFactory for RCFactoryWPath<'_> {
     type ConnMeta = super::ConnMetaWPath;
-    type ConnType<'a> 
-        where Self: 'a 
+    type ConnType<'a>
+	where Self: 'a
         = RCConn<'a>;
-
     type ConnResult = super::ConnErr;
 
     // Note: the path_res in the meta is recommended to be generated via the context of RCFactoryWPath.rctx
-    fn create<'a>(&'a mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'a>, super::ConnErr>
-    where
-        Self::ConnType<'a>: crate::Conn,
+    fn create(&mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, super::ConnErr>
     {
         let mut rc = RC::new(&self.rctx, core::ptr::null_mut(), core::ptr::null_mut())
             .ok_or(ConnErr::CreateQPErr)?;
@@ -81,7 +76,7 @@ impl crate::ConnFactory for RCFactoryWPath<'_> {
         // connect the RC
         let mrc = unsafe { Arc::get_mut_unchecked(&mut rc) };
         match mrc.connect(meta.qd_hint, meta.path, meta.service_id as u64) {       
-            Ok(_) => Ok(RCConn::<'a> { rc: rc, phantom : PhantomData } ),
+            Ok(_) => Ok(RCConn::<'_> { rc: rc, phantom : PhantomData } ),
             Err(_) => Err(ConnErr::ConnErr), // TODO: need to filter against the connection results
         }
     }

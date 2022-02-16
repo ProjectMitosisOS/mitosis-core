@@ -22,15 +22,11 @@ pub trait Conn {
 
 pub trait ConnFactory {
     type ConnMeta;
-    type ConnType<'a>
-    where
-        Self::ConnType<'a>: Conn, Self: 'a;
+    type ConnType<'a> : Conn where Self: 'a;
     type ConnResult;
 
     // create and connect the connection
-    fn create<'a>(&'a mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'a>, Self::ConnResult>
-    where
-        Self::ConnType<'a>: Conn;
+    fn create(&mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
 }
 
 // impl the connection as RDMA
