@@ -1,17 +1,30 @@
 #![no_std]
 
+extern crate alloc;
+
+use alloc::boxed::Box;
+
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 use KRdmaKit::ctrl::RCtrl;
+use KRdmaKit::KDriver;
 
 use rust_kernel_linux_util as log; 
 
 use os_network::{rdma,ConnFactory}; 
 
-struct SampleTestModule;
+use krdma_test::*;
+
+static mut KDRIVER: Option<Box<KDriver>> = None;
+
+unsafe fn global_kdriver() -> &'static mut Box<KDriver> {
+    match KDRIVER {
+        Some(ref mut x) => &mut *x,
+        None => panic!()
+    }
+}
 
 fn test_rc_factory() {
-    use KRdmaKit::KDriver;
-    let driver = unsafe { KDriver::create().unwrap() };
+    let driver = unsafe { global_kdriver() };
     let client_nic = driver
         .devices()
         .into_iter()
@@ -49,8 +62,7 @@ fn test_rc_factory() {
 }
 
 fn test_rc_factory_with_meta() {
-    use KRdmaKit::KDriver;
-    let driver = unsafe { KDriver::create().unwrap() };
+    let driver = unsafe { global_kdriver() };
     let client_nic = driver
         .devices()
         .into_iter()
@@ -88,18 +100,9 @@ fn test_rc_factory_with_meta() {
     }    
 }
 
-impl linux_kernel_module::KernelModule for SampleTestModule {
-    fn init() -> linux_kernel_module::KernelResult<Self> {
-        log::info!("test started"); 
-        test_rc_factory(); 
-        test_rc_factory_with_meta();
-        Ok(Self {})
+#[krdma_test(test_rc_factory, test_rc_factory_with_meta)]
+fn ctx_init() {
+    unsafe {
+        KDRIVER = KDriver::create();
     }
 }
-
-linux_kernel_module::kernel_module!(
-    SampleTestModule,
-    author: b"xmm",
-    description: b"A sample module for unit testing",
-    license: b"GPL"
-);
