@@ -86,7 +86,6 @@ fn test_rc_factory_with_meta() {
     let server_service_id: u64 = 0;
     let _ctrl = RCtrl::create(server_service_id, &server_ctx);
 
-
     // the main test body
     let conn_meta = rdma::ConnMeta { 
         gid : server_ctx.get_gid_as_string(), 
