@@ -27,7 +27,7 @@ impl crate::ConnFactory for RCFactory<'_> {
         = RCConn<'a>;
     type ConnResult = super::ConnErr;
 
-    fn create(&mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, ConnErr>
+    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, ConnErr>
     {
         let path_res = self
             .rctx
@@ -55,8 +55,8 @@ impl<'a> RCFactoryWPath<'a> {
         RContext::create(hca).map(|c| Self { rctx: c })
     }
 
-    pub fn convert_meta(&mut self, meta : super::ConnMeta) -> Option<super::ConnMetaWPath> { 
-        ConnMetaWPath::new(&mut self.rctx, meta) 
+    pub fn convert_meta(&self, meta: super::ConnMeta) -> Option<super::ConnMetaWPath> { 
+        ConnMetaWPath::new(&self.rctx, meta) 
     }
 }
 
@@ -68,7 +68,7 @@ impl crate::ConnFactory for RCFactoryWPath<'_> {
     type ConnResult = super::ConnErr;
 
     // Note: the path_res in the meta is recommended to be generated via the context of RCFactoryWPath.rctx
-    fn create(&mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, super::ConnErr>
+    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, super::ConnErr>
     {
         let mut rc = RC::new(&self.rctx, core::ptr::null_mut(), core::ptr::null_mut())
             .ok_or(ConnErr::CreateQPErr)?;

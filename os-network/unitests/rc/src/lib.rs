@@ -33,7 +33,7 @@ fn test_rc_factory() {
         .next()
         .expect("no rdma device available"); 
     
-    let mut client_factory = rdma::rc::RCFactory::new(client_nic).unwrap(); 
+    let client_factory = rdma::rc::RCFactory::new(client_nic).unwrap(); 
 
     let server_ctx = driver
         .devices()
@@ -73,7 +73,7 @@ fn test_rc_factory_with_meta() {
         .next()
         .expect("no rdma device available"); 
     
-    let mut client_factory = rdma::rc::RCFactoryWPath::new(client_nic).unwrap(); 
+    let client_factory = rdma::rc::RCFactoryWPath::new(client_nic).unwrap(); 
 
     let server_ctx = driver
         .devices()
