@@ -14,6 +14,7 @@ use os_network::remote_memory::Device;
 
 use krdma_test::*;
 
+/// A test on `LocalDevice`
 #[krdma_main]
 fn test_local() {
 

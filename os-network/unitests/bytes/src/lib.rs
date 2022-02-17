@@ -10,6 +10,7 @@ use os_network::bytes::*;
 
 use krdma_test::*;
 
+/// A test on `BytesMut`
 #[krdma_main]
 fn test_bytes() {
     use alloc::vec;

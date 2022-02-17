@@ -23,6 +23,8 @@ unsafe fn global_kdriver() -> &'static mut Box<KDriver> {
     }
 }
 
+/// A test on `RCFactory`
+/// Pre-requisition: `ctx_init`
 fn test_rc_factory() {
     let driver = unsafe { global_kdriver() };
     let client_nic = driver
@@ -61,6 +63,8 @@ fn test_rc_factory() {
     }
 }
 
+/// A test on `RCFactoryWPath`
+/// Pre-requisition: `ctx_init`
 fn test_rc_factory_with_meta() {
     let driver = unsafe { global_kdriver() };
     let client_nic = driver
