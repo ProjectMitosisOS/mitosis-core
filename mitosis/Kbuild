@@ -2,13 +2,14 @@ obj-m := mitosis.o
 mitosis-objs := mitosis.rust.o
 
 CARGO ?= cargo
+TARGET ?= x86_64-unknown-none-linuxkernel
 
 export c_flags
 
-$(src)/target/x86_64-linux-kernel/debug/libmitosis.a: cargo_will_determine_dependencies
-	cd $(src); $(CARGO) build -Z build-std=core,alloc --target=x86_64-linux-kernel
+$(src)/target/$(TARGET)/debug/libmitosis.a: cargo_will_determine_dependencies
+	cd $(src); $(CARGO) build -Z build-std=core,alloc --target=$(TARGET)
 
 .PHONY: cargo_will_determine_dependencies
 
-%.rust.o: target/x86_64-linux-kernel/debug/lib%.a
+%.rust.o: target/$(TARGET)/debug/lib%.a
 	$(LD) -r -o $@ --whole-archive $<
