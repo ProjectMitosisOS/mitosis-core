@@ -26,7 +26,7 @@ pub trait ConnFactory {
     type ConnResult;
 
     // create and connect the connection
-    fn create(&mut self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
+    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
 }
 
 // impl the connection as RDMA
