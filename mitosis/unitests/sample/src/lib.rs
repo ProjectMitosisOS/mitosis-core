@@ -3,7 +3,6 @@
 use krdma_test::*;
 
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
-use linux_kernel_module::println;
 use rust_kernel_linux_util as log;
 
 #[krdma_main]
