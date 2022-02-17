@@ -12,8 +12,10 @@ use rust_kernel_linux_util as log;
 use os_network::bytes::*;
 use os_network::remote_memory::Device;
 
-struct SampleTestModule;
+use krdma_test::*;
 
+/// A test on `LocalDevice`
+#[krdma_main]
 fn test_local() {
 
     // init context
@@ -38,18 +40,3 @@ fn test_local() {
     log::info!("after check dst {:?}", dst); 
     assert_eq!(src,dst); 
 }
-
-impl linux_kernel_module::KernelModule for SampleTestModule {
-    fn init() -> linux_kernel_module::KernelResult<Self> {
-        log::info!("test started");
-        test_local();
-        Ok(Self {})
-    }
-}
-
-linux_kernel_module::kernel_module!(
-    SampleTestModule,
-    author: b"xmm",
-    description: b"The unit tests for testing remote memory abstractions.",
-    license: b"GPL"
-);

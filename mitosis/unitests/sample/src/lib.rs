@@ -1,23 +1,11 @@
 #![no_std]
 
-struct SampleTestModule {
-}
+use krdma_test::*;
 
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
-use linux_kernel_module::println;
+use rust_kernel_linux_util as log;
 
-impl linux_kernel_module::KernelModule for SampleTestModule {
-    fn init() -> linux_kernel_module::KernelResult<Self> {
-        println!("sample test module in raw kernel rdma bindings!");
-
-        println!("check version");
-        Ok(Self {})
-    }
+#[krdma_main]
+fn test_sample() {
+    log::info!("sample test module in raw kernel rdma bindings!");
 }
-
-linux_kernel_module::kernel_module!(
-    SampleTestModule,
-    author: b"xmm",
-    description: b"A sample module for unit testing",
-    license: b"GPL"
-);

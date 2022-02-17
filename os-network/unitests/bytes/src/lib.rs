@@ -8,8 +8,10 @@ use rust_kernel_linux_util as log;
 
 use os_network::bytes::*;
 
-struct SampleTestModule;
+use krdma_test::*;
 
+/// A test on `BytesMut`
+#[krdma_main]
 fn test_bytes() {
     use alloc::vec;
     use core::fmt::Write;
@@ -42,18 +44,3 @@ fn test_bytes() {
     }
     assert_eq!(bytes, bytes_2);
 }
-
-impl linux_kernel_module::KernelModule for SampleTestModule {
-    fn init() -> linux_kernel_module::KernelResult<Self> {
-        log::info!("test started");
-        test_bytes();
-        Ok(Self {})
-    }
-}
-
-linux_kernel_module::kernel_module!(
-    SampleTestModule,
-    author: b"xmm",
-    description: b"The unit tests for testing bytes in os-network.",
-    license: b"GPL"
-);

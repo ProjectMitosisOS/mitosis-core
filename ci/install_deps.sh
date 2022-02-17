@@ -9,5 +9,5 @@ else
     source $HOME/.cargo/env
 fi
 
-rustup default nightly-2020-11-10-x86_64-unknown-linux-gnu
+rustup default nightly-2022-02-05-x86_64-unknown-linux-gnu
 rustup component add rust-src
