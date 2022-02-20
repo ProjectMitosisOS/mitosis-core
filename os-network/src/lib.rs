@@ -16,8 +16,11 @@ pub trait Conn {
     // post the request to the underlying device
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult>;
 
-    // poll the completion of the sent request
+    // poll the completion of the sent request, returns immediately
     fn poll(&mut self) -> Result<Self::CompPayload,Self::IOResult>;
+
+    // keep polling until one completion is retrieved
+    fn wait_til_comp(&mut self) -> Result<Self::CompPayload,Self::IOResult>;
 }
 
 pub trait ConnFactory {

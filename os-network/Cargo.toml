@@ -9,6 +9,7 @@ dct = ["KRdmaKit/dct"]
 
 [dependencies]
 KRdmaKit = { path = "../deps/rust-kernel-rdma/KRdmaKit" }
+rust-kernel-linux-util = {path = "../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
 
 [dependencies.lazy_static]
 version = "1.0"

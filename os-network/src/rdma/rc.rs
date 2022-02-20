@@ -3,11 +3,13 @@ use alloc::sync::Arc;
 use core::option::Option;
 use core::marker::PhantomData;
 
-use KRdmaKit::rust_kernel_rdma_base::ib_qp_state;
-
+use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::device::{RContext, RNIC};
 use KRdmaKit::qp::RC;
+use KRdmaKit::qp::RCOp;
+use rust_kernel_linux_util as log;
 
+use super::payload::rc_payload::{RCReqPayload, RCCompPayload};
 use super::{ConnErr, ConnMetaWPath};
 
 pub struct RCFactory<'a> {
@@ -17,6 +19,10 @@ pub struct RCFactory<'a> {
 impl<'a> RCFactory<'a> {
     pub fn new(hca: &'a RNIC) -> Option<Self> {
         RContext::create(hca).map(|c| Self { rctx: c })
+    }
+
+    pub fn get_context(&self) -> &RContext<'_> {
+        &self.rctx
     }
 }
 
@@ -104,15 +110,48 @@ impl RCConn<'_> {
 
 impl crate::Conn for RCConn<'_> {
 
-    type ReqPayload = u64;
-    type CompPayload = u64;
+    type ReqPayload = RCReqPayload;
+    type CompPayload = RCCompPayload;
     type IOResult = super::Err; 
 
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult> {
-        unimplemented!();
+        let mut op = RCOp::new(&self.rc);
+        op.post_send(req.get_sge(), req.get_wr()).map_err(|_x| {
+            // TODO: need to be refined according to the error number
+            super::Err::Other
+        })
     }
 
     fn poll(&mut self) -> Result<Self::CompPayload,Self::IOResult> {
-        unimplemented!();
+        let mut op = RCOp::new(&self.rc);
+        let mut wc: ib_wc = Default::default();
+        let result = op.pop_with_wc(&mut wc as *mut ib_wc);
+        if result.is_none() {
+            return Err(super::Err::Retry);
+        }
+        let result = result.unwrap();
+        let result = unsafe {
+            (*result).status
+        };
+        if result != ib_wc_status::IB_WC_SUCCESS {
+            log::error!("poll cq with err: {}", result);
+            return Err(super::Err::Other)
+        } else {
+            return Ok(RCCompPayload{});
+        }
+    }
+
+    fn wait_til_comp(&mut self) -> Result<Self::CompPayload,Self::IOResult> {
+        loop {
+            let result = self.poll();
+            if result.is_ok() {
+                return result;
+            }
+            let err = result.err().unwrap();
+            if err == super::Err::Retry {
+                continue;
+            }
+            return Err(err);
+        }
     }
 }

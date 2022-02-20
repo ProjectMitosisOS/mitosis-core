@@ -41,11 +41,14 @@ pub enum ConnErr {
     ConnErr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Err {
     // TODO: Need to be refined, should be more detailed
     /// Timeout error
     Timeout = 0,
+
+    /// Retry, used to indicate retrying the erroneous function call, typically `ib_poll_cq`
+    Retry,
 
     /// Other general error
     Other,
@@ -59,5 +62,6 @@ pub enum QPStatus {
 }
 
 pub mod rc;
+pub mod payload;
 // pub mod ud;
 // pub mod dc; 
