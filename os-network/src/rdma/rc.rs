@@ -135,7 +135,7 @@ impl crate::Conn for RCConn<'_> {
         };
         if result != ib_wc_status::IB_WC_SUCCESS {
             log::error!("poll cq with err: {}", result);
-            return Err(super::Err::Other)
+            return Err(super::Err::Other);
         } else {
             return Ok(RCCompPayload{});
         }
