@@ -116,10 +116,12 @@ impl crate::Conn for RCConn<'_> {
 
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult> {
         let mut op = RCOp::new(&self.rc);
-        op.post_send(req.get_sge(), req.get_wr()).map_err(|_x| {
-            // TODO: need to be refined according to the error number
-            super::Err::Other
-        })
+        unsafe {
+            op.post_send_raw(req.get_wr_ptr() as *mut _).map_err(|_x| {
+                // TODO: need to be refined according to the error number
+                super::Err::Other
+            })
+        }
     }
 
     fn poll(&mut self) -> Result<Self::CompPayload,Self::IOResult> {

@@ -4,11 +4,12 @@ pub trait SendWR {
     fn set_opcode(&mut self, opcode: u32);
     fn set_send_flags(&mut self, send_flags: i32);
     fn set_imm_data(&mut self, imm_data: u32);
+    fn set_single_sge(&mut self, sge: *const ib_sge);
 }
 
 pub struct Payload<T>
 where
-    T: Default + SendWR + Copy
+    T: Default + SendWR
 {
     sge: ib_sge,
     wr: T
@@ -16,8 +17,13 @@ where
 
 impl<T> Payload<T> 
 where
-    T: Default + SendWR + Copy
+    T: Default + SendWR
 {
+    fn set_sge(mut self) -> Self {
+        self.wr.set_single_sge(unsafe { self.get_sge_ptr() });
+        self
+    }
+    
     pub fn set_laddr(mut self, laddr: u64) -> Self {
         self.sge.addr = laddr;
         self
@@ -48,27 +54,27 @@ where
         self
     }
 
-    pub fn get_sge(&self) -> ib_sge {
-        self.sge
+    pub unsafe fn get_sge_ptr(&self) -> *const ib_sge {
+        &self.sge as *const _
     }
 
-    pub fn get_wr(&self) -> T {
-        self.wr
+    pub unsafe fn get_wr_ptr(&self) -> *const T {
+        &self.wr as *const T
     }
 }
 
-/// Default Payload will be marked as SIGNALED and with immediate data as 0
+/// Default Payload will be marked with immediate data as 0
 impl<T> Default for Payload<T>
 where
-    T: Default + SendWR + Copy
+    T: Default + SendWR
 {
     fn default() -> Self {
         Self {
             sge: Default::default(),
             wr: Default::default()
         }
-        .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_imm_data(0)
+        .set_sge()
     }
 }
 

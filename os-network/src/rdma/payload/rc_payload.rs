@@ -12,6 +12,11 @@ impl super::SendWR for ib_rdma_wr {
     fn set_imm_data(&mut self, imm_data: u32) {
         self.wr.ex.imm_data = imm_data;
     }
+
+    fn set_single_sge(&mut self, sge: *const ib_sge) {
+        self.wr.sg_list = sge as *mut _;
+        self.wr.num_sge = 1;
+    }
 }
 
 pub type RCReqPayload = super::Payload<ib_rdma_wr>;

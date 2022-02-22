@@ -156,6 +156,7 @@ fn test_rc_post_poll() {
                                 .set_sz(capacity)
                                 .set_lkey(unsafe { client_factory.get_context().get_lkey() })
                                 .set_rkey(unsafe { server_ctx.get_rkey() }) // here we are testing on a single machine
+                                .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
                                 .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ);
 
     let res = rc.post(&rc_read_req_payload);
@@ -185,6 +186,7 @@ fn test_rc_post_poll() {
                                 .set_sz(capacity)
                                 .set_lkey(unsafe { client_factory.get_context().get_lkey() })
                                 .set_rkey(unsafe { server_ctx.get_rkey() }) // here we are testing on a single machine
+                                .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
                                 .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE);
 
     let res = rc.post(&rc_write_req_payload);
