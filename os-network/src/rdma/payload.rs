@@ -4,7 +4,7 @@ pub trait SendWR {
     fn set_opcode(&mut self, opcode: u32);
     fn set_send_flags(&mut self, send_flags: i32);
     fn set_imm_data(&mut self, imm_data: u32);
-    fn set_single_sge(&mut self, sge: *const ib_sge);
+    fn set_sge_ptr(&mut self, sge: *const ib_sge);
 }
 
 pub struct Payload<T>
@@ -19,8 +19,8 @@ impl<T> Payload<T>
 where
     T: Default + SendWR
 {
-    fn set_sge(mut self) -> Self {
-        self.wr.set_single_sge(unsafe { self.get_sge_ptr() });
+    fn set_my_sge_ptr(mut self) -> Self {
+        self.wr.set_sge_ptr(unsafe { self.get_sge_ptr() });
         self
     }
     
@@ -73,8 +73,7 @@ where
             sge: Default::default(),
             wr: Default::default()
         }
-        .set_imm_data(0)
-        .set_sge()
+        .set_my_sge_ptr()
     }
 }
 

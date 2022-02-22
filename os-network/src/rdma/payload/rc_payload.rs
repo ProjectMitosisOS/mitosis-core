@@ -13,7 +13,7 @@ impl super::SendWR for ib_rdma_wr {
         self.wr.ex.imm_data = imm_data;
     }
 
-    fn set_single_sge(&mut self, sge: *const ib_sge) {
+    fn set_sge_ptr(&mut self, sge: *const ib_sge) {
         self.wr.sg_list = sge as *mut _;
         self.wr.num_sge = 1;
     }
@@ -33,4 +33,4 @@ impl RCReqPayload {
     }
 }
 
-pub struct RCCompPayload;
+pub type RCCompPayload = ib_wc;

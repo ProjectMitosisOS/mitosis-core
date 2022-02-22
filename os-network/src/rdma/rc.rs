@@ -7,6 +7,7 @@ use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::device::{RContext, RNIC};
 use KRdmaKit::qp::RC;
 use KRdmaKit::qp::RCOp;
+
 use rust_kernel_linux_util as log;
 
 use super::payload::rc_payload::{RCReqPayload, RCCompPayload};
@@ -139,7 +140,7 @@ impl crate::Conn for RCConn<'_> {
             log::error!("poll cq with err: {}", result);
             return Err(super::Err::Other);
         } else {
-            return Ok(RCCompPayload{});
+            return Ok(wc);
         }
     }
 
