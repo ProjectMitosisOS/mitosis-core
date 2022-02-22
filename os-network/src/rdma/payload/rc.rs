@@ -1,4 +1,4 @@
-use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::rust_kernel_rdma_base::{ib_rdma_wr,ib_sge};
 
 impl super::SendWR for ib_rdma_wr {
     fn set_opcode(&mut self, opcode: u32) {
@@ -19,18 +19,13 @@ impl super::SendWR for ib_rdma_wr {
     }
 }
 
-pub type RCReqPayload = super::Payload<ib_rdma_wr>;
 
-impl RCReqPayload {
-    pub fn set_raddr(mut self, raddr: u64) -> Self {
-        self.wr.remote_addr = raddr;
-        self
+impl super::RDMAWR for ib_rdma_wr {
+    fn set_raddr(&mut self, raddr: u64) {
+        self.remote_addr = raddr;
     }
     
-    pub fn set_rkey(mut self, rkey: u32) -> Self {
-        self.wr.rkey = rkey;
-        self
+    fn set_rkey(&mut self, rkey: u32) {
+        self.rkey = rkey;
     }
 }
-
-pub type RCCompPayload = ib_wc;

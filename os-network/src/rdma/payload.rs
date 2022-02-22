@@ -7,6 +7,11 @@ pub trait SendWR {
     fn set_sge_ptr(&mut self, sge: *const ib_sge);
 }
 
+pub trait RDMAWR { 
+    fn set_raddr(&mut self, raddr: u64);
+    fn set_rkey(&mut self, rkey: u32);
+}
+
 pub struct Payload<T>
 where
     T: Default + SendWR
@@ -63,6 +68,21 @@ where
     }
 }
 
+impl<T> Payload<T> 
+where
+    T: Default + SendWR + RDMAWR 
+{
+    pub fn set_raddr(mut self, raddr: u64) -> Self { 
+        self.wr.set_raddr(raddr);
+        self
+    }
+
+    pub fn set_rkey(mut self, rkey: u32) -> Self { 
+        self.wr.set_rkey(rkey);
+        self
+    }
+}
+
 /// Default Payload will be marked with immediate data as 0
 impl<T> Default for Payload<T>
 where
@@ -77,4 +97,4 @@ where
     }
 }
 
-pub mod rc_payload;
+pub mod rc;

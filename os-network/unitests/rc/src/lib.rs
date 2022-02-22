@@ -16,9 +16,11 @@ use rust_kernel_linux_util as log;
 
 use os_network::{rdma, ConnFactory, Conn}; 
 use os_network::bytes::BytesMut;
-use os_network::rdma::payload::rc_payload::RCReqPayload;
+use os_network::rdma::payload;
 
 use krdma_test::*;
+
+type RCReqPayload = payload::Payload<ib_rdma_wr>; 
 
 static mut KDRIVER: Option<Box<KDriver>> = None;
 

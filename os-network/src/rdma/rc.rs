@@ -10,7 +10,6 @@ use KRdmaKit::qp::RCOp;
 
 use rust_kernel_linux_util as log;
 
-use super::payload::rc_payload::{RCReqPayload, RCCompPayload};
 use super::{ConnErr, ConnMetaWPath};
 
 pub struct RCFactory<'a> {
@@ -111,8 +110,8 @@ impl RCConn<'_> {
 
 impl crate::Conn for RCConn<'_> {
 
-    type ReqPayload = RCReqPayload;
-    type CompPayload = RCCompPayload;
+    type ReqPayload = super::payload::Payload<ib_rdma_wr>;
+    type CompPayload = ib_wc;
     type IOResult = super::Err; 
 
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult> {
