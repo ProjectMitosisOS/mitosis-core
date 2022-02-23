@@ -1,0 +1,41 @@
+[workspace]
+
+[package]
+name = "sample_param_tests"
+version = "0.1.0"
+authors = ["xmm <wxdwfc@gmail.com>, wtx <wang.tianxia1998@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["staticlib"]
+test = false
+
+[features]
+default = ["rust-kernel-linux-util","krdma-test","KRdmaKit"]
+
+[dependencies]
+rust-kernel-linux-util = {path = "../../../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
+krdma-test = {path="../../../deps/rust-kernel-rdma/krdma-test",optional = true}
+KRdmaKit = {path = "../../../deps/rust-kernel-rdma/KRdmaKit", optional = true, features = ["dct"]}
+mitosis-macros = {path = "../../../mitosis-macros"}
+
+[dev-dependencies]
+kernel-module-testlib = { path = "../../../deps/rust-kernel-rdma/testlib" }
+
+[profile.dev]
+opt-level = 2
+debug = false
+split-debuginfo = '...'  # Platform-specific.
+debug-assertions = true # Enable debug print in test by default
+overflow-checks = true   # overflow-checks is currently not a bottleneck
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false
+
+[build-dependencies]
+bindgen = "0.54"
+cc = "1.0"
+shlex = "0.1"
