@@ -12,8 +12,8 @@ use rust_kernel_linux_util as log;
 #[krdma_main]
 fn ctx_init() {
     log::info!("context init");
-    log::info!("sample_int: {}", config::get_sample_int());
-    log::info!("sample_long: {}", config::get_sample_long());
-    log::info!("sample_str: 0x{:x}", config::get_sample_str() as u64);
-    log::info!("first charactor in str: {}", unsafe { *config::get_sample_str() as char });
+    log::info!("sample_int: {}", config::sample_int::read());
+    log::info!("sample_long: {}", config::sample_long::read());
+    log::info!("sample_str: 0x{:x}", config::sample_str::read() as u64);
+    log::info!("first charactor in str: {}", unsafe { *config::sample_str::read() as char });
 }
