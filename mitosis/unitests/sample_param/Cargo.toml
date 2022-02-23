@@ -1,7 +1,7 @@
 [workspace]
 
 [package]
-name = "sample_tests"
+name = "sample_param_tests"
 version = "0.1.0"
 authors = ["xmm <wxdwfc@gmail.com>, wtx <wang.tianxia1998@gmail.com>"]
 edition = "2018"

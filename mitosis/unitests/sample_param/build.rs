@@ -44,6 +44,12 @@ fn main() {
     println!("cargo:rerun-if-env-changed=c_flags");
     println!("cargo:rerun-if-env-changed=ofa_flags");
 
+    // do not compile in test mode (cargo test)
+    let cargo_test_dir = env::var("CARGO_TARGET_DIR").expect("CARGO_TARGET_DIR missing, strange?");
+    if cargo_test_dir.contains("test") {
+        return;
+    }
+
     let kernel_dir = env::var("KDIR").expect("Must be invoked from kernel makefile");
     let kernel_cflags = env::var("c_flags").expect("Add 'export c_flags' to Kbuild");
     let kbuild_cflags_module =
