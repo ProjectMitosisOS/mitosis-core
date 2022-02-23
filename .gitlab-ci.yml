@@ -16,10 +16,14 @@ unittest-mitosis-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   script:
     - echo "Running unit tests on mitosis"
+    - sudo dmesg -C
     - python3 mitosis/unitests/run_tests.py
+    - dmesg
 
 unittest-os-network-job:   # This job also runs in the test stage.
   stage: test    # It can run at the same time as unit-test-job (in parallel).
   script:
     - echo "Running unit tests on os-network"
+    - sudo dmesg -C
     - python3 os-network/unitests/run_tests.py
+    - dmesg
