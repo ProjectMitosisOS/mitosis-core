@@ -18,6 +18,7 @@ unittest-mitosis-job:   # This job runs in the test stage.
     - echo "Running unit tests on mitosis"
     - sudo dmesg -C
     - python3 mitosis/unitests/run_tests.py
+  after_script:
     - dmesg
 
 unittest-os-network-job:   # This job also runs in the test stage.
@@ -26,4 +27,5 @@ unittest-os-network-job:   # This job also runs in the test stage.
     - echo "Running unit tests on os-network"
     - sudo dmesg -C
     - python3 os-network/unitests/run_tests.py
+  after_script:
     - dmesg
