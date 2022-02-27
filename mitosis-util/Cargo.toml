@@ -1,0 +1,35 @@
+[package]
+name = "mitosis-util"
+version = "0.1.0"
+authors = ["xmm <wxdwfc@gmail.com>, wtx <wang.tianxia1998@gmail.com>"]
+edition = "2018"
+
+[features]
+default = ["rust-kernel-linux-util"]
+
+[dependencies]
+rust-kernel-linux-util = {path = "../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
+
+[dependencies.lazy_static]
+version = "1.0"
+features = ["spin_no_std"]
+
+# Default profile for this project
+# Always enable all the optimizations except overflow-checks, disable debug print
+[profile.dev]
+opt-level = 2
+debug = false
+split-debuginfo = '...'  # Platform-specific.
+debug-assertions = false # Set to false to disable debug print
+overflow-checks = true   # overflow-checks is currently not a bottleneck
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false
+
+# Comment the above default profile and uncomment the follow lines, then re-make the project to enable non-release mode
+# Reference: https://doc.rust-lang.org/cargo/reference/profiles.html
+
+# [profile.dev]
+# opt-level = 1
