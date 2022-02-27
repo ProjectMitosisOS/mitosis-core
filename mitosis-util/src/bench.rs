@@ -10,27 +10,6 @@ use rust_kernel_linux_util::kthread::JoinHandler;
 use rust_kernel_linux_util::linux_kernel_module;
 use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
 
-/// OP_COUNT is a private, global vector to record the operation completion count 
-static mut OP_COUNT: Option<Vec<u64>> = None;
-
-/// Private function to clear the operation count
-fn restore_op_count(sz: usize) {
-    let mut op_count_arr = Vec::new();
-    for _i in 0..sz {
-        op_count_arr.push(0 as u64);
-    }
-    unsafe {
-        OP_COUNT = Some(op_count_arr);
-    }
-}
-
-/// Private function to sum the operation count
-fn sum_op_count() -> u64 {
-    unsafe {
-        OP_COUNT.as_ref().unwrap().iter().sum()
-    }
-}
-
 /// BenchmarkThreadID must be implemented to serve as an index into OP_COUNT
 pub trait BenchmarkThreadID {
     fn get_thread_id(&self) -> u64;
@@ -54,13 +33,18 @@ pub trait BenchmarkRoutine {
     fn routine(prepare: &mut Self::Prepare) -> Result<(), ()>;
 }
 
+struct ThreadParameter {
+    parameter: *mut c_void,
+    counter: u64,
+}
+
 /// Define all the essential info for the benchmark
 pub struct Benchmark<T> 
 where
     T: BenchmarkRoutine
 {
     threads: Vec<JoinHandler>,
-    thread_parameters: Vec<*mut c_void>,
+    thread_parameters: Vec<ThreadParameter>,
     thread_count: u64,
     phantom: PhantomData<T>,
 }
@@ -73,20 +57,26 @@ where
 {   
     pub fn new(thread_parameters: Vec<*mut c_void>) -> Self {
         let thread_count = thread_parameters.len();
+        let mut parameters = Vec::new();
+        for p in thread_parameters.iter() {
+            parameters.push(ThreadParameter {
+                parameter: *p,
+                counter: 0
+            });
+        }
         Self {
             threads: Vec::new(),
-            thread_parameters: thread_parameters,
+            thread_parameters: parameters,
             thread_count: thread_count as u64,
             phantom: PhantomData
         }
     }
     
     pub fn start_benchmark(&mut self) -> Result<(), ()> {
-        restore_op_count(self.thread_count as usize);
         for i in 0..self.thread_count {
             let builder = kthread::Builder::new()
                                         .set_name(format!("Benchmark Thread {}", i))
-                                        .set_parameter(self.thread_parameters[i as usize]);
+                                        .set_parameter(&self.thread_parameters[i as usize] as *const _ as *mut c_void);
             let handler = builder.spawn(Benchmark::<T>::client_thread);
             if handler.is_err() {
                 log::error!("spawn thread failed");
@@ -97,10 +87,12 @@ where
         return Ok(());
     }
 
-    pub fn report_sum() -> u64 {
-        let sum = sum_op_count();
-        log::debug!("Total completed operations {}", sum);
-        return sum;
+    pub fn report_sum(&self) -> u64 {
+        let mut sum: u64 = 0;
+        for i in self.thread_parameters.iter() {
+            sum += i.counter;
+        }
+        sum
     }
 
     pub fn stop_benchmark(&mut self) -> Result<(), ()> {
@@ -121,7 +113,8 @@ where
     extern "C" fn client_thread(
         data: *mut c_void,
     ) -> c_int {
-        let mut prepared = T::prepare(data as u64);
+        let data = data as *mut ThreadParameter;
+        let mut prepared = T::prepare(unsafe { (*data).parameter } as u64);
         let thread_id = prepared.get_thread_id();
         log::debug!("thread {} starts benchmarking", thread_id);
         while !kthread::should_stop() {
@@ -133,7 +126,7 @@ where
                 break;
             }
             unsafe {
-                OP_COUNT.as_mut().unwrap()[thread_id as usize] += 1;
+                (*data).counter += 1;
             }
         }
         log::debug!("thread {} ends benchmarking", thread_id);

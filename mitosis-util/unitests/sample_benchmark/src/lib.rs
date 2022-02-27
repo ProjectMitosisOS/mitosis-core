@@ -72,7 +72,7 @@ fn module_main() {
     // Do some statistics in the main thread
     for _i in 0..TIME {
         kthread::sleep(REPORT_INTERVAL);
-        let new_sum = Benchmark::<MyBenchmarkRoutine>::report_sum();
+        let new_sum = benchmark.report_sum();
         let delta = new_sum - sum;
         sum = new_sum;
         log::info!("complete {} operations in {} second(s)", delta, REPORT_INTERVAL);
