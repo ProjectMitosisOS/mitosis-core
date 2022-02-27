@@ -66,7 +66,8 @@ pub fn declare_global(args: TokenStream) -> TokenStream {
             pub unsafe fn init(v : #param_type) { 
                 crate::#param_name = Some(v); 
             }
-
+            
+            #[inline]
             pub unsafe fn get_mut() -> &'static mut #param_type {
                 match crate::#param_name {
                     Some(ref mut x) => &mut *x,
@@ -74,6 +75,7 @@ pub fn declare_global(args: TokenStream) -> TokenStream {
                 }
             }
 
+            #[inline]
             pub unsafe fn get_ref() -> &'static #param_type {
                 match crate::#param_name {
                     Some(ref x) => & *x,

@@ -1,4 +1,4 @@
-use kernel_module_testlib::{with_kernel_module, dmesg_contains};
+use kernel_module_testlib::{with_kernel_module};
 
 #[test]
 fn test_global() {
