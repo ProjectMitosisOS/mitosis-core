@@ -70,9 +70,7 @@ impl BenchmarkReporter for ThptReporter {
         self.timer.reset();
     }
 
-    fn start(&mut self) {
-        return;
-    }
+    fn start(&mut self) {}
 
     fn end(&mut self) {
         self.sum += 1;
@@ -106,7 +104,6 @@ where
 {
     threads: Vec<JoinHandler>,
     thread_parameters: Vec<ThreadParameter<U, R>>,
-    thread_count: u64,
     phantom: PhantomData<T>,
 }
 
@@ -117,7 +114,6 @@ where
     T: BenchmarkRoutine + BenchmarkRoutine<Input = U>, U: Default + Clone, R: BenchmarkReporter + Default
 {   
     pub fn new(thread_parameters: Vec<U>) -> Self {
-        let thread_count = thread_parameters.len();
         let mut parameters = Vec::new();
         for (pos, p) in thread_parameters.iter().enumerate() {
             let mut parameter = ThreadParameter::<U, R>::default();
@@ -128,13 +124,13 @@ where
         Self {
             threads: Vec::new(),
             thread_parameters: parameters,
-            thread_count: thread_count as u64,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
     
     pub fn start(&mut self) -> Result<(), ()> {
-        for i in 0..self.thread_count {
+        let thread_count = self.thread_parameters.len();
+        for i in 0..thread_count {
             let builder = kthread::Builder::new()
                                         .set_name(format!("Benchmark Thread {}", i))
                                         .set_parameter(&self.thread_parameters[i as usize] as *const _ as *mut c_void);
