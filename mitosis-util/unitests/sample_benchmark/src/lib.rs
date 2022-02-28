@@ -12,7 +12,7 @@ use rust_kernel_linux_util as log;
 
 use linux_kernel_module::c_types::c_void;
 
-use mitosis_util::bench::{BenchmarkThreadID, Benchmark, BenchmarkRoutine};
+use mitosis_util::bench::{Benchmark, BenchmarkRoutine};
 
 static THREAD_COUNT: u64 = 10;
 static TIME: u64 = 10;
@@ -20,23 +20,7 @@ static REPORT_INTERVAL: u32 = 1;
 
 // Implement custom `Prepare` data structure
 
-pub struct MyPrepareData {
-    thread_id: u64
-}
-
-impl MyPrepareData {
-    pub fn new(thread_id: u64) -> Self {
-        Self {
-            thread_id: thread_id
-        }
-    }
-}
-
-impl BenchmarkThreadID for MyPrepareData {
-    fn get_thread_id(&self) -> u64 {
-        self.thread_id
-    } 
-}
+pub struct MyPrepareData;
 
 // Implement custom `BenchmarkRoutine`
 
@@ -47,7 +31,7 @@ impl BenchmarkRoutine for MyBenchmarkRoutine {
 
     fn prepare(data: u64) -> Self::Prepare {
             log::info!("prepare in thread {}", data);
-            MyPrepareData::new(data)
+            MyPrepareData{}
     }
 
     fn routine(_prepare: &mut Self::Prepare) -> Result<(), ()> {

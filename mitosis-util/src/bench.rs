@@ -10,14 +10,9 @@ use rust_kernel_linux_util::kthread::JoinHandler;
 use rust_kernel_linux_util::linux_kernel_module;
 use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
 
-/// BenchmarkThreadID must be implemented to serve as an index into OP_COUNT
-pub trait BenchmarkThreadID {
-    fn get_thread_id(&self) -> u64;
-}
-
 /// BenchmarkRoutine provide benchmark related methods
 pub trait BenchmarkRoutine {
-    type Prepare: BenchmarkThreadID;
+    type Prepare;
 
     /// Method `prepare` receives the thread parameter as u64
     /// and returns a custom `Prepare` data structure
@@ -36,6 +31,7 @@ pub trait BenchmarkRoutine {
 struct ThreadParameter {
     parameter: *mut c_void,
     counter: u64,
+    thread_id: u64,
 }
 
 /// Define all the essential info for the benchmark
@@ -58,10 +54,11 @@ where
     pub fn new(thread_parameters: Vec<*mut c_void>) -> Self {
         let thread_count = thread_parameters.len();
         let mut parameters = Vec::new();
-        for p in thread_parameters.iter() {
+        for (pos, p) in thread_parameters.iter().enumerate() {
             parameters.push(ThreadParameter {
                 parameter: *p,
-                counter: 0
+                counter: 0,
+                thread_id: pos as u64,
             });
         }
         Self {
@@ -115,7 +112,7 @@ where
     ) -> c_int {
         let data = data as *mut ThreadParameter;
         let mut prepared = T::prepare(unsafe { (*data).parameter } as u64);
-        let thread_id = prepared.get_thread_id();
+        let thread_id = unsafe { (*data).thread_id };
         log::debug!("thread {} starts benchmarking", thread_id);
         while !kthread::should_stop() {
             compiler_fence(Ordering::SeqCst);
