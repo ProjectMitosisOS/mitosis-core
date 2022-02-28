@@ -72,7 +72,7 @@ where
         }
     }
     
-    pub fn start_benchmark(&mut self) -> Result<(), ()> {
+    pub fn start(&mut self) -> Result<(), ()> {
         for i in 0..self.thread_count {
             let builder = kthread::Builder::new()
                                         .set_name(format!("Benchmark Thread {}", i))
@@ -95,7 +95,7 @@ where
         sum
     }
 
-    pub fn stop_benchmark(&mut self) -> Result<(), ()> {
+    pub fn stop(&mut self) -> Result<(), ()> {
         let count = self.threads.len();
         for _i in 0..count {
             let handler = self.threads.pop().unwrap();

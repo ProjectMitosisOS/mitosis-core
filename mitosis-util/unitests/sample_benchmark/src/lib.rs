@@ -67,7 +67,7 @@ fn module_main() {
 
     // Init and start the benchmark with custom routine and required parameters
     let mut benchmark = Benchmark::<MyBenchmarkRoutine>::new(parameters);
-    benchmark.start_benchmark().expect("fail to start benchmark");
+    benchmark.start().expect("fail to start benchmark");
 
     // Do some statistics in the main thread
     for _i in 0..TIME {
@@ -79,6 +79,6 @@ fn module_main() {
     }
 
     // Stop the benchmark
-    benchmark.stop_benchmark().expect("fail to stop benchmark");
+    benchmark.stop().expect("fail to stop benchmark");
     log::info!("total complete {} operations in {} second(s)", sum, TIME);
 }
