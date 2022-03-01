@@ -88,14 +88,14 @@ where
     R: BenchReporter,
 {
     extern "C" fn worker(ctx: *mut c_void) -> c_int {
-        let mut ctx = unsafe { Box::from_raw(ctx as *mut ThreadLocalCTX<B::Args, R>) };
+        let ctx = unsafe { Box::from_raw(ctx as *mut ThreadLocalCTX<B::Args, R>) };
 
         log::info!("Bench thread {} started", ctx.id);
         let mut bench = B::thread_local_init(&ctx.arg);
 
         while !kthread::should_stop() {
             compiler_fence(Ordering::SeqCst);
-            ctx.reporter.start();
+            unsafe { (*ctx.reporter.get()).start() };
             let result = bench.op();
             if result.is_err() {
                 log::error!("error in benchmark routine, wait to exit!");
@@ -104,7 +104,7 @@ where
                 }
                 break;
             }
-            ctx.reporter.end();
+            unsafe { (*ctx.reporter.get()).end() };
         }
 
         log::info!("Bench thread {} finished", ctx.id);
