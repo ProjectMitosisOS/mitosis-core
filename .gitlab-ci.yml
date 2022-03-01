@@ -25,7 +25,7 @@ unittest-mitosis-job:   # This job runs in the test stage.
     - sudo dmesg -C
     - python3 mitosis/unitests/run_tests.py
   after_script:
-    - bash /home/yyh/is_ok.sh
+    - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
 
 unittest-os-network-job:   # This job also runs in the test stage.
   stage: test    # It can run at the same time as unit-test-job (in parallel).
@@ -34,4 +34,4 @@ unittest-os-network-job:   # This job also runs in the test stage.
     - sudo dmesg -C
     - python3 os-network/unitests/run_tests.py
   after_script:
-    - bash /home/yyh/is_ok.sh
+    - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
