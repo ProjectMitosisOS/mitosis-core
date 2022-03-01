@@ -8,18 +8,24 @@ stages:          # List of stages for jobs, and their order of execution
 
 deps-job:
   stage: deps
+  tags: 
+    - ssh
+    - mitosis
   script:
     - chmod +x ci/install_deps.sh
     - ./ci/install_deps.sh
 
 unittest-mitosis-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
+  tags:
+    - ssh
+    - mitosis
   script:
     - echo "Running unit tests on mitosis"
     - sudo dmesg -C
     - python3 mitosis/unitests/run_tests.py
   after_script:
-    - dmesg
+    - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
 
 unittest-os-network-job:   # This job also runs in the test stage.
   stage: test    # It can run at the same time as unit-test-job (in parallel).
@@ -28,4 +34,4 @@ unittest-os-network-job:   # This job also runs in the test stage.
     - sudo dmesg -C
     - python3 os-network/unitests/run_tests.py
   after_script:
-    - dmesg
+    - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
