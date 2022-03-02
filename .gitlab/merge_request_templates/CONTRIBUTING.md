@@ -8,3 +8,5 @@ Contributing to Mitosis
 
 - [ ] Each single function should be written in a single `fn test_xxx()`, with comments describing what is testing and what is the pre-request (e.g., `init_ctx`) of this function.
 
+- [ ] If you update the submodule, be sure to run `git submodule update --init --recursive --remote` to update the references.
+
