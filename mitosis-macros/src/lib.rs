@@ -5,7 +5,7 @@ use proc_macro2::{Ident, Span};
 use quote::quote;
 
 /// Create a getter to an extern variable in C (used for passing parameters)
-/// 
+///
 /// ```
 /// declare_module_param!(sample_long,u64);
 /// ```
@@ -32,22 +32,22 @@ pub fn declare_module_param(args: TokenStream) -> TokenStream {
 }
 
 
-/// Generate code for declaring global variables in rust 
-/// Note: can only be used in lib.rs 
-/// 
+/// Generate code for declaring global variables in rust
+/// Note: can only be used in lib.rs
+///
 /// ```
 /// declare_global!(TEST,u64);
-/// 
+///
 /// ```
-/// 
+///
 /// The global variable can be init via:
 /// ```
-/// TEST::init(some exp); 
+/// TEST::init(some exp);
 /// ```
-/// 
+///
 /// The mut reference to global variable can be accessed via:
 /// ```
-/// let test = unsafe { TEST::get_mut() }; 
+/// let test = unsafe { TEST::get_mut() };
 /// ```
 ///
 #[proc_macro]
@@ -62,16 +62,16 @@ pub fn declare_global(args: TokenStream) -> TokenStream {
     quote! {
         static mut #param_name : Option<#param_type> = None;
 
-        mod #param_name { 
-            pub unsafe fn init(v : #param_type) { 
-                crate::#param_name = Some(v); 
+        mod #param_name {
+            pub unsafe fn init(v : #param_type) {
+                crate::#param_name = Some(v);
             }
-            
+
             #[inline]
             pub unsafe fn get_mut() -> &'static mut #param_type {
                 match crate::#param_name {
                     Some(ref mut x) => &mut *x,
-                    None => panic!()        
+                    None => panic!()
                 }
             }
 
@@ -79,9 +79,9 @@ pub fn declare_global(args: TokenStream) -> TokenStream {
             pub unsafe fn get_ref() -> &'static #param_type {
                 match crate::#param_name {
                     Some(ref x) => & *x,
-                    None => panic!()        
+                    None => panic!()
                 }
-            }            
+            }
 
             #[inline]
             pub unsafe fn drop() {
@@ -90,4 +90,3 @@ pub fn declare_global(args: TokenStream) -> TokenStream {
         }
     }.into()
 }
-
