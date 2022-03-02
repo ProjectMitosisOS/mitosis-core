@@ -5,11 +5,12 @@ extern crate alloc;
 
 use alloc::string::String;
 
-use krdma_test::{krdma_main, krdma_drop};
+use krdma_test::{krdma_test, krdma_drop};
 
 use rust_kernel_linux_util::kthread;
 use rust_kernel_linux_util::linux_kernel_module;
 use rust_kernel_linux_util::string::ptr2string;
+use rust_kernel_linux_util::timer::KTimer;
 use rust_kernel_linux_util as log;
 
 use mitosis_util::bench::*;
@@ -42,12 +43,12 @@ pub struct RCConnBench<'a> {
 }
 
 impl RCConnBench<'_> {
-    fn local_nic(thread_id: u64) -> &'static RNIC {
+    fn get_local_nic(thread_id: u64) -> &'static RNIC {
         let index = thread_id % nic_count::read();
         unsafe { &KDRIVER::get_ref().devices()[index as usize] }
     }
 
-    fn conn_meta(thread_id: u64) -> ConnMeta {
+    fn get_conn_meta(thread_id: u64) -> ConnMeta {
         let index = thread_id % unsafe { *REMOTE_NIC_COUNT::get_ref() };
         let gid = unsafe { REMOTE_GIDS::get_ref()[index as usize].clone() };
         let service_id = remote_service_id_base::read();
@@ -64,8 +65,8 @@ impl<'a> BenchRoutine for RCConnBench<'a> {
 
     fn thread_local_init(args: &Self::Args) -> Self {
         let thread_id = *args;
-        let local_nic = Self::local_nic(thread_id);
-        let conn_meta = Self::conn_meta(thread_id);
+        let local_nic = Self::get_local_nic(thread_id);
+        let conn_meta = Self::get_conn_meta(thread_id);
         let factory = RCFactoryWPath::new(local_nic).unwrap();
         let conn_meta = factory.convert_meta(conn_meta).unwrap();
         Self {
@@ -87,28 +88,43 @@ impl<'a> BenchRoutine for RCConnBench<'a> {
 
 use alloc::boxed::Box;
 
-#[krdma_main]
 fn module_main() {
-    unsafe {
-        REMOTE_GIDS::init(ptr2string(gids::read()).split(",").map(|x| String::from(x.trim())).collect());
-        KDRIVER::init(KDriver::create().unwrap());
-        REMOTE_NIC_COUNT::init(REMOTE_GIDS::get_ref().len() as u64);
-    }
-    
-    let mut bench = Benchmark::<RCConnBench,ThptReporter>::new();
+    let mut global_reporter = GlobalReporter::<ConThptReporter>::new();
+    let mut bench = Benchmark::<RCConnBench,ConThptReporter>::new();
 
     for i in 0..thread_count::read() {
-        bench.spawn(Box::new(
-            ThreadLocalCTX::new(i, ThptReporter::new(), i as usize)
-        )).expect("should succeed");
+        let ctx = Box::new(ThreadLocalCTX::new(i, ConThptReporter::new(), i as usize));
+        global_reporter.add(ctx.get_reporter());
+        bench.spawn(ctx).expect("should succeed");
     }
 
+    let mut timer = KTimer::new();
     for _ in 0..(running_secs::read() / report_interval::read()) {
         kthread::sleep(report_interval::read());
+        let count = global_reporter.report() as i64;
+        let passed = timer.get_passed_usec();
+        let thpt = 1000000 * count / passed;
+
+        timer.reset();
+        log::info!(
+            "check global reporter states: {}, passed: {}. thpt : {}",
+            count,
+            passed,
+            thpt
+        );
     }
 
     for _ in 0..thread_count::read() {
         bench.stop_one().unwrap();
+    }
+}
+
+#[krdma_test(module_main)]
+fn ctx_init() {
+    unsafe {
+        REMOTE_GIDS::init(ptr2string(gids::read()).split(",").map(|x| String::from(x.trim())).collect());
+        KDRIVER::init(KDriver::create().unwrap());
+        REMOTE_NIC_COUNT::init(REMOTE_GIDS::get_ref().len() as u64);
     }
 }
 
