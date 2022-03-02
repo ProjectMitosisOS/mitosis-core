@@ -5,29 +5,28 @@ extern crate alloc;
 
 use alloc::string::String;
 
-use krdma_test::{krdma_test, krdma_drop};
+use krdma_test::{krdma_drop, krdma_main};
 
+use rust_kernel_linux_util as log;
 use rust_kernel_linux_util::kthread;
 use rust_kernel_linux_util::linux_kernel_module;
 use rust_kernel_linux_util::string::ptr2string;
 use rust_kernel_linux_util::timer::KTimer;
-use rust_kernel_linux_util as log;
 
 use mitosis_util::bench::*;
 use mitosis_util::reporter::*;
 
-use os_network::rdma::ConnMeta;
 use os_network::rdma::rc::RCFactoryWPath;
-use os_network::rdma::ConnMetaWPath;
+use os_network::rdma::{ConnMeta, ConnMetaWPath};
 use os_network::ConnFactory;
 
-use KRdmaKit::KDriver;
 use KRdmaKit::device::RNIC;
+use KRdmaKit::KDriver;
 
 use mitosis_macros::{declare_global, declare_module_param};
 
 declare_module_param!(remote_service_id_base, u64);
-declare_module_param!(nic_count, u64);
+declare_module_param!(nic_count, u64); // how many local NICs to use
 declare_module_param!(running_secs, u32);
 declare_module_param!(report_interval, u32);
 declare_module_param!(thread_count, u64);
@@ -35,22 +34,21 @@ declare_module_param!(gids, *mut u8);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(REMOTE_GIDS, alloc::vec::Vec<alloc::string::String>);
-declare_global!(REMOTE_NIC_COUNT, u64);
 
-pub struct RCConnBench<'a> {
+pub struct RCConnBenchWorker<'a> {
     factory: RCFactoryWPath<'a>,
     meta: ConnMetaWPath,
 }
 
-impl RCConnBench<'_> {
-    fn get_local_nic(thread_id: u64) -> &'static RNIC {
-        let index = thread_id % nic_count::read();
-        unsafe { &KDRIVER::get_ref().devices()[index as usize] }
+impl RCConnBenchWorker<'_> {
+    fn get_local_nic(thread_id: usize) -> &'static RNIC {
+        let index = thread_id % nic_count::read() as usize;
+        unsafe { &KDRIVER::get_ref().devices()[index] }
     }
 
-    fn get_conn_meta(thread_id: u64) -> ConnMeta {
-        let index = thread_id % unsafe { *REMOTE_NIC_COUNT::get_ref() };
-        let gid = unsafe { REMOTE_GIDS::get_ref()[index as usize].clone() };
+    fn get_conn_meta(thread_id: usize) -> ConnMeta {
+        let index = thread_id % unsafe { REMOTE_GIDS::get_ref().len() };
+        let gid = unsafe { REMOTE_GIDS::get_ref()[index].clone() };
         let service_id = remote_service_id_base::read();
         ConnMeta {
             gid: gid,
@@ -60,8 +58,8 @@ impl RCConnBench<'_> {
     }
 }
 
-impl<'a> BenchRoutine for RCConnBench<'a> {
-    type Args = u64;
+impl<'a> BenchRoutine for RCConnBenchWorker<'a> {
+    type Args = usize;
 
     fn thread_local_init(args: &Self::Args) -> Self {
         let thread_id = *args;
@@ -88,11 +86,26 @@ impl<'a> BenchRoutine for RCConnBench<'a> {
 
 use alloc::boxed::Box;
 
-fn module_main() {
-    let mut global_reporter = GlobalReporter::<ConThptReporter>::new();
-    let mut bench = Benchmark::<RCConnBench,ConThptReporter>::new();
+fn ctx_init() {
+    unsafe {
+        REMOTE_GIDS::init(
+            ptr2string(gids::read())
+                .split(",")
+                .map(|x| String::from(x.trim()))
+                .collect(),
+        );
+        KDRIVER::init(KDriver::create().unwrap());
+    }
+}
 
-    for i in 0..thread_count::read() {
+#[krdma_main]
+fn module_main() {
+    ctx_init();
+
+    let mut global_reporter = GlobalReporter::<ConThptReporter>::new();
+    let mut bench = Benchmark::<RCConnBenchWorker, ConThptReporter>::new();
+
+    for i in 0..thread_count::read() as usize {
         let ctx = Box::new(ThreadLocalCTX::new(i, ConThptReporter::new(), i as usize));
         global_reporter.add(ctx.get_reporter());
         bench.spawn(ctx).expect("should succeed");
@@ -116,15 +129,6 @@ fn module_main() {
 
     for _ in 0..thread_count::read() {
         bench.stop_one().unwrap();
-    }
-}
-
-#[krdma_test(module_main)]
-fn ctx_init() {
-    unsafe {
-        REMOTE_GIDS::init(ptr2string(gids::read()).split(",").map(|x| String::from(x.trim())).collect());
-        KDRIVER::init(KDriver::create().unwrap());
-        REMOTE_NIC_COUNT::init(REMOTE_GIDS::get_ref().len() as u64);
     }
 }
 
