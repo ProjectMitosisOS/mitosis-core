@@ -14,20 +14,20 @@ impl ThptReporter {
 impl BenchReporter for ThptReporter {
     type States = f64;
 
-    #[inline]
+    #[inline(always)]
     fn start(&mut self) {}
 
-    #[inline]
+    #[inline(always)]
     fn end(&mut self) {
         self.counter += 1;
     }
 
-    #[inline]
+    #[inline(always)]
     fn report(&self) -> f64 {
         self.counter as f64
     }
 
-    #[inline]
+    #[inline(always)]
     fn reset(&mut self) {
         self.counter = 0;
     }
@@ -47,20 +47,20 @@ impl ConThptReporter {
 impl BenchReporter for ConThptReporter {
     type States = u64;
 
-    #[inline]
+    #[inline(always)]
     fn start(&mut self) {}
 
-    #[inline]
+    #[inline(always)]
     fn end(&mut self) {
         self.next += 1;
     }
 
-    #[inline]
+    #[inline(always)]
     fn report(&self) -> Self::States {
         self.next - self.prev
     }
 
-    #[inline]
+    #[inline(always)]
     fn reset(&mut self) {
         self.prev = self.next
     }
