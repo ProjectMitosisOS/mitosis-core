@@ -13,6 +13,8 @@ use rust_kernel_linux_util::linux_kernel_module;
 use rust_kernel_linux_util::string::ptr2string;
 use rust_kernel_linux_util::timer::KTimer;
 
+use linux_kernel_module::c_types::*;
+
 use mitosis_util::bench::*;
 use mitosis_util::reporter::*;
 
@@ -26,10 +28,10 @@ use KRdmaKit::KDriver;
 use mitosis_macros::{declare_global, declare_module_param};
 
 declare_module_param!(remote_service_id_base, u64);
-declare_module_param!(nic_count, u64); // how many local NICs to use
-declare_module_param!(running_secs, u32);
-declare_module_param!(report_interval, u32);
-declare_module_param!(thread_count, u64);
+declare_module_param!(nic_count, c_uint); // how many local NICs to use
+declare_module_param!(running_secs, c_uint);
+declare_module_param!(report_interval, c_uint);
+declare_module_param!(thread_count, c_uint);
 declare_module_param!(gids, *mut u8);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
