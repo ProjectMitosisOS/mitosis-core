@@ -1,0 +1,80 @@
+wtx ipadsipadsipads+1S None
+None
+(execute cmd @val01 sudo rmmod rc_conn_server_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_server_tests.ko nic_count=2 service_id_base=50
+(execute cmd @val04 sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=2 running_secs=60 report_interval=1 thread_count=4 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c,fe80:0000:0000:0000:ec0d:9a03:0078:6376" && dmesg && sleep 1
+exit  val01
+@val04      [573054.198454] in krdma test framework test functions
+@val04      [573054.202346] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/lib.rs@80: [INFO ] - KRdmaKit driver initialization done.
+@val04      [573054.202407] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 0 started
+@val04      [573054.202447] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 1 started
+@val04      [573054.202468] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 2 started
+@val04      [573054.202497] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 3 started
+@val04      [573055.233217] src/lib.rs@109: [INFO ] - check global reporter states: 833, passed: 1030731. thpt : 808
+@val04      [573056.257209] src/lib.rs@109: [INFO ] - check global reporter states: 835, passed: 1024000. thpt : 815
+@val04      [573057.281202] src/lib.rs@109: [INFO ] - check global reporter states: 880, passed: 1024001. thpt : 859
+@val04      [573058.305194] src/lib.rs@109: [INFO ] - check global reporter states: 894, passed: 1024000. thpt : 873
+@val04      [573059.329194] src/lib.rs@109: [INFO ] - check global reporter states: 877, passed: 1024005. thpt : 856
+@val04      [573060.353182] src/lib.rs@109: [INFO ] - check global reporter states: 864, passed: 1023998. thpt : 843
+@val04      [573061.377174] src/lib.rs@109: [INFO ] - check global reporter states: 832, passed: 1023999. thpt : 812
+@val04      [573062.401162] src/lib.rs@109: [INFO ] - check global reporter states: 854, passed: 1023997. thpt : 833
+@val04      [573063.425190] src/lib.rs@109: [INFO ] - check global reporter states: 859, passed: 1024032. thpt : 838
+@val04      [573064.449155] src/lib.rs@109: [INFO ] - check global reporter states: 843, passed: 1023973. thpt : 823
+@val04      [573065.473153] src/lib.rs@109: [INFO ] - check global reporter states: 856, passed: 1024005. thpt : 835
+@val04      [573066.497132] src/lib.rs@109: [INFO ] - check global reporter states: 832, passed: 1023989. thpt : 812
+@val04      [573067.521126] src/lib.rs@109: [INFO ] - check global reporter states: 840, passed: 1024001. thpt : 820
+@val04      [573068.545117] src/lib.rs@109: [INFO ] - check global reporter states: 833, passed: 1023999. thpt : 813
+@val04      [573069.569108] src/lib.rs@109: [INFO ] - check global reporter states: 849, passed: 1023999. thpt : 829
+@val04      [573070.593136] src/lib.rs@109: [INFO ] - check global reporter states: 836, passed: 1024034. thpt : 816
+@val04      [573071.617123] src/lib.rs@109: [INFO ] - check global reporter states: 836, passed: 1023994. thpt : 816
+@val04      [573072.641117] src/lib.rs@109: [INFO ] - check global reporter states: 819, passed: 1024004. thpt : 799
+@val04      [573073.665125] src/lib.rs@109: [INFO ] - check global reporter states: 824, passed: 1024015. thpt : 804
+@val04      [573074.689098] src/lib.rs@109: [INFO ] - check global reporter states: 839, passed: 1023980. thpt : 819
+@val04      [573075.713073] src/lib.rs@109: [INFO ] - check global reporter states: 836, passed: 1023980. thpt : 816
+@val04      [573076.737083] src/lib.rs@109: [INFO ] - check global reporter states: 854, passed: 1024020. thpt : 833
+@val04      [573077.761074] src/lib.rs@109: [INFO ] - check global reporter states: 848, passed: 1023999. thpt : 828
+@val04      [573078.785102] src/lib.rs@109: [INFO ] - check global reporter states: 837, passed: 1024035. thpt : 817
+@val04      [573079.809068] src/lib.rs@109: [INFO ] - check global reporter states: 845, passed: 1023974. thpt : 825
+@val04      [573080.833049] src/lib.rs@109: [INFO ] - check global reporter states: 851, passed: 1023989. thpt : 831
+@val04      [573081.857044] src/lib.rs@109: [INFO ] - check global reporter states: 856, passed: 1024002. thpt : 835
+@val04      [573082.881038] src/lib.rs@109: [INFO ] - check global reporter states: 844, passed: 1024001. thpt : 824
+@val04      [573083.905044] src/lib.rs@109: [INFO ] - check global reporter states: 829, passed: 1024011. thpt : 809
+@val04      [573084.929017] src/lib.rs@109: [INFO ] - check global reporter states: 845, passed: 1023982. thpt : 825
+@val04      [573085.953032] src/lib.rs@109: [INFO ] - check global reporter states: 855, passed: 1024020. thpt : 834
+@val04      [573086.977009] src/lib.rs@109: [INFO ] - check global reporter states: 831, passed: 1023987. thpt : 811
+@val04      [573088.001013] src/lib.rs@109: [INFO ] - check global reporter states: 844, passed: 1024009. thpt : 824
+@val04      [573089.025014] src/lib.rs@109: [INFO ] - check global reporter states: 842, passed: 1024009. thpt : 822
+@val04      [573090.048982] src/lib.rs@109: [INFO ] - check global reporter states: 843, passed: 1023978. thpt : 823
+@val04      [573091.072991] src/lib.rs@109: [INFO ] - check global reporter states: 835, passed: 1024014. thpt : 815
+@val04      [573092.096965] src/lib.rs@109: [INFO ] - check global reporter states: 840, passed: 1023985. thpt : 820
+@val04      [573093.120957] src/lib.rs@109: [INFO ] - check global reporter states: 852, passed: 1023999. thpt : 832
+@val04      [573094.144951] src/lib.rs@109: [INFO ] - check global reporter states: 852, passed: 1024001. thpt : 832
+@val04      [573095.168942] src/lib.rs@109: [INFO ] - check global reporter states: 844, passed: 1023999. thpt : 824
+@val04      [573096.192933] src/lib.rs@109: [INFO ] - check global reporter states: 849, passed: 1023998. thpt : 829
+@val04      [573097.216946] src/lib.rs@109: [INFO ] - check global reporter states: 860, passed: 1024021. thpt : 839
+@val04      [573098.240916] src/lib.rs@109: [INFO ] - check global reporter states: 871, passed: 1023978. thpt : 850
+@val04      [573099.264923] src/lib.rs@109: [INFO ] - check global reporter states: 826, passed: 1024015. thpt : 806
+@val04      [573100.288923] src/lib.rs@109: [INFO ] - check global reporter states: 839, passed: 1024007. thpt : 819
+@val04      [573101.312924] src/lib.rs@109: [INFO ] - check global reporter states: 851, passed: 1024009. thpt : 831
+@val04      [573102.336908] src/lib.rs@109: [INFO ] - check global reporter states: 837, passed: 1023989. thpt : 817
+@val04      [573103.360890] src/lib.rs@109: [INFO ] - check global reporter states: 839, passed: 1023992. thpt : 819
+@val04      [573104.384872] src/lib.rs@109: [INFO ] - check global reporter states: 830, passed: 1023989. thpt : 810
+@val04      [573105.408870] src/lib.rs@109: [INFO ] - check global reporter states: 835, passed: 1024006. thpt : 815
+@val04      [573106.432875] src/lib.rs@109: [INFO ] - check global reporter states: 830, passed: 1024011. thpt : 810
+@val04      [573107.456866] src/lib.rs@109: [INFO ] - check global reporter states: 831, passed: 1023998. thpt : 811
+@val04      [573108.480867] src/lib.rs@109: [INFO ] - check global reporter states: 834, passed: 1024009. thpt : 814
+@val04      [573109.504836] src/lib.rs@109: [INFO ] - check global reporter states: 844, passed: 1023979. thpt : 824
+@val04      [573110.528857] src/lib.rs@109: [INFO ] - check global reporter states: 852, passed: 1024026. thpt : 832
+@val04      [573111.552809] src/lib.rs@109: [INFO ] - check global reporter states: 841, passed: 1023962. thpt : 821
+@val04      [573112.576792] src/lib.rs@109: [INFO ] - check global reporter states: 843, passed: 1023991. thpt : 823
+@val04      [573113.600809] src/lib.rs@109: [INFO ] - check global reporter states: 839, passed: 1024024. thpt : 819
+@val04      [573114.624827] src/lib.rs@109: [INFO ] - check global reporter states: 834, passed: 1024023. thpt : 814
+@val04      [573115.648790] src/lib.rs@109: [INFO ] - check global reporter states: 827, passed: 1023973. thpt : 807
+@val04      [573115.650971] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 3 finished
+@val04      [573115.651713] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [573115.656329] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 2 finished
+@val04      [573115.657150] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [573115.658932] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 1 finished
+@val04      [573115.659362] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [573115.663591] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 0 finished
+@val04      [573115.664065] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+exit  val04
