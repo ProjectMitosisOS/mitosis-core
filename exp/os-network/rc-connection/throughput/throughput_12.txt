@@ -1,104 +1,74 @@
 wtx ipadsipadsipads+1S None
 None
 (execute cmd @val01 sudo rmmod rc_conn_server_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_server_tests.ko nic_count=2 service_id_base=50
-(execute cmd @val02 sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=2 running_secs=60 report_interval=1 thread_count=12 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c,fe80:0000:0000:0000:ec0d:9a03:0078:6376" && dmesg && sleep 1
+(execute cmd @val04 sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=2 running_secs=30 report_interval=1 thread_count=12 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c,fe80:0000:0000:0000:ec0d:9a03:0078:6376" && dmesg && sleep 1
 exit  val01
-@val02      [146393.385081] in krdma test framework test functions
-@val02      [146393.387837] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/lib.rs@80: [INFO ] - KRdmaKit driver initialization done.
-@val02      [146393.387903] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 0 started
-@val02      [146393.387922] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 1 started
-@val02      [146393.387948] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 2 started
-@val02      [146393.387969] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 3 started
-@val02      [146393.388000] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 4 started
-@val02      [146393.388023] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 5 started
-@val02      [146393.388046] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 6 started
-@val02      [146393.388075] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 7 started
-@val02      [146393.388106] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 8 started
-@val02      [146393.388131] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 9 started
-@val02      [146393.388176] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 10 started
-@val02      [146393.388204] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 11 started
-@val02      [146394.392414] src/lib.rs@109: [INFO ] - check global reporter states: 830, passed: 1004219. thpt : 826
-@val02      [146395.416403] src/lib.rs@109: [INFO ] - check global reporter states: 885, passed: 1023998. thpt : 864
-@val02      [146396.440398] src/lib.rs@109: [INFO ] - check global reporter states: 903, passed: 1024004. thpt : 881
-@val02      [146397.464409] src/lib.rs@109: [INFO ] - check global reporter states: 888, passed: 1024017. thpt : 867
-@val02      [146398.488375] src/lib.rs@109: [INFO ] - check global reporter states: 903, passed: 1023979. thpt : 881
-@val02      [146399.512382] src/lib.rs@109: [INFO ] - check global reporter states: 896, passed: 1024014. thpt : 874
-@val02      [146400.536374] src/lib.rs@109: [INFO ] - check global reporter states: 889, passed: 1024001. thpt : 868
-@val02      [146401.560382] src/lib.rs@109: [INFO ] - check global reporter states: 897, passed: 1024019. thpt : 875
-@val02      [146402.584362] src/lib.rs@109: [INFO ] - check global reporter states: 892, passed: 1023987. thpt : 871
-@val02      [146403.608343] src/lib.rs@109: [INFO ] - check global reporter states: 892, passed: 1023990. thpt : 871
-@val02      [146404.632324] src/lib.rs@109: [INFO ] - check global reporter states: 892, passed: 1023992. thpt : 871
-@val02      [146405.656329] src/lib.rs@109: [INFO ] - check global reporter states: 873, passed: 1024012. thpt : 852
-@val02      [146406.680304] src/lib.rs@109: [INFO ] - check global reporter states: 845, passed: 1023985. thpt : 825
-@val02      [146407.704294] src/lib.rs@109: [INFO ] - check global reporter states: 874, passed: 1024000. thpt : 853
-@val02      [146408.728308] src/lib.rs@109: [INFO ] - check global reporter states: 869, passed: 1024023. thpt : 848
-@val02      [146409.752294] src/lib.rs@109: [INFO ] - check global reporter states: 877, passed: 1023992. thpt : 856
-@val02      [146410.776272] src/lib.rs@109: [INFO ] - check global reporter states: 881, passed: 1023989. thpt : 860
-@val02      [146411.800280] src/lib.rs@109: [INFO ] - check global reporter states: 867, passed: 1024016. thpt : 846
-@val02      [146412.824246] src/lib.rs@109: [INFO ] - check global reporter states: 869, passed: 1023975. thpt : 848
-@val02      [146413.848239] src/lib.rs@109: [INFO ] - check global reporter states: 876, passed: 1024001. thpt : 855
-@val02      [146414.872231] src/lib.rs@109: [INFO ] - check global reporter states: 874, passed: 1024001. thpt : 853
-@val02      [146415.896220] src/lib.rs@109: [INFO ] - check global reporter states: 878, passed: 1023997. thpt : 857
-@val02      [146416.920234] src/lib.rs@109: [INFO ] - check global reporter states: 863, passed: 1024022. thpt : 842
-@val02      [146417.944204] src/lib.rs@109: [INFO ] - check global reporter states: 886, passed: 1023979. thpt : 865
-@val02      [146418.968231] src/lib.rs@109: [INFO ] - check global reporter states: 880, passed: 1024035. thpt : 859
-@val02      [146419.992188] src/lib.rs@109: [INFO ] - check global reporter states: 1158, passed: 1023967. thpt : 1130
-@val02      [146421.016174] src/lib.rs@109: [INFO ] - check global reporter states: 1011, passed: 1023994. thpt : 987
-@val02      [146422.040170] src/lib.rs@109: [INFO ] - check global reporter states: 814, passed: 1024003. thpt : 794
-@val02      [146423.064159] src/lib.rs@109: [INFO ] - check global reporter states: 839, passed: 1024000. thpt : 819
-@val02      [146424.088163] src/lib.rs@109: [INFO ] - check global reporter states: 826, passed: 1024010. thpt : 806
-@val02      [146425.112142] src/lib.rs@109: [INFO ] - check global reporter states: 834, passed: 1023991. thpt : 814
-@val02      [146426.136133] src/lib.rs@109: [INFO ] - check global reporter states: 829, passed: 1024000. thpt : 809
-@val02      [146427.160100] src/lib.rs@109: [INFO ] - check global reporter states: 821, passed: 1023974. thpt : 801
-@val02      [146428.184110] src/lib.rs@109: [INFO ] - check global reporter states: 1079, passed: 1024020. thpt : 1053
-@val02      [146429.208119] src/lib.rs@109: [INFO ] - check global reporter states: 1095, passed: 1024016. thpt : 1069
-@val02      [146430.232068] src/lib.rs@109: [INFO ] - check global reporter states: 826, passed: 1023960. thpt : 806
-@val02      [146431.256083] src/lib.rs@109: [INFO ] - check global reporter states: 821, passed: 1024024. thpt : 801
-@val02      [146432.280076] src/lib.rs@109: [INFO ] - check global reporter states: 824, passed: 1024002. thpt : 804
-@val02      [146433.304082] src/lib.rs@109: [INFO ] - check global reporter states: 1107, passed: 1024013. thpt : 1081
-@val02      [146434.328052] src/lib.rs@109: [INFO ] - check global reporter states: 957, passed: 1023981. thpt : 934
-@val02      [146435.352051] src/lib.rs@109: [INFO ] - check global reporter states: 871, passed: 1024008. thpt : 850
-@val02      [146436.376039] src/lib.rs@109: [INFO ] - check global reporter states: 881, passed: 1023997. thpt : 860
-@val02      [146437.400055] src/lib.rs@109: [INFO ] - check global reporter states: 856, passed: 1024021. thpt : 835
-@val02      [146438.424022] src/lib.rs@109: [INFO ] - check global reporter states: 870, passed: 1023979. thpt : 849
-@val02      [146439.448034] src/lib.rs@109: [INFO ] - check global reporter states: 866, passed: 1024021. thpt : 845
-@val02      [146440.472003] src/lib.rs@109: [INFO ] - check global reporter states: 872, passed: 1023977. thpt : 851
-@val02      [146441.496022] src/lib.rs@109: [INFO ] - check global reporter states: 858, passed: 1024021. thpt : 837
-@val02      [146442.520020] src/lib.rs@109: [INFO ] - check global reporter states: 852, passed: 1024014. thpt : 832
-@val02      [146443.543975] src/lib.rs@109: [INFO ] - check global reporter states: 865, passed: 1023964. thpt : 844
-@val02      [146444.567984] src/lib.rs@109: [INFO ] - check global reporter states: 871, passed: 1024016. thpt : 850
-@val02      [146445.591961] src/lib.rs@109: [INFO ] - check global reporter states: 873, passed: 1023988. thpt : 852
-@val02      [146446.615969] src/lib.rs@109: [INFO ] - check global reporter states: 854, passed: 1024017. thpt : 833
-@val02      [146447.639942] src/lib.rs@109: [INFO ] - check global reporter states: 867, passed: 1023982. thpt : 846
-@val02      [146448.663930] src/lib.rs@109: [INFO ] - check global reporter states: 894, passed: 1023997. thpt : 873
-@val02      [146449.687921] src/lib.rs@109: [INFO ] - check global reporter states: 871, passed: 1024000. thpt : 850
-@val02      [146450.711888] src/lib.rs@109: [INFO ] - check global reporter states: 865, passed: 1023975. thpt : 844
-@val02      [146451.735915] src/lib.rs@109: [INFO ] - check global reporter states: 852, passed: 1024035. thpt : 832
-@val02      [146452.759911] src/lib.rs@109: [INFO ] - check global reporter states: 838, passed: 1024003. thpt : 818
-@val02      [146453.783901] src/lib.rs@109: [INFO ] - check global reporter states: 869, passed: 1023998. thpt : 848
-@val02      [146454.807877] src/lib.rs@109: [INFO ] - check global reporter states: 854, passed: 1023988. thpt : 833
-@val02      [146454.809048] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 11 finished
-@val02      [146454.809833] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.816673] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 10 finished
-@val02      [146454.817393] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.820119] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 9 finished
-@val02      [146454.820530] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.820733] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 8 finished
-@val02      [146454.821264] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.829206] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 7 finished
-@val02      [146454.829581] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.829989] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 6 finished
-@val02      [146454.830348] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.831817] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 5 finished
-@val02      [146454.832189] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.832916] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 4 finished
-@val02      [146454.833276] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.834674] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 3 finished
-@val02      [146454.835167] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.835263] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 2 finished
-@val02      [146454.835633] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.836260] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 1 finished
-@val02      [146454.836712] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-@val02      [146454.839742] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 0 finished
-@val02      [146454.840180] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
-exit  val02
+@val04      [575774.866834] in krdma test framework test functions
+@val04      [575774.870610] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/lib.rs@80: [INFO ] - KRdmaKit driver initialization done.
+@val04      [575774.870657] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 0 started
+@val04      [575774.870681] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 1 started
+@val04      [575774.870707] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 2 started
+@val04      [575774.870733] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 3 started
+@val04      [575774.870759] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 4 started
+@val04      [575774.870784] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 5 started
+@val04      [575774.870814] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 6 started
+@val04      [575774.870842] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 7 started
+@val04      [575774.870865] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 8 started
+@val04      [575774.870894] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 9 started
+@val04      [575774.870923] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 10 started
+@val04      [575774.870955] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@93: [INFO ] - Bench thread 11 started
+@val04      [575775.885581] src/lib.rs@109: [INFO ] - check global reporter states: 850, passed: 1014631. thpt : 837
+@val04      [575776.909570] src/lib.rs@109: [INFO ] - check global reporter states: 864, passed: 1023997. thpt : 843
+@val04      [575777.933594] src/lib.rs@109: [INFO ] - check global reporter states: 885, passed: 1024030. thpt : 864
+@val04      [575778.957573] src/lib.rs@109: [INFO ] - check global reporter states: 864, passed: 1023983. thpt : 843
+@val04      [575779.985587] src/lib.rs@109: [INFO ] - check global reporter states: 909, passed: 1028022. thpt : 884
+@val04      [575781.005545] src/lib.rs@109: [INFO ] - check global reporter states: 890, passed: 1019965. thpt : 872
+@val04      [575782.029554] src/lib.rs@109: [INFO ] - check global reporter states: 884, passed: 1024012. thpt : 863
+@val04      [575783.053534] src/lib.rs@109: [INFO ] - check global reporter states: 871, passed: 1023989. thpt : 850
+@val04      [575784.077524] src/lib.rs@109: [INFO ] - check global reporter states: 863, passed: 1023996. thpt : 842
+@val04      [575785.101510] src/lib.rs@109: [INFO ] - check global reporter states: 905, passed: 1023992. thpt : 883
+@val04      [575786.125515] src/lib.rs@109: [INFO ] - check global reporter states: 921, passed: 1024009. thpt : 899
+@val04      [575787.149529] src/lib.rs@109: [INFO ] - check global reporter states: 895, passed: 1024016. thpt : 874
+@val04      [575788.173503] src/lib.rs@109: [INFO ] - check global reporter states: 901, passed: 1023987. thpt : 879
+@val04      [575789.197491] src/lib.rs@109: [INFO ] - check global reporter states: 906, passed: 1023995. thpt : 884
+@val04      [575790.221502] src/lib.rs@109: [INFO ] - check global reporter states: 876, passed: 1024014. thpt : 855
+@val04      [575791.245529] src/lib.rs@109: [INFO ] - check global reporter states: 864, passed: 1024034. thpt : 843
+@val04      [575792.269506] src/lib.rs@109: [INFO ] - check global reporter states: 882, passed: 1023982. thpt : 861
+@val04      [575793.293474] src/lib.rs@109: [INFO ] - check global reporter states: 886, passed: 1023977. thpt : 865
+@val04      [575794.317493] src/lib.rs@109: [INFO ] - check global reporter states: 880, passed: 1024023. thpt : 859
+@val04      [575795.341468] src/lib.rs@109: [INFO ] - check global reporter states: 861, passed: 1023983. thpt : 840
+@val04      [575796.365435] src/lib.rs@109: [INFO ] - check global reporter states: 866, passed: 1023969. thpt : 845
+@val04      [575797.389461] src/lib.rs@109: [INFO ] - check global reporter states: 879, passed: 1024036. thpt : 858
+@val04      [575798.413493] src/lib.rs@109: [INFO ] - check global reporter states: 870, passed: 1024038. thpt : 849
+@val04      [575799.437430] src/lib.rs@109: [INFO ] - check global reporter states: 875, passed: 1023943. thpt : 854
+@val04      [575800.461438] src/lib.rs@109: [INFO ] - check global reporter states: 867, passed: 1024015. thpt : 846
+@val04      [575801.485417] src/lib.rs@109: [INFO ] - check global reporter states: 860, passed: 1023985. thpt : 839
+@val04      [575802.509440] src/lib.rs@109: [INFO ] - check global reporter states: 873, passed: 1024030. thpt : 852
+@val04      [575803.533434] src/lib.rs@109: [INFO ] - check global reporter states: 856, passed: 1023998. thpt : 835
+@val04      [575804.557400] src/lib.rs@109: [INFO ] - check global reporter states: 860, passed: 1023974. thpt : 839
+@val04      [575805.581409] src/lib.rs@109: [INFO ] - check global reporter states: 874, passed: 1024016. thpt : 853
+@val04      [575805.589103] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 11 finished
+@val04      [575805.589938] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.601084] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 10 finished
+@val04      [575805.601972] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.612261] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 9 finished
+@val04      [575805.612671] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.612758] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 8 finished
+@val04      [575805.613077] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.622267] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 7 finished
+@val04      [575805.622750] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.632604] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 6 finished
+@val04      [575805.632978] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.637116] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 5 finished
+@val04      [575805.637499] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.641248] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 4 finished
+@val04      [575805.641603] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.647622] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 3 finished
+@val04      [575805.648033] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.652553] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 2 finished
+@val04      [575805.652986] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.656069] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 1 finished
+@val04      [575805.656470] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+@val04      [575805.657149] /mnt/hdd/wtx/mitosis/mitosis-util/src/bench.rs@110: [INFO ] - Bench thread 0 finished
+@val04      [575805.657498] /mnt/hdd/wtx/mitosis/deps/rust-kernel-rdma/KRdmaKit/src/device.rs@215: [DEBUG] - finish reset one device
+exit  val04
