@@ -33,14 +33,17 @@ impl BenchReporter for ThptReporter {
     }
 }
 
+#[repr(align(128))]
+struct CachedAlignedu64(u64); 
+
 pub struct ConThptReporter {
-    prev: u64,
-    next: u64,
+    prev: CachedAlignedu64,
+    next: CachedAlignedu64,
 }
 
 impl ConThptReporter {
     pub fn new() -> Self {
-        Self { prev: 0, next: 0 }
+        Self { prev: CachedAlignedu64(0), next: CachedAlignedu64(0) }
     }
 }
 
@@ -52,16 +55,16 @@ impl BenchReporter for ConThptReporter {
 
     #[inline(always)]
     fn end(&mut self) {
-        self.next += 1;
+        self.next.0 += 1;
     }
 
     #[inline(always)]
     fn report(&self) -> Self::States {
-        self.next - self.prev
+        self.next.0 - self.prev.0
     }
 
     #[inline(always)]
     fn reset(&mut self) {
-        self.prev = self.next
+        self.prev.0 = self.next.0
     }
 }

@@ -5,8 +5,8 @@ use core::cell::UnsafeCell;
 pub struct ThreadLocalCTX<Arg, R> 
 where R : BenchReporter
 {
-    pub(crate) arg: Arg,    // input specific to this thread
     pub(crate) reporter: Arc<UnsafeCell<R>>, // reporter to report the benchmark stats
+    pub(crate) arg: Arg,    // input specific to this thread
     pub(crate) id: usize,   // thread id
     pub(crate) cpu_id: Option<u32>, // id of the cpu which this thread might be bound to
 }

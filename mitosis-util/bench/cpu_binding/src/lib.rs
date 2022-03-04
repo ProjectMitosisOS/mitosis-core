@@ -13,7 +13,7 @@ use mitosis_util::reporter::*;
 
 use mitosis_macros::declare_module_param;
 
-declare_module_param!(thread_count, u32);
+declare_module_param!(nthreads, u32);
 declare_module_param!(time, u32);
 declare_module_param!(report_interval, u32);
 
@@ -26,6 +26,7 @@ impl BenchRoutine for SampleBench {
         Self
     }
 
+    #[inline]
     fn op(&mut self) -> Result<(), ()> {
         Ok(())
     }
@@ -38,7 +39,7 @@ use rust_kernel_linux_util::timer::KTimer;
 fn test_global_reporter() {
     log::info!("==test global reporter==");
 
-    let thread_num = thread_count::read() as usize;
+    let thread_num = crate::nthreads::read() as usize;
 
     let mut global_reporter = GlobalReporter::<ConThptReporter>::new();
     let mut bench = Benchmark::<SampleBench, ConThptReporter>::new();
@@ -62,7 +63,7 @@ fn test_global_reporter() {
         timer.reset();
 
         log::info!(
-            "check global reporter states: {}, passed: {}. thpt : {} = {}M",
+            "perf w/o binding: {}, passed: {}. thpt : {} = {}M",
             count,
             passed,
             thpt,
@@ -78,7 +79,7 @@ fn test_global_reporter() {
 fn test_global_reporter_w_cpu_binding() {
     log::info!("==test global reporter with cpu binding==");
 
-    let thread_num = thread_count::read() as usize;
+    let thread_num = crate::nthreads::read() as usize;
 
     let mut global_reporter = GlobalReporter::<ConThptReporter>::new();
     let mut bench = Benchmark::<SampleBench, ConThptReporter>::new();
@@ -102,7 +103,7 @@ fn test_global_reporter_w_cpu_binding() {
         timer.reset();
 
         log::info!(
-            "check global reporter with cpu binding states: {}, passed: {}. thpt : {} = {}M",
+            "perf w/ binding {}, passed: {}. thpt : {} = {}M",
             count,
             passed,
             thpt,
