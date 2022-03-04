@@ -93,11 +93,15 @@ where
     B: BenchRoutine,
     R: BenchReporter,
 {
+    const YIELD_THRESHOLD: u64 = 1000;
+    
     extern "C" fn worker(ctx: *mut c_void) -> c_int {
         let ctx = unsafe { Box::from_raw(ctx as *mut ThreadLocalCTX<B::Args, R>) };
 
         log::info!("Bench thread {} started", ctx.id);
         let mut bench = B::thread_local_init(&ctx.arg);
+
+        let mut counter: u64 = 0;
 
         while !kthread::should_stop() {
             compiler_fence(Ordering::SeqCst);
@@ -111,6 +115,11 @@ where
                 break;
             }
             unsafe { (*ctx.reporter.get()).end() };
+            counter += 1;
+            if counter > Self::YIELD_THRESHOLD {
+                kthread::yield_now();
+                counter = 0;
+            }
         }
 
         log::info!("Bench thread {} finished", ctx.id);
