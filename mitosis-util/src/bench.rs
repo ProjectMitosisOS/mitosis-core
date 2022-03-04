@@ -62,11 +62,17 @@ where
         R: BenchReporter,
     {
         let id = ctx.id;
+        let cpu_id = ctx.cpu_id.clone();
         let ctx_ptr = Box::into_raw(ctx);
 
-        let builder = kthread::Builder::new()
+        let mut builder = kthread::Builder::new()
             .set_name(alloc::format!("Benchmark Thread {}", id))
             .set_parameter(ctx_ptr as *mut c_void);
+        
+        if cpu_id.is_some() {
+            builder = builder.bind(cpu_id.unwrap());
+        }
+
         let handler = builder.spawn(Self::worker)?;
         self.threads.push(handler);
 
