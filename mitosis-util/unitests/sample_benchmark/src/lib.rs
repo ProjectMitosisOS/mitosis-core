@@ -35,7 +35,7 @@ fn test_single_reporter() {
     let mut bench = Benchmark::<SampleBench, ThptReporter>::new();
     for i in 0..THREAD_COUNT {
         bench
-            .spawn(Box::new(ThreadLocalCTX::new((), ThptReporter::new(), i)))
+            .spawn(Box::new(ThreadLocalCTX::new((), ThptReporter::new(), i, None)))
             .expect("should succeed");
     }
 
@@ -60,7 +60,7 @@ fn test_global_reporter() {
     let mut bench = Benchmark::<SampleBench, ConThptReporter>::new();
 
     for i in 0..thread_num {
-        let ctx = Box::new(ThreadLocalCTX::new((), ConThptReporter::new(), i));
+        let ctx = Box::new(ThreadLocalCTX::new((), ConThptReporter::new(), i, None));
         global_reporter.add(ctx.get_reporter());
 
         bench.spawn(ctx).expect("should succeed");
