@@ -108,7 +108,7 @@ fn module_main() {
     let mut bench = Benchmark::<RCConnBenchWorker, ConThptReporter>::new();
 
     for i in 0..thread_count::read() as usize {
-        let ctx = Box::new(ThreadLocalCTX::new(i, ConThptReporter::new(), i as usize));
+        let ctx = Box::new(ThreadLocalCTX::new(i, ConThptReporter::new(), i as usize, Some(i as u32)));
         global_reporter.add(ctx.get_reporter());
         bench.spawn(ctx).expect("should succeed");
     }
