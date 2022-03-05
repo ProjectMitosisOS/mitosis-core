@@ -1,6 +1,6 @@
 # Benchmarks
 
-## CPU Binding
+## cpu_binding
 
 This benchmark measures the throughput of an nop operation on a single machine with the benchmark framework.
 
