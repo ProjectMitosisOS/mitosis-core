@@ -1,0 +1,4 @@
+[[pass]]
+host = "localhost"
+path = '~/projects/mos/mitosis-util/bench'
+cmd  = 'sudo rmmod cpu_binding_tests.ko;'

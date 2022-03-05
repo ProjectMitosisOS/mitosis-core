@@ -4,7 +4,23 @@
 
 This benchmark measures the throughput of an nop operation on a single machine with the benchmark framework.
 
-TODO
+### Building & running 
+
+Building:
+```
+cd PATH_TO_MITOSIS/mitosis-util/bench
+../../scripts/bootstrap_proxy.py -f cpu_binding/scripts/build.toml -u USER -p PWD
+```
+
+Running:
+```
+cd PATH_TO_MITOSIS/mitosis-util/bench
+../../scripts/bootstrap_proxy.py -f cpu_binding/scripts/run.toml -u USER -p PWD
+../../scripts/bootstrap_proxy.py -f cpu_binding/scripts/clean.toml -u USER -p PWD 
+```
+
+Be sure the clean the modules after the running!
+
 
 ### Reference Result
 

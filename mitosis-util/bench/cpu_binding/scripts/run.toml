@@ -1,0 +1,4 @@
+[[pass]]
+host = "localhost"
+path = '~/projects/mos/mitosis-util/bench'
+cmd  = 'sudo dmesg -C; sudo rmmod cpu_binding_tests.ko; sudo insmod cpu_binding_tests.ko time=10 nthreads=24 &  dmesg -wH'

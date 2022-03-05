@@ -349,7 +349,8 @@ def main():
         help='The configuration file to execute commands')
     arg_parser.add_argument('-b','--black', nargs='+', help='hosts to ignore', required=False)
     arg_parser.add_argument('-n','--num', help='num-passes to run', default = 128,type=int)
-
+    arg_parser.add_argument('-u','--user', help='the user name of the remote host', default = "wxd",type=str,dest='user')
+    arg_parser.add_argument('-p','--pwd', help='the password of the remote host', default = "123",type=str, dest='pwd')
 
     args = arg_parser.parse_args()
     num = args.num
@@ -358,8 +359,8 @@ def main():
 
     passes = config.get("pass",[])
 
-    user = config.get("user","xxx")
-    pwd  = config.get("pwd","xxx")
+    user = config.get("user",args.user)
+    pwd  = config.get("pwd",args.pwd)
     passp = config.get("passphrase",None)
     global_configs = config.get("global_configs","")
 
