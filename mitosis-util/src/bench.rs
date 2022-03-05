@@ -8,6 +8,7 @@ use rust_kernel_linux_util::kthread;
 use rust_kernel_linux_util::kthread::JoinHandler;
 use rust_kernel_linux_util::linux_kernel_module;
 use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
+use rust_kernel_linux_util::timer::KTimer;
 
 use crate::reporter::BenchReporter;
 
@@ -62,11 +63,17 @@ where
         R: BenchReporter,
     {
         let id = ctx.id;
+        let cpu_id = ctx.cpu_id.clone();
         let ctx_ptr = Box::into_raw(ctx);
 
-        let builder = kthread::Builder::new()
+        let mut builder = kthread::Builder::new()
             .set_name(alloc::format!("Benchmark Thread {}", id))
             .set_parameter(ctx_ptr as *mut c_void);
+
+        if cpu_id.is_some() {
+            builder = builder.bind(cpu_id.unwrap());
+        }
+
         let handler = builder.spawn(Self::worker)?;
         self.threads.push(handler);
 
@@ -87,17 +94,23 @@ where
     B: BenchRoutine,
     R: BenchReporter,
 {
+    const YIELD_THRESHOLD: usize = 10000;
+    const YIELD_TIME_USEC: i64 = 1000; // 1ms
+
     extern "C" fn worker(ctx: *mut c_void) -> c_int {
         let ctx = unsafe { Box::from_raw(ctx as *mut ThreadLocalCTX<B::Args, R>) };
 
-        log::info!("Bench thread {} started", ctx.id);
+        log::debug!("Bench thread {} started", ctx.id);
         let mut bench = B::thread_local_init(&ctx.arg);
+
+        let mut counter = 0;
+        let mut timer = KTimer::new();
 
         while !kthread::should_stop() {
             compiler_fence(Ordering::SeqCst);
             unsafe { (*ctx.reporter.get()).start() };
             let result = bench.op();
-            if result.is_err() {
+            if core::intrinsics::unlikely(result.is_err()) {
                 log::error!("error in benchmark routine, wait to exit!");
                 while !kthread::should_stop() {
                     kthread::sleep(1)
@@ -105,9 +118,17 @@ where
                 break;
             }
             unsafe { (*ctx.reporter.get()).end() };
+            counter += 1;
+            if core::intrinsics::unlikely(counter > Self::YIELD_THRESHOLD) {
+                if core::intrinsics::unlikely(timer.get_passed_usec() > Self::YIELD_TIME_USEC) {
+                    kthread::yield_now();
+                    timer.reset();
+                }
+                counter = 0;
+            }
         }
 
-        log::info!("Bench thread {} finished", ctx.id);
+        log::debug!("Bench thread {} finished", ctx.id);
         0
     }
 }

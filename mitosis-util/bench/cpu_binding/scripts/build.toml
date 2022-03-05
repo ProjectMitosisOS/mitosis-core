@@ -1,0 +1,4 @@
+[[pass]]
+host = "localhost"
+path = '~/projects/mos/mitosis-util/bench'
+cmd  = './build.py cpu_binding'
