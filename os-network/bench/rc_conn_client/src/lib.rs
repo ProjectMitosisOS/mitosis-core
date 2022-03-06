@@ -27,7 +27,7 @@ use KRdmaKit::KDriver;
 
 use mitosis_macros::{declare_global, declare_module_param};
 
-declare_module_param!(remote_service_id_base, u64);
+declare_module_param!(remote_service_id_base, c_uint);
 declare_module_param!(nic_count, c_uint); // how many local NICs to use
 declare_module_param!(running_secs, c_uint);
 declare_module_param!(report_interval, c_uint);
@@ -51,7 +51,7 @@ impl RCConnBenchWorker<'_> {
     fn get_conn_meta(thread_id: usize) -> ConnMeta {
         let index = thread_id % unsafe { REMOTE_GIDS::get_ref().len() };
         let gid = unsafe { REMOTE_GIDS::get_ref()[index].clone() };
-        let service_id = remote_service_id_base::read();
+        let service_id = remote_service_id_base::read() as u64;
         ConnMeta {
             gid: gid,
             service_id: service_id,

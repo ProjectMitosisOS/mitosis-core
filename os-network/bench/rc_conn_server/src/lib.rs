@@ -7,13 +7,15 @@ use alloc::vec::Vec;
 
 use krdma_test::{krdma_test, krdma_drop};
 
+use linux_kernel_module::c_types::*;
+
 use KRdmaKit::KDriver;
 use KRdmaKit::ctrl::RCtrl;
 
 use mitosis_macros::{declare_module_param, declare_global};
 
-declare_module_param!(nic_count, u64);
-declare_module_param!(service_id_base, u64);
+declare_module_param!(nic_count, c_uint);
+declare_module_param!(service_id_base, c_uint);
 
 use rust_kernel_linux_util::linux_kernel_module;
 use rust_kernel_linux_util as log;
@@ -37,7 +39,7 @@ fn module_main() {
     for i in 0..nic_count::read() {
         let service_id = service_id_base::read();
         log::info!("create RCtrl {} on context {}", service_id, i);
-        let rctrl = RCtrl::create(service_id, unsafe { &RCONTEXTS::get_ref()[i as usize] }).unwrap();
+        let rctrl = RCtrl::create(service_id as u64, unsafe { &RCONTEXTS::get_ref()[i as usize] }).unwrap();
         unsafe { RCTRLS::get_mut().push(rctrl) };
     }
 }
