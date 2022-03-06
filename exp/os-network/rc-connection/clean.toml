@@ -1,6 +1,3 @@
-user = 'wtx'
-pwd = 'ipadsipadsipads+1S'
-
 [[pass]]
 host = 'val01'
 path = ''
