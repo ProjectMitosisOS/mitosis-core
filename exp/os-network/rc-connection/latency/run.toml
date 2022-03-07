@@ -1,3 +1,5 @@
+global_configs = 'remote_service_id_base=50 nic_count=1 running_secs=30 report_interval=1 thread_count=1 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c"'
+
 [[pass]]
 host = 'val01'
 path = ''
@@ -6,4 +8,4 @@ cmd = 'sudo rmmod rc_conn_server_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev
 [[pass]]
 host = 'val04'
 path = ''
-cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=30 report_interval=1 thread_count=1 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko {} & dmesg -wH'
