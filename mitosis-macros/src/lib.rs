@@ -82,6 +82,11 @@ pub fn declare_global(args: TokenStream) -> TokenStream {
                     None => panic!()
                 }
             }
+
+            #[inline]
+            pub unsafe fn drop() {
+                crate::#param_name = None;
+            }
         }
     }.into()
 }

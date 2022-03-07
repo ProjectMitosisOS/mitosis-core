@@ -11,6 +11,7 @@ pub struct ConnMeta {
     pub qd_hint: u64,
 }
 
+#[derive(Clone, Copy)]
 pub struct ConnMetaWPath {
     pub path: sa_path_rec,
     pub service_id: u64,

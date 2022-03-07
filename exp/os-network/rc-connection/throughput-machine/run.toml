@@ -1,0 +1,44 @@
+[[pass]]
+host = 'val01'
+path = ''
+cmd = 'sudo rmmod rc_conn_server_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_server_tests.ko nic_count=1 service_id_base=50'
+
+[[pass]]
+host = 'val00'
+path = ''
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=2 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
+
+[[pass]]
+host = 'val04'
+path = ''
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=2 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
+
+[[pass]]
+host = 'val05'
+path = ''
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=2 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
+
+[[pass]]
+host = 'val06'
+path = ''
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=2 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
+
+[[pass]]
+host = 'val07'
+path = ''
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=2 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
+
+[[pass]]
+host = 'val08'
+path = ''
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=2 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
+
+[[pass]]
+host = 'val09'
+path = ''
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=2 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
+
+[[pass]]
+host = 'val10'
+path = ''
+cmd = 'sudo rmmod rc_conn_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod rc_conn_client_tests.ko remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=2 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" & dmesg -wH'
