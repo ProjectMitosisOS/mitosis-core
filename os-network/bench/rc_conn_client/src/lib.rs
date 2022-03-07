@@ -65,10 +65,10 @@ impl<'a> BenchRoutine for RCConnBenchWorker<'a> {
 
     fn thread_local_init(args: &Self::Args) -> Self {
         let thread_id = *args;
-        let local_nic = Self::get_local_nic(thread_id);
-        let conn_meta = Self::get_conn_meta(thread_id);
-        let factory = RCFactoryWPath::new(local_nic).unwrap();
-        let conn_meta = factory.convert_meta(conn_meta).unwrap();
+        let factory = RCFactoryWPath::new(Self::get_local_nic(thread_id)).unwrap();
+        let conn_meta = factory
+            .convert_meta(Self::get_conn_meta(thread_id))
+            .unwrap();
         Self {
             factory: factory,
             meta: conn_meta,
@@ -108,7 +108,12 @@ fn module_main() {
     let mut bench = Benchmark::<RCConnBenchWorker, ConThptReporter>::new();
 
     for i in 0..thread_count::read() as usize {
-        let ctx = Box::new(ThreadLocalCTX::new(i, ConThptReporter::new(), i as usize, Some(i as u32)));
+        let ctx = Box::new(ThreadLocalCTX::new(
+            i,
+            ConThptReporter::new(),
+            i as usize,
+            Some(i as u32),
+        ));
         global_reporter.add(ctx.get_reporter());
         bench.spawn(ctx).expect("should succeed");
     }
