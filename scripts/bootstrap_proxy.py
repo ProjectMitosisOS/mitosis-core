@@ -364,7 +364,6 @@ def main():
     passp = config.get("passphrase",None)
     global_configs = config.get("global_configs","")
 
-
     print(user,pwd,passp)
     print(args.black)
 
@@ -392,7 +391,7 @@ def main():
         if runned >= num:
             break
         runned += 1
-        print("(execute cmd @%s" % p["host"],p["cmd"])
+        print("(execute cmd @%s" % p["host"],p["cmd"].format(global_configs))
 
         if p["host"] in black_list:
             continue
@@ -401,7 +400,7 @@ def main():
             subprocess.run(("cd " + p["path"] + ";" + p["cmd"]).split(" "))
             pass
         else:
-            res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
+            res = cr.execute_w_channel(p["cmd"].format(global_configs),
                                        p["host"],
                                        p["path"])
             if p["host"] not in config.get("null",[]):

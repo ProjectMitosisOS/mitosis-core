@@ -1,0 +1,6 @@
+global_configs = "-l"
+
+[[pass]]
+host = 'localhost'
+path = ''
+cmd = 'ls {}'
