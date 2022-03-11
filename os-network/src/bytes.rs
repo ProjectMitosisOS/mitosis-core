@@ -18,10 +18,12 @@ impl BytesMut {
         Self::from_static(slice)
     }
 
-    pub unsafe fn truncate(&mut self, offset : usize) -> core::option::Option<Self> { 
-        if offset < self.len() { 
-            return Some(Self::from_raw(self.ptr.offset(offset as _),
-                self.len() - offset)); 
+    pub unsafe fn truncate(&mut self, offset: usize) -> core::option::Option<Self> {
+        if offset < self.len() {
+            return Some(Self::from_raw(
+                self.ptr.offset(offset as _),
+                self.len() - offset,
+            ));
         }
         None
     }
@@ -37,27 +39,33 @@ impl BytesMut {
         false
     }
 
-    pub fn get_raw(&self) -> u64 { 
+    pub fn get_raw(&self) -> u64 {
         self.ptr as u64
     }
 
-    pub fn len(&self) -> usize { 
+    pub fn resize(&mut self, sz: usize) {
+        if core::intrinsics::likely(sz < self.len()) {
+            self.len = sz;
+        }
+    }
+
+    pub fn len(&self) -> usize {
         self.len
     }
 
-    pub unsafe fn at_unchecked(&self, offset : usize) -> u8 { 
-        core::ptr::read(self.ptr.offset(offset as isize)) 
+    pub unsafe fn at_unchecked(&self, offset: usize) -> u8 {
+        core::ptr::read(self.ptr.offset(offset as isize))
     }
 }
 
-impl core::cmp::PartialEq for BytesMut { 
-    fn eq(&self, other : &Self) -> bool { 
-        if self.len != other.len { 
-            return false; 
+impl core::cmp::PartialEq for BytesMut {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len != other.len {
+            return false;
         }
-        for i  in 0..self.len { 
-            if unsafe { self.at_unchecked(i) != other.at_unchecked(i) } { 
-                return false; 
+        for i in 0..self.len {
+            if unsafe { self.at_unchecked(i) != other.at_unchecked(i) } {
+                return false;
             }
         }
         true
@@ -66,8 +74,8 @@ impl core::cmp::PartialEq for BytesMut {
 
 impl core::cmp::Eq for BytesMut {}
 
-use core::fmt::{Arguments, Debug, Write, Formatter, Result};
-// use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::println; 
+use core::fmt::{Arguments, Debug, Formatter, Result, Write};
+// use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::println;
 
 impl Write for BytesMut {
     #[inline]
@@ -108,7 +116,7 @@ impl Debug for BytesMut {
                 write!(f, "\\x{:02x}", b)?;
             }
         }
-        write!(f, "\"")?;        
+        write!(f, "\"")?;
         Ok(())
     }
 }

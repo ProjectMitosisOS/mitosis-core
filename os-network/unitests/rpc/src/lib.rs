@@ -18,6 +18,7 @@ fn test_callback(input : &mut BytesMut, output : &mut BytesMut) {
     log::info!("test callback output {:?}", output); 
 }
 
+// a local test 
 fn test_service() {
     let mut service = Service::new(); 
     assert_eq!(true, service.register(73, test_callback));  
@@ -36,5 +37,11 @@ fn test_service() {
     assert_eq!(true, service.execute(73, &mut msg, &mut out_msg));
 }
 
-#[krdma_test(test_service)]
+// a test with RDMA
+fn test_rpc() { 
+    let mut rpc = datagram::RPCHook::new(); 
+    rpc.get_mut_service().register(73, test_callback);     
+}
+
+#[krdma_test(test_service,test_rpc)]
 fn init() { }
