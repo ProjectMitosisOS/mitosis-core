@@ -1,10 +1,9 @@
 use kernel_module_testlib::{with_kernel_module, dmesg_contains};
 
 #[test]
-fn test_basic() {
+fn test_rc_related() {
     // a dummy test func
     with_kernel_module(|| {
-        println!("basic");
-        assert_eq!(dmesg_contains(&String::from("error")),false);
+        assert_eq!(dmesg_contains(&String::from("ERROR")),false);
     });
 }

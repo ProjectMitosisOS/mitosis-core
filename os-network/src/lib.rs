@@ -1,26 +1,30 @@
 #![no_std]
-#![feature(generic_associated_types, get_mut_unchecked, core_intrinsics)]
+#![feature(
+    generic_associated_types,
+    get_mut_unchecked,
+    core_intrinsics,
+    associated_type_defaults
+)]
 
 //! Manage network connections in the OS
 
 extern crate alloc;
 
+pub mod future;
+pub use future::Future;
+
+pub mod timeout; 
+
 pub mod bytes;
 pub mod remote_memory;
 
-pub trait Conn {
-    type IOResult; // result of IO rm -
+pub trait Conn<T: Future = Self>: Future {
     type ReqPayload; // the request format
-    type CompPayload; // the completion (comp) format
+    type CompPayload = Self::Item;
+    type IOResult = Self::Error;
 
     // post the request to the underlying device
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult>;
-
-    // poll the completion of the sent request, returns immediately
-    fn poll(&mut self) -> Result<Self::CompPayload, Self::IOResult>;
-
-    // keep polling until one completion is retrieved
-    fn wait_til_comp(&mut self) -> Result<Self::CompPayload, Self::IOResult>;
 }
 
 pub trait Datagram {
@@ -38,6 +42,8 @@ pub trait Datagram {
     // but currently in MITOSIS's case, implementing these is fine
     // If time permits, we will add the above optimizations
     fn post_recv(&mut self, buf: bytes::BytesMut) -> Result<(), Self::IOResult>;
+
+    // TODO: change it to future
     fn poll_datagram(&mut self) -> Result<bytes::BytesMut, Self::IOResult>;
 }
 
@@ -54,3 +60,7 @@ pub trait ConnFactory {
 
 // impl the connection as RDMA
 pub mod rdma;
+
+pub fn block_on() { 
+    todo!(); 
+}
