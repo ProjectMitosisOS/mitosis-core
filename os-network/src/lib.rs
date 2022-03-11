@@ -9,7 +9,7 @@ pub mod bytes;
 pub mod remote_memory;
 
 pub trait Conn {
-    type IOResult;    // result of IO rm -
+    type IOResult;    // result of IO 
     type ReqPayload;  // the request format 
     type CompPayload; // the completion (comp) format 
 
@@ -34,3 +34,5 @@ pub trait ConnFactory {
 
 // impl the connection as RDMA
 pub mod rdma;
+
+pub mod rpc;

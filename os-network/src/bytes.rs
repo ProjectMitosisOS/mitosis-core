@@ -17,6 +17,14 @@ impl BytesMut {
         let slice = core::slice::from_raw_parts_mut(ptr, len);
         Self::from_static(slice)
     }
+
+    pub unsafe fn truncate(&mut self, offset : usize) -> core::option::Option<Self> { 
+        if offset < self.len() { 
+            return Some(Self::from_raw(self.ptr.offset(offset as _),
+                self.len() - offset)); 
+        }
+        None
+    }
 }
 
 impl BytesMut {
