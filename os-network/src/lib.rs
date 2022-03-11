@@ -9,23 +9,43 @@ pub mod bytes;
 pub mod remote_memory;
 
 pub trait Conn {
-    type IOResult;    // result of IO rm -
-    type ReqPayload;  // the request format 
-    type CompPayload; // the completion (comp) format 
+    type IOResult; // result of IO rm -
+    type ReqPayload; // the request format
+    type CompPayload; // the completion (comp) format
 
     // post the request to the underlying device
-    fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult>;
+    fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult>;
 
     // poll the completion of the sent request, returns immediately
-    fn poll(&mut self) -> Result<Self::CompPayload,Self::IOResult>;
+    fn poll(&mut self) -> Result<Self::CompPayload, Self::IOResult>;
 
     // keep polling until one completion is retrieved
-    fn wait_til_comp(&mut self) -> Result<Self::CompPayload,Self::IOResult>;
+    fn wait_til_comp(&mut self) -> Result<Self::CompPayload, Self::IOResult>;
+}
+
+pub trait Datagram {
+    type IOResult;
+    type AddressHandler;
+
+    fn post_datagram(
+        &mut self,
+        addr: &Self::AddressHandler,
+        msg: &bytes::BytesMut,
+    ) -> Result<(), Self::IOResult>;
+
+    // XD: this is not an optimized version,
+    // e.g., RDMA's UD will use inlining & doorbell batching for acceleration
+    // but currently in MITOSIS's case, implementing these is fine
+    // If time permits, we will add the above optimizations
+    fn post_recv(&mut self, buf: bytes::BytesMut) -> Result<(), Self::IOResult>;
+    fn poll_datagram(&mut self) -> Result<bytes::BytesMut, Self::IOResult>;
 }
 
 pub trait ConnFactory {
     type ConnMeta;
-    type ConnType<'a> : Conn where Self: 'a;
+    type ConnType<'a>: Conn
+    where
+        Self: 'a;
     type ConnResult;
 
     // create and connect the connection
