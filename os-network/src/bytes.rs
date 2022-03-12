@@ -21,6 +21,7 @@ impl BytesMut {
 
 impl BytesMut {
     /// return true if the range of payload's len is within [ptr + offset, ptr + len]
+    #[inline(always)]
     pub fn copy(&mut self, payload: &Self, offset: usize) -> bool {
         if core::intrinsics::likely(self.len.checked_sub(offset).is_some()) {
             unsafe { core::ptr::copy_nonoverlapping(payload.ptr, self.ptr, payload.len) };
@@ -29,14 +30,17 @@ impl BytesMut {
         false
     }
 
+    #[inline(always)]
     pub fn get_raw(&self) -> u64 { 
         self.ptr as u64
     }
 
+    #[inline(always)]
     pub fn len(&self) -> usize { 
         self.len
     }
 
+    #[inline(always)]
     pub unsafe fn at_unchecked(&self, offset : usize) -> u8 { 
         core::ptr::read(self.ptr.offset(offset as isize)) 
     }
