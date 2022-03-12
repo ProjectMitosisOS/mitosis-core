@@ -13,8 +13,8 @@ pub trait Caller {
     /// #Arguments
     /// * `addr` - Target address, e.g., IP / RDMA's gid
     /// * `id` - Remote function ID
-    /// * request - Request buffer
-    /// * reply - Buffer to store the reply
+    /// * `request` - Request buffer
+    /// * `reply` - Buffer to store the reply
     fn sync_call(
         addr: &Self::Address,
         id: usize,
