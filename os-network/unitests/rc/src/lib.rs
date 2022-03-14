@@ -17,6 +17,8 @@ use rust_kernel_linux_util as log;
 use os_network::bytes::BytesMut;
 use os_network::rdma::payload;
 use os_network::{rdma, Conn, ConnFactory};
+use os_network::timeout::Timeout;
+use os_network::block_on;
 
 use krdma_test::*;
 
@@ -113,6 +115,7 @@ fn test_rc_factory_with_meta() {
 /// A test on post and poll operations on `RCConn`
 /// Pre-requisition: `ctx_init`
 fn test_rc_post_poll() {
+    let timeout_usec = 5000000;
     let driver = unsafe { global_kdriver() };
     let client_nic = driver
         .devices()
@@ -168,8 +171,14 @@ fn test_rc_post_poll() {
         return;
     }
 
-    // TODO: should use block_on()
+    let mut timeout = Timeout::new(rc, timeout_usec);
+    let result = block_on(&mut timeout);
+    if result.is_err() {
+        log::error!("polling rc qp with error");
+        return;
+    }
 
+    let mut rc = timeout.into_inner();
     if local_bytes == remote_bytes {
         log::info!("equal after rdma read operation!")
     } else {
@@ -194,7 +203,12 @@ fn test_rc_post_poll() {
         return;
     }
 
-    // TODO: should use block_on()
+    let mut timeout = Timeout::new(rc, timeout_usec);
+    let result = block_on(&mut timeout);
+    if result.is_err() {
+        log::error!("polling rc qp with error");
+        return;
+    }
 
     if local_bytes == remote_bytes {
         log::info!("equal after rdma write operation!")
@@ -206,8 +220,7 @@ fn test_rc_post_poll() {
 #[krdma_test(
     test_rc_factory,
     test_rc_factory_with_meta,
-    test_rc_post_poll,
-    test_timeout
+    test_rc_post_poll
 )]
 fn ctx_init() {
     unsafe {

@@ -138,7 +138,7 @@ impl Future for RCConn<'_> {
         let mut wc: ib_wc = Default::default();
         let result = op.pop_with_wc(&mut wc as *mut ib_wc);
         if result.is_none() {
-            return Err(super::Err::Retry);
+            return Ok(Async::NotReady);
         }
         let result = result.unwrap();
         let result = unsafe { (*result).status };
