@@ -89,7 +89,7 @@ impl Future for DCConn<'_> {
                 }
             },
             _ => {
-                log::error!("ib_poll_cq returns ret");
+                log::error!("ib_poll_cq returns {}", ret);
                 return Err(super::Err::Other);
             },
         }
