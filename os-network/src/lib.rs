@@ -62,7 +62,7 @@ pub trait ConnFactory {
 // impl the connection as RDMA
 pub mod rdma;
 
-/// TODO: comments
+/// Block on the future until it is ready or error
 #[allow(non_snake_case)] 
 pub fn block_on<F : Future>(f : &mut F) -> Result<F::Output, F::Error> { 
     use future::Async; 
