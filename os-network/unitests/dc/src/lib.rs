@@ -3,22 +3,23 @@
 extern crate alloc;
 
 use core::fmt::Write;
+use core::sync::atomic::compiler_fence;
+use core::sync::atomic::Ordering::SeqCst;
 
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
-use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::KDriver;
-use KRdmaKit::mem::{RMemPhy, Memory};
-use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::cm::SidrCM;
+use KRdmaKit::ctrl::RCtrl;
+use KRdmaKit::mem::{Memory, RMemPhy};
+use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
+use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::KDriver;
 
+use rust_kernel_linux_util as log;
 
-use rust_kernel_linux_util as log; 
-
-use os_network::{rdma, ConnFactory, Conn}; 
+use os_network::block_on;
 use os_network::bytes::BytesMut;
 use os_network::rdma::payload;
 use os_network::timeout::Timeout;
-use os_network::block_on;
+use os_network::{rdma, Conn, ConnFactory};
 
 use mitosis_macros::declare_global;
 
@@ -60,7 +61,7 @@ fn test_dc_factory() {
 fn test_dc_one_sided() {
     let timeout_usec = 5000000;
     let driver = unsafe { KDRIVER::get_ref() };
-    
+
     // Prepare for server side RCtrl
     let server_ctx = driver
         .devices()
@@ -75,40 +76,42 @@ fn test_dc_one_sided() {
     let _ctrl = RCtrl::create(service_id, &server_ctx);
 
     // Create the dc qp
-    let client_nic = driver
-        .devices()
-        .into_iter()
-        .next()
-        .unwrap();
+    let client_nic = driver.devices().into_iter().next().unwrap();
     let client_factory = rdma::dc::DCFactory::new(client_nic).unwrap();
     let client_ctx = client_factory.get_context();
     let lkey = unsafe { client_ctx.get_lkey() };
     let mut dc = client_factory.create(()).unwrap();
 
     // Prepare for the EndPoint
-    let path_res = client_factory.get_context().explore_path(gid, service_id).unwrap();
+    let path_res = client_factory
+        .get_context()
+        .explore_path(gid, service_id)
+        .unwrap();
     let mut sidr_cm = SidrCM::new(client_ctx, core::ptr::null_mut()).unwrap();
-    let endpoint = sidr_cm.sidr_connect(path_res, service_id, DEFAULT_QD_HINT).unwrap();
+    let endpoint = sidr_cm
+        .sidr_connect(path_res, service_id, DEFAULT_QD_HINT)
+        .unwrap();
 
     // Prepare memory regions
     let mut local = RMemPhy::new(MEM_SIZE);
     let local_bytes = unsafe { BytesMut::from_raw(local.get_ptr() as _, local.get_sz() as usize) };
     let mut remote = RMemPhy::new(MEM_SIZE);
-    let mut remote_bytes = unsafe { BytesMut::from_raw(remote.get_ptr() as _, remote.get_sz() as usize) };
+    let mut remote_bytes =
+        unsafe { BytesMut::from_raw(remote.get_ptr() as _, remote.get_sz() as usize) };
 
     // Initialize the remote memory
     write!(&mut remote_bytes, "hello world from remote").unwrap();
 
     // Perform a remote read
     let payload = DCReqPayload::default()
-                    .set_laddr(local.get_pa(0))
-                    .set_raddr(remote.get_pa(0))
-                    .set_sz(MEM_SIZE)
-                    .set_lkey(lkey)
-                    .set_rkey(rkey)
-                    .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-                    .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
-                    .set_ah(&endpoint);
+        .set_laddr(local.get_pa(0))
+        .set_raddr(remote.get_pa(0))
+        .set_sz(MEM_SIZE)
+        .set_lkey(lkey)
+        .set_rkey(rkey)
+        .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
+        .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE)
+        .set_ah(&endpoint);
     let res = dc.post(&payload);
     if res.is_err() {
         log::error!("unable to post read qp");
@@ -121,12 +124,17 @@ fn test_dc_one_sided() {
         log::error!("polling dc qp with error");
         return;
     }
+    compiler_fence(SeqCst);
 
     // Memory regions should be the same after the operations
     if local_bytes == remote_bytes {
         log::info!("equal after dc read operation!");
     } else {
-        log::error!("not equal after dc read operation!");
+        log::error!(
+            "not equal after dc read operation!"
+        );
+        log::info!("local {:?}", local_bytes); 
+        log::info!("remote {:?}", remote_bytes); 
     }
 }
 
