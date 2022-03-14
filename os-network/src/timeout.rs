@@ -16,20 +16,46 @@ enum Kind<T> {
     Elapsed,
 }
 
-struct Delay {}
+use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
 
-#[derive(Debug)]
+pub struct Delay {
+    timer: KTimer,
+    wait_usec: i64,
+}
+
+impl Delay {
+    pub fn new(wait_usec: i64) -> Self {
+        Self {
+            timer: KTimer::new(),
+            wait_usec: wait_usec,
+        }
+    }
+}
+
+impl Future for Delay {
+    type Output = i64;
+    type Error = (); // return the elapsed time
+
+    fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
+        let passed = self.timer.get_passed_usec();
+        if passed >= self.wait_usec {
+            return Ok(Async::Ready(passed));
+        }
+        return Ok(Async::NotReady);
+    }
+}
+
 pub struct Timeout<T> {
     value: T,
-    delay_usec: usize,
+    delay: Delay,
 }
 
 impl<T> Timeout<T> {
     /// create a Timeout to wrap a future
-    pub fn new(value: T, timeout_usec: usize) -> Timeout<T> {
+    pub fn new(value: T, timeout_usec: i64) -> Timeout<T> {
         Self {
             value: value,
-            delay_usec: timeout_usec,
+            delay: Delay::new(timeout_usec),
         }
     }
 
@@ -53,30 +79,32 @@ impl<T> Future for Timeout<T>
 where
     T: Future,
 {
-    type Item = T::Item;
+    type Output = T::Output; // result, passed_msec
     type Error = Error<T::Error>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         // First, try polling the future
         match self.value.poll() {
-            Ok(Async::Ready(v)) => return Ok(Async::Ready(v)),
+            Ok(Async::Ready(v)) => {
+                return Ok(Async::Ready(v));
+            }
             Ok(Async::NotReady) => {}
             Err(e) => return Err(Error::inner(e)),
         }
 
         // Now check the timer
-        /* the tokio code 
         match self.delay.poll() {
             Ok(Async::NotReady) => Ok(Async::NotReady),
-            Ok(Async::Ready(_)) => Err(Error::elapsed()),
-            Err(e) => Err(Error::timer(e)),
-        } */
-        todo!()
+            Ok(Async::Ready(_passed)) => {
+                return Err(Error::elapsed()); 
+            }
+            Err(_) => panic!(),
+        }
     }
 }
 
-// ===== impl Error ===== 
-// Credits: from tokio 
+// ===== impl Error =====
+// Credits: from tokio
 
 impl<T> Error<T> {
     /// Create a new `Error` representing the inner value completing with `Err`.

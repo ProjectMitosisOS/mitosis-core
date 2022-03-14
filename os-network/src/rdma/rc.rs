@@ -128,12 +128,12 @@ impl crate::Conn for RCConn<'_> {
 use crate::future::{Async,Future,Poll}; 
 
 impl Future for RCConn<'_> { 
-    type Item = ib_wc;
+    type Output = ib_wc;
     type Error = super::Err;
 
     // XD: should refine. Why using RCOp here? 
     // Maybe we call just call the low-level ib_poll_cq
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         let mut op = RCOp::new(&self.rc);
         let mut wc: ib_wc = Default::default();
         let result = op.pop_with_wc(&mut wc as *mut ib_wc);

@@ -6,11 +6,12 @@
     associated_type_defaults
 )]
 
-//! Manage network connections in the OS
+// Manage network connections in the OS
 
 extern crate alloc;
 
 pub mod future;
+
 pub use future::Future;
 
 pub mod timeout; 
@@ -20,7 +21,7 @@ pub mod remote_memory;
 
 pub trait Conn<T: Future = Self>: Future {
     type ReqPayload; // the request format
-    type CompPayload = Self::Item;
+    type CompPayload = Self::Output;
     type IOResult = Self::Error;
 
     // post the request to the underlying device
@@ -61,6 +62,15 @@ pub trait ConnFactory {
 // impl the connection as RDMA
 pub mod rdma;
 
-pub fn block_on() { 
-    todo!(); 
+/// TODO: comments
+#[allow(non_snake_case)] 
+pub fn block_on<F : Future>(f : &mut F) -> Result<F::Output, F::Error> { 
+    use future::Async; 
+    loop { 
+        match f.poll() {
+            Ok(Async::Ready(v)) => return Ok(v), 
+            Ok(_NotReady) => {}, 
+            Err(e) => return Err(e), 
+        }
+    }
 }

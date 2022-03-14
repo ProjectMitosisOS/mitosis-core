@@ -110,8 +110,6 @@ fn test_rc_factory_with_meta() {
     }
 }
 
-fn test_timeout() {}
-
 /// A test on post and poll operations on `RCConn`
 /// Pre-requisition: `ctx_init`
 fn test_rc_post_poll() {

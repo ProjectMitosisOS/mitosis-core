@@ -19,9 +19,9 @@ pub type Poll<T, E> = Result<Async<T>, E>;
 /// a simplified in-kernel future
 /// inspired by tokio 
 pub trait Future {
-    type Item;
+    type Output;
     type Error;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error>; 
+    fn poll(&mut self) -> Poll<Self::Output, Self::Error>; 
 }
 
