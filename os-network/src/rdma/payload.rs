@@ -1,4 +1,5 @@
 use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::cm::EndPoint;
 
 pub trait SendWR {
     fn set_opcode(&mut self, opcode: u32);
@@ -10,6 +11,10 @@ pub trait SendWR {
 pub trait RDMAWR { 
     fn set_raddr(&mut self, raddr: u64);
     fn set_rkey(&mut self, rkey: u32);
+}
+
+pub trait UDWR {
+    fn set_ah(&mut self, end_point: &EndPoint);
 }
 
 pub struct Payload<T>
@@ -83,6 +88,17 @@ where
     }
 }
 
+
+impl<T> Payload<T>
+where
+    T: Default + SendWR + UDWR
+{
+    pub fn set_ah(mut self, endpoint: &EndPoint) -> Self {
+        self.wr.set_ah(endpoint);
+        self
+    }
+}
+
 /// Default Payload will be marked with immediate data as 0
 impl<T> Default for Payload<T>
 where
@@ -98,3 +114,4 @@ where
 }
 
 pub mod rc;
+pub mod dc;
