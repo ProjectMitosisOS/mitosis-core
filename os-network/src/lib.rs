@@ -14,7 +14,7 @@ pub mod future;
 
 pub use future::Future;
 
-pub mod timeout; 
+pub mod timeout;
 
 pub mod bytes;
 pub mod remote_memory;
@@ -63,14 +63,31 @@ pub trait ConnFactory {
 pub mod rdma;
 
 /// Block on the future until it is ready or error
-#[allow(non_snake_case)] 
-pub fn block_on<F : Future>(f : &mut F) -> Result<F::Output, F::Error> { 
-    use future::Async; 
-    loop { 
+#[allow(non_snake_case)]
+pub fn block_on<F: Future>(f: &mut F) -> Result<F::Output, F::Error> {
+    use future::Async;
+    loop {
         match f.poll() {
-            Ok(Async::Ready(v)) => return Ok(v), 
-            Ok(_NotReady) => {}, 
-            Err(e) => return Err(e), 
+            Ok(Async::Ready(v)) => return Ok(v),
+            Ok(_NotReady) => {}
+            Err(e) => return Err(e),
         }
+    }
+}
+
+/// Block on the future until it is ready or error
+#[allow(non_snake_case)]
+pub fn block_on_w_yield<F: Future>(f: &mut F) -> Result<F::Output, F::Error> {
+    use future::Async;
+    use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread::yield_now;
+
+    loop {
+        match f.poll() {
+            Ok(Async::Ready(v)) => return Ok(v),
+            Ok(_NotReady) => {}
+            Err(e) => return Err(e),
+        }
+
+        yield_now();
     }
 }

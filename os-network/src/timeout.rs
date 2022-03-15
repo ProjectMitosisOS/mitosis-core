@@ -30,6 +30,20 @@ impl Delay {
             wait_usec: wait_usec,
         }
     }
+
+    pub fn reset(&mut self) { 
+        self.timer.reset(); 
+    }
+
+    pub fn reset_timer(&mut self, wait_usec : i64) { 
+        self.wait_usec = wait_usec; 
+        self.reset(); 
+    }
+
+    #[inline]
+    pub fn get_cur_delay_usec(&self) -> i64 { 
+        self.timer.get_passed_usec() 
+    }
 }
 
 impl Future for Delay {
@@ -37,7 +51,7 @@ impl Future for Delay {
     type Error = (); // return the elapsed time
 
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
-        let passed = self.timer.get_passed_usec();
+        let passed = self.get_cur_delay_usec(); 
         if passed >= self.wait_usec {
             return Ok(Async::Ready(passed));
         }
@@ -73,6 +87,16 @@ impl<T> Timeout<T> {
     pub fn into_inner(self) -> T {
         self.value
     }
+
+    /// Reset the counting of the timeout 
+    pub fn reset_timer(&mut self, timeout_usec : i64) { 
+        self.delay.reset_timer(timeout_usec); 
+    }
+
+    /// Get current wait status 
+    pub fn get_cur_delay_usec(&self) -> i64 { 
+        self.delay.get_cur_delay_usec() 
+    }    
 }
 
 impl<T> Future for Timeout<T>
