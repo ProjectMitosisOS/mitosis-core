@@ -108,3 +108,31 @@ impl Debug for BytesMut {
         Ok(())
     }
 }
+
+pub struct RMemRegion {
+    bytes: BytesMut,
+    paddr: u64,
+    lkey: u32,
+}
+
+impl RMemRegion {
+    pub unsafe fn new(bytes: BytesMut, paddr: u64, lkey: u32) -> Self {
+        Self {
+            bytes: bytes,
+            paddr: paddr,
+            lkey: lkey,
+        }
+    }
+
+    pub fn get_bytes(&self) -> &BytesMut {
+        &self.bytes
+    }
+
+    pub fn get_paddr(&self) -> u64 {
+        self.paddr
+    }
+
+    pub fn get_lkey(&self) -> u32 {
+        self.lkey
+    }
+}

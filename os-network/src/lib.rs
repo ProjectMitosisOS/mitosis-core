@@ -28,24 +28,18 @@ pub trait Conn<T: Future = Self>: Future {
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult>;
 }
 
-pub trait Datagram {
-    type IOResult;
+pub trait Datagram<T: Future = Self>: Future {
+    type IOResult = Self::Error;
     type AddressHandler;
+    type MemoryRegion;
 
-    fn post_datagram(
+    fn post_msg(
         &mut self,
         addr: &Self::AddressHandler,
-        msg: &bytes::BytesMut,
+        msg: &Self::MemoryRegion,
     ) -> Result<(), Self::IOResult>;
 
-    // XD: this is not an optimized version,
-    // e.g., RDMA's UD will use inlining & doorbell batching for acceleration
-    // but currently in MITOSIS's case, implementing these is fine
-    // If time permits, we will add the above optimizations
-    fn post_recv(&mut self, buf: bytes::BytesMut) -> Result<(), Self::IOResult>;
-
-    // TODO: change it to future
-    fn poll_datagram(&mut self) -> Result<bytes::BytesMut, Self::IOResult>;
+    fn post_recv_buf(&mut self, buf: Self::MemoryRegion) -> Result<(), Self::IOResult>;
 }
 
 pub trait ConnFactory {
