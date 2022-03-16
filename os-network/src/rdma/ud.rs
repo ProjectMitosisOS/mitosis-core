@@ -95,7 +95,6 @@ impl<const ENTRY_COUNT: usize, const ENTRY_SIZE: usize> crate::Datagram for UDDa
             log::error!("unable to send message");
             return Err(super::Err::Other);
         }
-        log::info!("post msg successfully");
         Ok(())
     }
 
@@ -106,7 +105,6 @@ impl<const ENTRY_COUNT: usize, const ENTRY_SIZE: usize> crate::Datagram for UDDa
             log::error!("unable to post recv buffer");
             return Err(super::Err::Other);
         }
-        log::info!("post recv buf successfully");
         self.queue.push_back(buf);
         Ok(())
     }

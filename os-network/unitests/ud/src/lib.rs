@@ -3,8 +3,6 @@
 extern crate alloc;
 
 use core::fmt::Write;
-use core::sync::atomic::compiler_fence;
-use core::sync::atomic::Ordering::SeqCst;
 
 use KRdmaKit::cm::SidrCM;
 use KRdmaKit::ctrl::RCtrl;
@@ -17,9 +15,7 @@ use rust_kernel_linux_util as log;
 
 use os_network::block_on;
 use os_network::bytes::BytesMut;
-use os_network::rdma::payload;
 use os_network::timeout::Timeout;
-use os_network::{rdma, Conn, ConnFactory};
 use os_network::rdma::ud::UDFactory;
 use os_network::bytes::RMemRegion;
 use os_network::Datagram;
@@ -28,11 +24,11 @@ use mitosis_macros::declare_global;
 
 use krdma_test::*;
 
-type DCReqPayload = payload::Payload<ib_dc_wr>;
-
 const ENTRY_COUNT: usize = 2048;
 const ENTRY_SIZE: usize = 512;
 const DEFAULT_QD_HINT: u64 = 74;
+const HEAD_SIZE: usize = 40;
+const MSG_SIZE: usize = ENTRY_SIZE - HEAD_SIZE;
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 
@@ -78,9 +74,6 @@ fn test_ud_two_sided() {
     let ctrl = RCtrl::create(service_id, &ctx).unwrap();
     ctrl.reg_ud(DEFAULT_QD_HINT as usize, server_ud.get_qp());
     let gid = ctx.get_gid_as_string();
-    let lkey = unsafe { 
-        ctx.get_lkey()
-    };
 
     let path_res = factory
         .get_context()
@@ -91,13 +84,13 @@ fn test_ud_two_sided() {
         .sidr_connect(path_res, service_id, DEFAULT_QD_HINT)
         .unwrap();
     
-    let mut send_mem = RMemPhy::new(ENTRY_SIZE);
-    let mut bytes = unsafe {
+    let mut send_mem = RMemPhy::new(MSG_SIZE);
+    let mut send_bytes = unsafe {
         BytesMut::from_raw(send_mem.get_ptr() as *mut u8, send_mem.get_sz() as usize)
     };
-    write!(&mut bytes, "hello world").unwrap();
+    write!(&mut send_bytes, "hello world").unwrap();
     let mem_region = unsafe {
-        RMemRegion::new(bytes,
+        RMemRegion::new(send_bytes,
                     send_mem.get_pa(0),
                     ctx.get_lkey())
     };
@@ -111,6 +104,26 @@ fn test_ud_two_sided() {
     if result.is_err() {
         log::error!("polling ud qp with error");
         return;
+    }
+
+    let result = result.unwrap();
+    let recv_bytes = unsafe {
+        BytesMut::from_raw((result.get_bytes().get_raw() + HEAD_SIZE as u64) as *mut u8, MSG_SIZE)
+    };
+    let send_bytes = unsafe {
+        BytesMut::from_raw(send_mem.get_ptr() as *mut u8, MSG_SIZE)
+    };
+    if send_bytes == recv_bytes {
+        log::info!("equal after ud operation!");
+    } else {
+        log::error!("not equal after ud operation!");
+    }
+
+    // Remember to post the buffer back
+    let mut server_ud = timeout.into_inner();
+    let result = server_ud.post_recv_buf(result);
+    if result.is_err() {
+        log::error!("fail to post recv buffer");
     }
 }
 
