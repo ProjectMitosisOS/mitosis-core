@@ -16,7 +16,8 @@ use rust_kernel_linux_util as log;
 
 use os_network::bytes::BytesMut;
 use os_network::rdma::payload;
-use os_network::{rdma, Conn, ConnFactory};
+use os_network::{rdma, Conn};
+use os_network::conn::Factory;
 use os_network::timeout::Timeout;
 use os_network::block_on;
 

@@ -18,40 +18,14 @@ pub mod timeout;
 
 pub mod bytes;
 pub mod remote_memory;
+/// TODO: need doc
+pub mod conn;
+pub use conn::*;
 
-pub trait Conn<T: Future = Self>: Future {
-    type ReqPayload; // the request format
-    type CompPayload = Self::Output;
-    type IOResult = Self::Error;
 
-    // post the request to the underlying device
-    fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult>;
-}
-
-pub trait Datagram<T: Future = Self>: Future {
-    type IOResult = Self::Error;
-    type AddressHandler;
-    type MemoryRegion;
-
-    fn post_msg(
-        &mut self,
-        addr: &Self::AddressHandler,
-        msg: &Self::MemoryRegion,
-    ) -> Result<(), Self::IOResult>;
-
-    fn post_recv_buf(&mut self, buf: Self::MemoryRegion) -> Result<(), Self::IOResult>;
-}
-
-pub trait ConnFactory {
-    type ConnMeta;
-    type ConnType<'a>: Conn
-    where
-        Self: 'a;
-    type ConnResult;
-
-    // create and connect the connection
-    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
-}
+/// TODO: need doc
+pub mod datagram;
+pub use datagram::*;
 
 // impl the connection as RDMA
 pub mod rdma;

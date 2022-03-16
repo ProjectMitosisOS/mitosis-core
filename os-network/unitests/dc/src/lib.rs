@@ -19,7 +19,8 @@ use os_network::block_on;
 use os_network::bytes::BytesMut;
 use os_network::rdma::payload;
 use os_network::timeout::Timeout;
-use os_network::{rdma, Conn, ConnFactory};
+use os_network::{rdma, Conn};
+use os_network::conn::Factory;
 
 use mitosis_macros::declare_global;
 

@@ -26,7 +26,7 @@ impl<'a> RCFactory<'a> {
     }
 }
 
-impl crate::ConnFactory for RCFactory<'_> {
+impl crate::conn::Factory for RCFactory<'_> {
     type ConnMeta = super::ConnMeta;
     type ConnType<'a>
     where
@@ -69,7 +69,7 @@ impl<'a> RCFactoryWPath<'a> {
     }
 }
 
-impl crate::ConnFactory for RCFactoryWPath<'_> {
+impl crate::conn::Factory for RCFactoryWPath<'_> {
     type ConnMeta = super::ConnMetaWPath;
     type ConnType<'a>
     where

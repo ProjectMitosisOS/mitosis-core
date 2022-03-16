@@ -1,10 +1,10 @@
+// TODO: should move ot the datagram folder
 use alloc::sync::Arc;
 use alloc::collections::VecDeque;
 
 use crate::Future;
 use crate::bytes::RMemRegion;
-use crate::future::Poll;
-use crate::future::Async;
+use crate::future::{Poll,Async};
 use crate::bytes::BytesMut;
 use crate::Datagram;
 

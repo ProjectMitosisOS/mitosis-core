@@ -81,7 +81,7 @@ impl Future for DCConn<'_> {
     }
 }
 
-impl crate::ConnFactory for DCFactory<'_> {
+impl crate::conn::Factory for DCFactory<'_> {
     type ConnMeta = ();
     type ConnType<'a>
     where
