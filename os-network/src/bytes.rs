@@ -124,6 +124,17 @@ impl RMemRegion {
         }
     }
 
+    pub unsafe fn from_raw(vaddr: u64, len: usize, paddr: u64, lkey: u32) -> Self {
+        Self {
+            bytes: BytesMut {
+                ptr: vaddr as *mut u8,
+                len: len,
+            },
+            paddr: paddr,
+            lkey: lkey,
+        }
+    }
+
     pub fn get_bytes(&self) -> &BytesMut {
         &self.bytes
     }

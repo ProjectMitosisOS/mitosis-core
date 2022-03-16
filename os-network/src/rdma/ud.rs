@@ -42,6 +42,12 @@ pub struct UDDatagram<'a, const ENTRY_COUNT: usize, const ENTRY_SIZE: usize> {
     inner_mem: Option<RMemPhy>,
 }
 
+impl<const ENTRY_COUNT: usize, const ENTRY_SIZE: usize> UDDatagram<'_, ENTRY_COUNT, ENTRY_SIZE> {
+    pub fn get_qp(&self) -> Arc<UD> {
+        self.ud.clone()
+    }
+}
+
 impl<const ENTRY_COUNT: usize, const ENTRY_SIZE: usize> Future for UDDatagram<'_, ENTRY_COUNT, ENTRY_SIZE> {
     type Output = RMemRegion;
     type Error = super::Err;
@@ -89,6 +95,7 @@ impl<const ENTRY_COUNT: usize, const ENTRY_SIZE: usize> crate::Datagram for UDDa
             log::error!("unable to send message");
             return Err(super::Err::Other);
         }
+        log::info!("post msg successfully");
         Ok(())
     }
 
@@ -99,6 +106,7 @@ impl<const ENTRY_COUNT: usize, const ENTRY_SIZE: usize> crate::Datagram for UDDa
             log::error!("unable to post recv buffer");
             return Err(super::Err::Other);
         }
+        log::info!("post recv buf successfully");
         self.queue.push_back(buf);
         Ok(())
     }
