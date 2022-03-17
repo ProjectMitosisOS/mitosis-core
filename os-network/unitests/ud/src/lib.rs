@@ -12,9 +12,9 @@ use KRdmaKit::KDriver;
 use rust_kernel_linux_util as log;
 
 use os_network::block_on;
+use os_network::conn::{Conn, Factory};
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
-use os_network::datagram::{Datagram, Factory, Receiver};
 use os_network::timeout::Timeout;
 
 use mitosis_macros::declare_global;
@@ -79,17 +79,24 @@ fn test_ud_two_sided() {
 
     let mut ud_receiver = UDReceiver::new(server_ud);
     for _ in 0..12 {
-        match ud_receiver
-            .post_recv_buf(UDMsg::new(MSG_SIZE), unsafe { ctx.get_lkey() }) { 
-            Ok(_) => {},
+        // 64 is the header
+        match ud_receiver.post_recv_buf(UDMsg::new(MSG_SIZE + 64, 73), unsafe { ctx.get_lkey() }) {
+            Ok(_) => {}
             Err(e) => log::error!("post recv buf err: {:?}", e),
         }
-    }        
+    }
 
-    let mut send_msg = UDMsg::new(MSG_SIZE);
+    let mut send_msg = UDMsg::new(MSG_SIZE, 73);
     write!(&mut send_msg, "hello world").unwrap();
 
-    let result = client_ud.post_msg(&endpoint, &send_msg, unsafe { &ctx.get_lkey() });
+    let mut send_req = send_msg
+        .to_ud_wr(&endpoint)
+        .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
+        .set_lkey(unsafe { ctx.get_lkey() });
+    send_req.set_my_sge_ptr();
+
+    let result = client_ud.post(&send_req);
+
     if result.is_err() {
         log::error!("fail to post message");
         return;
@@ -100,6 +107,8 @@ fn test_ud_two_sided() {
     let result = block_on(&mut timeout_client_ud);
     if result.is_err() {
         log::error!("polling send ud qp with error: {:?}", result.err().unwrap());
+    } else {
+        log::info!("post msg done");
     }
 
     // start to receive
@@ -110,9 +119,27 @@ fn test_ud_two_sided() {
             "polling receive ud qp with error: {:?}",
             result.err().unwrap()
         );
+    } else {
+        let received_msg = unsafe { result.unwrap().get_bytes().truncate(0).unwrap() };
+        log::info!(
+            "Get received msg: {:?}",
+            // if the result is correct, then the truncate size should be 40
+            received_msg
+        );
+        let received_msg = unsafe { received_msg.truncate(40).unwrap() };
+        log::debug!("received msg: {} {:?} ", received_msg.len(), received_msg);
+
+        assert!(
+            unsafe { received_msg.clone_and_resize(send_msg.get_bytes().len()) }.unwrap()
+                == unsafe { send_msg.get_bytes().clone() }
+        );
     }
 
-    log::info!("finally check the content: {:?}", send_msg.get_bytes()); 
+    log::info!(
+        "finally check the content:{} {:?}",
+        send_msg.len(),
+        send_msg.get_bytes()
+    );
 }
 
 #[krdma_test(test_ud_factory, test_ud_two_sided)]

@@ -1,6 +1,6 @@
 use alloc::collections::VecDeque;
 
-use KRdmaKit::qp::{UDOp, UD};
+use KRdmaKit::qp::UDOp;
 
 use crate::rdma::Err;
 
@@ -72,3 +72,5 @@ impl Future for UDReceiver<'_> {
         }
     }
 }
+
+pub use super::Receiver;

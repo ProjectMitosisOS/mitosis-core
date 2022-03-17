@@ -1,19 +1,14 @@
 // TODO: should move ot the datagram folder
 use alloc::sync::Arc;
 
-use crate::bytes::BytesMut;
 use crate::future::{Async, Future, Poll};
 
 use core::marker::PhantomData;
 use core::option::Option;
 
 use KRdmaKit::device::{RContext, RNIC};
-use KRdmaKit::mem::RMemPhy;
-use KRdmaKit::qp::{UDOp, UD};
+use KRdmaKit::qp::UD;
 use KRdmaKit::rust_kernel_rdma_base::*;
-
-use super::msg::UDMsg;
-use super::{Datagram, Factory};
 
 // XD: should tuned. maybe use it as a global configure?
 pub const MAX_MTU: usize = 4096;
@@ -58,6 +53,7 @@ impl Future for UDDatagram<'_> {
             1 => {
                 // FIXME: should dispatch according to the wc_status
                 if wc.status != ib_wc_status::IB_WC_SUCCESS {
+                    crate::log::debug!("check wc: {}", wc.status);
                     return Err(Err::Other);
                 }
                 Ok(Async::Ready(wc))
@@ -67,36 +63,36 @@ impl Future for UDDatagram<'_> {
     }
 }
 
-impl crate::Datagram for UDDatagram<'_> {
-    type AddressHandler =  KRdmaKit::cm::EndPoint;
-    type Msg = UDMsg;
-    type Key = u32;
+impl crate::conn::Conn for UDDatagram<'_> {
+    type ReqPayload = crate::rdma::payload::Payload<ib_ud_wr>;
 
-    fn post_msg(
-        &mut self,
-        addr: &Self::AddressHandler,
-        msg: &Self::Msg,
-        key: &Self::Key,
-    ) -> Result<(), Self::IOResult> {
-        crate::log::debug!("check posted msg: {:?}", addr); 
-        let mut op = UDOp::new(&self.ud);
-        let res = op.send(msg.get_pa(), *key, &addr, msg.get_bytes().len());
-        if res.is_err() {
+    fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
+        let mut bad_wr: *mut ib_send_wr = core::ptr::null_mut();
+        let err = unsafe {
+            bd_ib_post_send(
+                self.ud.get_qp(),
+                req.get_wr_ptr() as *mut _,
+                &mut bad_wr as *mut _,
+            )
+        };
+        if err != 0 {
             return Err(Err::Other);
         }
+
         Ok(())
     }
 }
 
-impl Factory for UDFactory<'_> {
-    type CreateMeta = ();
-    type DatagramType<'a>
+impl crate::conn::Factory for UDFactory<'_> {
+    type ConnMeta = ();
+    type ConnType<'a>
     where
         Self: 'a,
     = UDDatagram<'a>;
-    type CreateResult = Err;
 
-    fn create(&self, meta: Self::CreateMeta) -> Result<Self::DatagramType<'_>, Self::CreateResult> {
+    type ConnResult = Err;
+
+    fn create(&self, _meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult> {
         let ud = UD::new(&self.rctx).ok_or(Err::Other)?;
         Ok(UDDatagram {
             ud: ud,
