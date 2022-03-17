@@ -51,7 +51,9 @@ pub enum Err {
     /// Retry, used to indicate retrying the erroneous function call, typically `ib_poll_cq`
     Retry,
 
+    Empty, 
     /// Other general error
+    ///     
     Other,
 }
 
@@ -62,7 +64,6 @@ pub enum QPStatus {
     Other, 
 }
 
-pub mod rc;
 pub mod payload;
-pub mod ud;
+pub mod rc;
 pub mod dc; 

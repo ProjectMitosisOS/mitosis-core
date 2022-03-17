@@ -3,25 +3,27 @@ use super::Future;
 pub trait Datagram<T: Future = Self>: Future {
     type IOResult = Self::Error;
     type AddressHandler;
-    type MemoryRegion;
+    type Msg;
+    type Key;
 
     fn post_msg(
         &mut self,
         addr: &Self::AddressHandler,
-        msg: &Self::MemoryRegion,
+        msg: &Self::Msg,
+        key: &Self::Key,
     ) -> Result<(), Self::IOResult>;
-
-    // TODO: should be move to another trait
-    fn post_recv_buf(&mut self, buf: Self::MemoryRegion) -> Result<(), Self::IOResult>;
 }
 
-pub trait Receiver<D, T: Future = Self>: Future where D : Datagram {
-    type MsgBuf = D::MemoryRegion; 
+pub trait Receiver<T: Future = Self>: Future
+{
+    type IOResult = Self::Error;
+    type MsgBuf;
+    type Key;
 
-    fn post_recv();
+    fn post_recv_buf(&mut self, buf: Self::MsgBuf, key: Self::Key) -> Result<(), Self::IOResult>;
 }
 
-pub trait Factory { 
+pub trait Factory {
     type DatagramType<'a>: Datagram
     where
         Self: 'a;
@@ -30,3 +32,7 @@ pub trait Factory {
 
     fn create(&self, meta: Self::CreateMeta) -> Result<Self::DatagramType<'_>, Self::CreateResult>;
 }
+
+pub mod msg;
+pub mod ud;
+pub mod ud_receiver;

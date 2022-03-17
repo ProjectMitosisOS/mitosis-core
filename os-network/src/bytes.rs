@@ -36,6 +36,11 @@ impl BytesMut {
     }
 
     #[inline(always)]
+    pub unsafe fn get_ptr(&self) -> *mut u8 { 
+        self.ptr
+    }
+
+    #[inline(always)]
     pub fn len(&self) -> usize { 
         self.len
     }
@@ -106,44 +111,5 @@ impl Debug for BytesMut {
         }
         write!(f, "\"")?;        
         Ok(())
-    }
-}
-
-pub struct RMemRegion {
-    bytes: BytesMut,
-    paddr: u64,
-    lkey: u32,
-}
-
-impl RMemRegion {
-    pub unsafe fn new(bytes: BytesMut, paddr: u64, lkey: u32) -> Self {
-        Self {
-            bytes: bytes,
-            paddr: paddr,
-            lkey: lkey,
-        }
-    }
-
-    pub unsafe fn from_raw(vaddr: u64, len: usize, paddr: u64, lkey: u32) -> Self {
-        Self {
-            bytes: BytesMut {
-                ptr: vaddr as *mut u8,
-                len: len,
-            },
-            paddr: paddr,
-            lkey: lkey,
-        }
-    }
-
-    pub fn get_bytes(&self) -> &BytesMut {
-        &self.bytes
-    }
-
-    pub fn get_paddr(&self) -> u64 {
-        self.paddr
-    }
-
-    pub fn get_lkey(&self) -> u32 {
-        self.lkey
     }
 }
