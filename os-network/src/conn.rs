@@ -20,7 +20,7 @@ pub trait Factory {
     fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
 }
 
-pub trait MetaFactory {
+pub trait MetaFactory : Factory {
     type HyperMeta;
     type Meta;
     type MetaResult;
