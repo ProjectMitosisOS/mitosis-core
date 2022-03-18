@@ -3,6 +3,7 @@
 extern crate alloc;
 
 use core::fmt::Write;
+use core::pin::Pin;
 
 use alloc::boxed::Box;
 
@@ -16,7 +17,8 @@ use rust_kernel_linux_util as log;
 
 use os_network::bytes::BytesMut;
 use os_network::rdma::payload;
-use os_network::{rdma, Conn, ConnFactory};
+use os_network::{rdma, Conn};
+use os_network::conn::Factory;
 use os_network::timeout::Timeout;
 use os_network::block_on;
 
@@ -156,7 +158,7 @@ fn test_rc_post_poll() {
     write!(&mut remote_bytes, "hello world from remote").unwrap();
 
     // read the remote memory to local
-    let read_req = RCReqPayload::default()
+    let mut read_req = RCReqPayload::default()
         .set_laddr(local.get_pa(0))
         .set_raddr(remote.get_pa(0))
         .set_sz(capacity)
@@ -165,7 +167,11 @@ fn test_rc_post_poll() {
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ);
 
-    let res = rc.post(&read_req);
+    // pin the request to set the sge_ptr properly. 
+    let mut read_req = unsafe { Pin::new_unchecked(&mut read_req) }; 
+    os_network::rdma::payload::Payload::<ib_rdma_wr>::finalize(read_req.as_mut());
+
+    let res = rc.post(&read_req.as_ref());
     if res.is_err() {
         log::error!("unable to post read op");
         return;
@@ -188,7 +194,7 @@ fn test_rc_post_poll() {
     write!(&mut local_bytes, "hello world from local").unwrap();
 
     // write local memory to remote
-    let write_req = RCReqPayload::default()
+    let mut write_req = RCReqPayload::default()
         .set_laddr(local.get_pa(0))
         .set_raddr(remote.get_pa(0))
         .set_sz(capacity)
@@ -197,7 +203,11 @@ fn test_rc_post_poll() {
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE);
 
-    let res = rc.post(&write_req);
+    // pin the request to set the sge_ptr properly. 
+    let mut write_req = unsafe { Pin::new_unchecked(&mut write_req) }; 
+    os_network::rdma::payload::Payload::<ib_rdma_wr>::finalize(write_req.as_mut());
+
+    let res = rc.post(&write_req.as_ref());
     if res.is_err() {
         log::error!("unable to post read op");
         return;

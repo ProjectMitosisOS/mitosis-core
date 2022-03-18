@@ -2,6 +2,7 @@
 
 extern crate alloc;
 
+use core::pin::Pin;
 use core::fmt::Write;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering::SeqCst;
@@ -19,7 +20,8 @@ use os_network::block_on;
 use os_network::bytes::BytesMut;
 use os_network::rdma::payload;
 use os_network::timeout::Timeout;
-use os_network::{rdma, Conn, ConnFactory};
+use os_network::{rdma, Conn};
+use os_network::conn::Factory;
 
 use mitosis_macros::declare_global;
 
@@ -103,7 +105,7 @@ fn test_dc_one_sided() {
     write!(&mut remote_bytes, "hello world from remote").unwrap();
 
     // Perform a remote read
-    let payload = DCReqPayload::default()
+    let mut payload = DCReqPayload::default()
         .set_laddr(local.get_pa(0))
         .set_raddr(remote.get_pa(0))
         .set_sz(MEM_SIZE)
@@ -112,7 +114,12 @@ fn test_dc_one_sided() {
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE)
         .set_ah(&endpoint);
-    let res = dc.post(&payload);
+
+    // pin the payload to set the sge_ptr properly. 
+    let mut payload = unsafe { Pin::new_unchecked(&mut payload) }; 
+    os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+
+    let res = dc.post(&payload.as_ref());
     if res.is_err() {
         log::error!("unable to post read qp");
         return;

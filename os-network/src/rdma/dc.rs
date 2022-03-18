@@ -37,6 +37,7 @@ impl crate::Conn for DCConn<'_> {
     type CompPayload = ();
     type IOResult = super::Err;
 
+    #[inline]
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult> {
         compiler_fence(SeqCst); 
         let mut op = DCOp::new(&self.dc);
@@ -81,7 +82,7 @@ impl Future for DCConn<'_> {
     }
 }
 
-impl crate::ConnFactory for DCFactory<'_> {
+impl crate::conn::Factory for DCFactory<'_> {
     type ConnMeta = ();
     type ConnType<'a>
     where

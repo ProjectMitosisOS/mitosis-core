@@ -17,6 +17,35 @@ impl BytesMut {
         let slice = core::slice::from_raw_parts_mut(ptr, len);
         Self::from_static(slice)
     }
+
+    pub unsafe fn truncate(&self, off: usize) -> core::option::Option<Self> {
+        if self.len > off {
+            Some(Self {
+                ptr: self.ptr.offset(off as isize),
+                len: self.len - off,
+            })
+        } else {
+            None
+        }
+    }    
+
+    pub unsafe fn clone_and_resize(&self, sz : usize) -> core::option::Option<Self> { 
+        if self.len >= sz && sz > 0 { 
+            Some(Self { 
+                ptr : self.ptr, 
+                len : sz
+            })
+        } else { 
+            None
+        }
+    }
+
+    pub unsafe fn clone(&self) -> Self {
+        Self {
+            ptr: self.ptr,
+            len: self.len,
+        }
+    }
 }
 
 impl BytesMut {
@@ -31,29 +60,34 @@ impl BytesMut {
     }
 
     #[inline(always)]
-    pub fn get_raw(&self) -> u64 { 
+    pub fn get_raw(&self) -> u64 {
         self.ptr as u64
     }
 
     #[inline(always)]
-    pub fn len(&self) -> usize { 
+    pub unsafe fn get_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+
+    #[inline(always)]
+    pub fn len(&self) -> usize {
         self.len
     }
 
     #[inline(always)]
-    pub unsafe fn at_unchecked(&self, offset : usize) -> u8 { 
-        core::ptr::read(self.ptr.offset(offset as isize)) 
+    pub unsafe fn at_unchecked(&self, offset: usize) -> u8 {
+        core::ptr::read(self.ptr.offset(offset as isize))
     }
 }
 
-impl core::cmp::PartialEq for BytesMut { 
-    fn eq(&self, other : &Self) -> bool { 
-        if self.len != other.len { 
-            return false; 
+impl core::cmp::PartialEq for BytesMut {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len != other.len {
+            return false;
         }
-        for i  in 0..self.len { 
-            if unsafe { self.at_unchecked(i) != other.at_unchecked(i) } { 
-                return false; 
+        for i in 0..self.len {
+            if unsafe { self.at_unchecked(i) != other.at_unchecked(i) } {
+                return false;
             }
         }
         true
@@ -62,8 +96,8 @@ impl core::cmp::PartialEq for BytesMut {
 
 impl core::cmp::Eq for BytesMut {}
 
-use core::fmt::{Arguments, Debug, Write, Formatter, Result};
-// use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::println; 
+use core::fmt::{Arguments, Debug, Formatter, Result, Write};
+// use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module::println;
 
 impl Write for BytesMut {
     #[inline]
@@ -104,7 +138,7 @@ impl Debug for BytesMut {
                 write!(f, "\\x{:02x}", b)?;
             }
         }
-        write!(f, "\"")?;        
+        write!(f, "\"")?;
         Ok(())
     }
 }

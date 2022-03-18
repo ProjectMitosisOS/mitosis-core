@@ -18,49 +18,20 @@ pub mod timeout;
 
 pub mod bytes;
 pub mod remote_memory;
+/// TODO: need doc
+pub mod conn;
+pub use conn::*;
 
-pub trait Conn<T: Future = Self>: Future {
-    type ReqPayload; // the request format
-    type CompPayload = Self::Output;
-    type IOResult = Self::Error;
 
-    // post the request to the underlying device
-    fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult>;
-}
-
-pub trait Datagram {
-    type IOResult;
-    type AddressHandler;
-
-    fn post_datagram(
-        &mut self,
-        addr: &Self::AddressHandler,
-        msg: &bytes::BytesMut,
-    ) -> Result<(), Self::IOResult>;
-
-    // XD: this is not an optimized version,
-    // e.g., RDMA's UD will use inlining & doorbell batching for acceleration
-    // but currently in MITOSIS's case, implementing these is fine
-    // If time permits, we will add the above optimizations
-    fn post_recv(&mut self, buf: bytes::BytesMut) -> Result<(), Self::IOResult>;
-
-    // TODO: change it to future
-    fn poll_datagram(&mut self) -> Result<bytes::BytesMut, Self::IOResult>;
-}
-
-pub trait ConnFactory {
-    type ConnMeta;
-    type ConnType<'a>: Conn
-    where
-        Self: 'a;
-    type ConnResult;
-
-    // create and connect the connection
-    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
-}
+/// TODO: need doc
+pub mod datagram;
+pub use datagram::*;
 
 // impl the connection as RDMA
 pub mod rdma;
+
+#[allow(unused_imports)]
+use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util as log;
 
 /// Block on the future until it is ready or error
 #[allow(non_snake_case)]
