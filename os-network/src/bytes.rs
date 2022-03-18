@@ -18,19 +18,39 @@ impl BytesMut {
         Self::from_static(slice)
     }
 
-    pub unsafe fn truncate(&mut self, offset: usize) -> core::option::Option<Self> {
-        if offset < self.len() {
-            return Some(Self::from_raw(
-                self.ptr.offset(offset as _),
-                self.len() - offset,
-            ));
+    pub unsafe fn truncate(&self, off: usize) -> core::option::Option<Self> {
+        if self.len > off {
+            Some(Self {
+                ptr: self.ptr.offset(off as isize),
+                len: self.len - off,
+            })
+        } else {
+            None
         }
-        None
+    }    
+
+    pub unsafe fn clone_and_resize(&self, sz : usize) -> core::option::Option<Self> { 
+        if self.len >= sz && sz > 0 { 
+            Some(Self { 
+                ptr : self.ptr, 
+                len : sz
+            })
+        } else { 
+            None
+        }
+    }
+
+    pub unsafe fn clone(&self) -> Self {
+        Self {
+            ptr: self.ptr,
+            len: self.len,
+        }
     }
 }
 
 impl BytesMut {
     /// return true if the range of payload's len is within [ptr + offset, ptr + len]
+    #[inline(always)]
     pub fn copy(&mut self, payload: &Self, offset: usize) -> bool {
         if core::intrinsics::likely(self.len.checked_sub(offset).is_some()) {
             unsafe { core::ptr::copy_nonoverlapping(payload.ptr, self.ptr, payload.len) };
@@ -39,6 +59,7 @@ impl BytesMut {
         false
     }
 
+    #[inline(always)]
     pub fn get_raw(&self) -> u64 {
         self.ptr as u64
     }
@@ -49,10 +70,16 @@ impl BytesMut {
         }
     }
 
+    pub unsafe fn get_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+
+    #[inline(always)]
     pub fn len(&self) -> usize {
         self.len
     }
 
+    #[inline(always)]
     pub unsafe fn at_unchecked(&self, offset: usize) -> u8 {
         core::ptr::read(self.ptr.offset(offset as isize))
     }

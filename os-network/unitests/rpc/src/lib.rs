@@ -39,7 +39,7 @@ fn test_service() {
 
 // a test with RDMA
 fn test_rpc() { 
-    let mut rpc = datagram::RPCHook::new(); 
+    let mut rpc = hook::RPCHook::new(); 
     rpc.get_mut_service().register(73, test_callback);     
 }
 

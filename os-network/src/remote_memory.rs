@@ -1,4 +1,5 @@
 use crate::bytes::BytesMut;
+
 pub trait Device {
     // data for authentication the validity of the operation
     type Key;

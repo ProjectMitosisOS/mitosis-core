@@ -1,6 +1,6 @@
-use KRdmaKit::rust_kernel_rdma_base::{ib_rdma_wr,ib_sge};
+use KRdmaKit::rust_kernel_rdma_base::{ib_dc_wr, ib_sge};
 
-impl super::SendWR for ib_rdma_wr {
+impl super::SendWR for ib_dc_wr {
     fn set_opcode(&mut self, opcode: u32) {
         self.wr.opcode = opcode;
     }
@@ -27,7 +27,7 @@ impl super::SendWR for ib_rdma_wr {
     }    
 }
 
-impl super::RDMAWR for ib_rdma_wr {
+impl super::RDMAWR for ib_dc_wr {
     fn set_raddr(&mut self, raddr: u64) {
         self.remote_addr = raddr;
     }
@@ -35,4 +35,12 @@ impl super::RDMAWR for ib_rdma_wr {
     fn set_rkey(&mut self, rkey: u32) {
         self.rkey = rkey;
     }
+}
+
+impl super::UDWR for ib_dc_wr {
+    fn set_ah(&mut self, end_point: &KRdmaKit::cm::EndPoint) {
+        self.ah = end_point.ah;
+        self.dct_access_key = 73; // TODO
+        self.dct_number = end_point.dct_num;
+    }    
 }

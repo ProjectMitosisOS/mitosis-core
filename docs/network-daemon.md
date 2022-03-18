@@ -1,8 +1,8 @@
-### A short documentation of the network daemon
+# A short documentation of the network daemon
 
-### Module graphs
+## Module graphs
 
-#### Network connection
+### Network connection
 ```mermaid
 flowchart LR
 A[NetConn] --> B[RDMA]
@@ -11,7 +11,7 @@ B-->D[UD]
 B-->E[DCT]
 ```
 
-#### Remote memory
+### Remote memory
 ```mermaid
 flowchart LR
 A[Device]

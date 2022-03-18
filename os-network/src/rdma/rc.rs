@@ -26,7 +26,7 @@ impl<'a> RCFactory<'a> {
     }
 }
 
-impl crate::ConnFactory for RCFactory<'_> {
+impl crate::conn::Factory for RCFactory<'_> {
     type ConnMeta = super::ConnMeta;
     type ConnType<'a>
     where
@@ -69,7 +69,7 @@ impl<'a> RCFactoryWPath<'a> {
     }
 }
 
-impl crate::ConnFactory for RCFactoryWPath<'_> {
+impl crate::conn::Factory for RCFactoryWPath<'_> {
     type ConnMeta = super::ConnMetaWPath;
     type ConnType<'a>
     where
@@ -111,12 +111,15 @@ impl RCConn<'_> {
     }
 }
 
+use core::sync::atomic::compiler_fence;
+use core::sync::atomic::Ordering::SeqCst;
+
 impl crate::Conn for RCConn<'_> {
     type ReqPayload = super::payload::Payload<ib_rdma_wr>;
-    type CompPayload = ib_wc;
-    type IOResult = super::Err;
 
+    #[inline]
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
+        compiler_fence(SeqCst); 
         let mut op = RCOp::new(&self.rc);
         unsafe {
             op.post_send_raw(req.get_wr_ptr() as *mut _).map_err(|_x| {
@@ -125,13 +128,24 @@ impl crate::Conn for RCConn<'_> {
             })
         }
     }
+}
 
-    fn poll(&mut self) -> Result<Self::CompPayload, Self::IOResult> {
+use crate::future::{Async,Future,Poll}; 
+
+impl Future for RCConn<'_> { 
+    type Output = ib_wc;
+    type Error = super::Err;
+
+    // XD: should refine. Why using RCOp here? 
+    // Maybe we call just call the low-level ib_poll_cq
+    #[inline]
+    fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
+        compiler_fence(SeqCst); 
         let mut op = RCOp::new(&self.rc);
         let mut wc: ib_wc = Default::default();
         let result = op.pop_with_wc(&mut wc as *mut ib_wc);
         if result.is_none() {
-            return Err(super::Err::Retry);
+            return Ok(Async::NotReady);
         }
         let result = result.unwrap();
         let result = unsafe { (*result).status };
@@ -139,21 +153,7 @@ impl crate::Conn for RCConn<'_> {
             log::error!("poll cq with err: {}", result);
             return Err(super::Err::Other);
         } else {
-            return Ok(wc);
-        }
-    }
-
-    fn wait_til_comp(&mut self) -> Result<Self::CompPayload, Self::IOResult> {
-        loop {
-            let result = self.poll();
-            if result.is_ok() {
-                return result;
-            }
-            let err = result.err().unwrap();
-            if err == super::Err::Retry {
-                continue;
-            }
-            return Err(err);
-        }
+            return Ok(Async::Ready(wc));
+        }        
     }
 }
