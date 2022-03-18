@@ -39,8 +39,8 @@ fn test_service() {
 
 // a test with RDMA
 fn test_rpc() { 
-    let mut rpc = hook::RPCHook::new(); 
-    rpc.get_mut_service().register(73, test_callback);     
+//    let mut rpc = hook::RPCHook::new(); 
+//    rpc.get_mut_service().register(73, test_callback);     
 }
 
 #[krdma_test(test_service,test_rpc)]

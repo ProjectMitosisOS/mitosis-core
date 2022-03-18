@@ -5,6 +5,10 @@ pub struct BytesMut {
     len: usize,
 }
 
+pub trait ToBytes {
+    fn get_bytes(&self) -> &BytesMut;
+}
+
 impl BytesMut {
     pub fn from_static(bytes: &'static mut [u8]) -> Self {
         Self {

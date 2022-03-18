@@ -52,6 +52,7 @@ fn test_ud_factory() {
 }
 
 use os_network::datagram::ud_receiver::*;
+use os_network::bytes::ToBytes;
 use core::pin::Pin;
 
 /// A test on one-sided operation on `UDDatagram`

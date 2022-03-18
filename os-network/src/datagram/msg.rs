@@ -1,4 +1,4 @@
-use crate::bytes::BytesMut;
+use crate::bytes::*;
 use KRdmaKit::mem::{Memory, RMemPhy};
 
 /// UD must use physical address.
@@ -25,6 +25,12 @@ impl UDMsg {
     }
 }
 
+impl ToBytes for UDMsg {
+    fn get_bytes(&self) -> &BytesMut {
+        &self.bytes
+    }
+}
+
 impl UDMsg {
     pub fn new_from_phy(mut phy: RMemPhy, imm: u32) -> Self {
         let pa = phy.get_pa(0);
@@ -38,10 +44,6 @@ impl UDMsg {
 
     pub fn new(size: usize, imm : u32) -> Self {
         Self::new_from_phy(RMemPhy::new(size), imm)
-    }
-
-    pub fn get_bytes(&self) -> &BytesMut {
-        &self.bytes
     }
 
     pub fn get_pa(&self) -> u64 {
