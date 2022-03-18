@@ -27,6 +27,10 @@ impl<'a> UDReceiver<'a> {
     pub fn to_inner_msg_queues(self) -> VecDeque<UDMsg> {
         self.msg_queues
     }
+
+    pub fn to_inner(self) -> (UDDatagram<'a>,  VecDeque<UDMsg>) { 
+        (self.inner, self.msg_queues)
+    }
 }
 
 impl super::Receiver for UDReceiver<'_> {
