@@ -61,6 +61,22 @@ pub enum Err {
     WCErr(WCStatus),
 }
 
+impl Err {
+    pub fn is_wc_err(&self) -> bool {
+        match self {
+            Self::WCErr(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn unwrap_wc_err(self) -> WCStatus {
+        match self {
+            Self::WCErr(status) => status,
+            _ => panic!("called `unwrap_wc_err()` on a non-wc_err value"),
+        }
+    }
+}
+
 #[repr(C)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq)]
