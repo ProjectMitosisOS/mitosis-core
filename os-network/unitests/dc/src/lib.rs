@@ -105,7 +105,7 @@ fn test_dc_one_sided() {
     write!(&mut remote_bytes, "hello world from remote").unwrap();
 
     // Perform a remote read
-    let payload = DCReqPayload::default()
+    let mut payload = DCReqPayload::default()
         .set_laddr(local.get_pa(0))
         .set_raddr(remote.get_pa(0))
         .set_sz(MEM_SIZE)
