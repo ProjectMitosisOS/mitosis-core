@@ -2,6 +2,7 @@
 
 extern crate alloc;
 
+use core::pin::Pin;
 use core::fmt::Write;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering::SeqCst;
@@ -113,7 +114,12 @@ fn test_dc_one_sided() {
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE)
         .set_ah(&endpoint);
-    let res = dc.post(&payload);
+
+    // pin the payload to set the sge_ptr properly. 
+    let mut payload = unsafe { Pin::new_unchecked(&mut payload) }; 
+    os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+
+    let res = dc.post(&payload.as_ref());
     if res.is_err() {
         log::error!("unable to post read qp");
         return;

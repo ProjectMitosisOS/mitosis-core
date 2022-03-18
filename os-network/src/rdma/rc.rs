@@ -111,10 +111,15 @@ impl RCConn<'_> {
     }
 }
 
+use core::sync::atomic::compiler_fence;
+use core::sync::atomic::Ordering::SeqCst;
+
 impl crate::Conn for RCConn<'_> {
     type ReqPayload = super::payload::Payload<ib_rdma_wr>;
 
+    #[inline]
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
+        compiler_fence(SeqCst); 
         let mut op = RCOp::new(&self.rc);
         unsafe {
             op.post_send_raw(req.get_wr_ptr() as *mut _).map_err(|_x| {
@@ -133,7 +138,9 @@ impl Future for RCConn<'_> {
 
     // XD: should refine. Why using RCOp here? 
     // Maybe we call just call the low-level ib_poll_cq
+    #[inline]
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
+        compiler_fence(SeqCst); 
         let mut op = RCOp::new(&self.rc);
         let mut wc: ib_wc = Default::default();
         let result = op.pop_with_wc(&mut wc as *mut ib_wc);
