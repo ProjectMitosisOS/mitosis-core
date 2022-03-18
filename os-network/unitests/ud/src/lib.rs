@@ -52,6 +52,7 @@ fn test_ud_factory() {
 }
 
 use os_network::datagram::ud_receiver::*;
+use core::pin::Pin;
 
 /// A test on one-sided operation on `UDDatagram`
 /// Pre-requisition: `ctx_init`
@@ -93,9 +94,12 @@ fn test_ud_two_sided() {
         .to_ud_wr(&endpoint)
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_lkey(unsafe { ctx.get_lkey() });
-    send_req.set_my_sge_ptr();
 
-    let result = client_ud.post(&send_req);
+    // pin the request to set the sge_ptr properly. 
+    let mut send_req = unsafe { Pin::new_unchecked(&mut send_req) }; 
+    os_network::rdma::payload::Payload::<ib_ud_wr>::finalize(send_req.as_mut()); 
+
+    let result = client_ud.post(&send_req.as_ref());
 
     if result.is_err() {
         log::error!("fail to post message");

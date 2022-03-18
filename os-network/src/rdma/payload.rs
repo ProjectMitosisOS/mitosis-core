@@ -1,3 +1,6 @@
+use core::marker::PhantomPinned;
+use core::pin::Pin;
+
 use KRdmaKit::cm::EndPoint;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
@@ -27,16 +30,26 @@ where
 {
     wr: T,
     sge: ib_sge,
+    _pin: PhantomPinned,
 }
 
 impl<T> Payload<T>
 where
     T: Default + SendWR,
 {
-    pub fn set_my_sge_ptr(&mut self) {
-        self.wr.set_sge_ptr(unsafe { self.get_sge_ptr() });
+    /// wr may self reference sge, so we need to pin it before we set the sge_list field
+    pub fn finalize<'a>(self: Pin<&'a mut Self>) {
+        unsafe {
+            let sge_ptr = self.get_sge_ptr();
+            Pin::get_unchecked_mut(self).wr.set_sge_ptr(sge_ptr);
+        }
     }
+}
 
+impl<T> Payload<T>
+where
+    T: Default + SendWR,
+{
     pub fn print_sge(&self) {
         unsafe { crate::log::debug!("{:?} {:?}", self.wr.get_sge_ptr(), self.get_sge_ptr()) };
     }
@@ -115,12 +128,11 @@ where
     T: Default + SendWR,
 {
     fn default() -> Self {
-        let mut res = Self {
+        Self {
             wr: Default::default(),
             sge: Default::default(),
-        };
-        res.set_my_sge_ptr();
-        res
+            _pin: PhantomPinned,
+        }
     }
 }
 
