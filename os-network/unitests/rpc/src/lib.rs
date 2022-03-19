@@ -52,6 +52,7 @@ const DEFAULT_QD_HINT: u64 = 73;
 // a test RPC with RDMA
 fn test_ud_rpc() {
     log::info!("Test RPC backed by RDMA's UD.");
+    let timeout_usec = 1000_000;
 
     type UDRPCHook<'a> = hook::RPCHook<'a, UDDatagram<'a>, UDReceiver<'a>>;
 
@@ -94,10 +95,33 @@ fn test_ud_rpc() {
             Ok(_) => {}
             Err(e) => log::error!("post recv buf err: {:?}", e),
         }
-    }    
+    }
 
-    // test RPC request 
+    use os_network::rpc::header::*;
+    use os_network::timeout::Timeout;    
+    use os_network::block_on;
 
+    // test RPC connect request 
+    let connect_header = MsgHeader::gen_connect_stub(0,0); 
+    let mut request = UDMsg::new(512, 73);
+    unsafe { request.get_bytes_mut().memcpy_serialize(&connect_header) };
+
+    let result = client_session.post(&request, true);
+    if result.is_err() {
+        log::error!("fail to post message");
+        return;
+    }
+    // check the message has been sent
+    let mut timeout_client = Timeout::new(client_session, timeout_usec);
+    let result = block_on(&mut timeout_client);
+    if result.is_err() {
+        log::error!("polling send ud qp with error: {:?}", result.err().unwrap());
+    } else {
+        log::info!("post msg done");
+    }
+
+    let mut rpc_server = Timeout::new(rpc_server, 10000);
+    assert!(block_on(&mut rpc_server).err().unwrap().is_elapsed());
     /****************************/
 }
 

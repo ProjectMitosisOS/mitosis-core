@@ -48,7 +48,7 @@ pub struct MsgHeader {
 }
 
 impl MsgHeader {
-    pub fn gen_connect_header(session_id: usize, payload: usize) -> Self {
+    pub fn gen_connect_stub(session_id: usize, payload: usize) -> Self {
         Self {
             marker: ReqType::Connect,
             payload: payload,
@@ -56,7 +56,7 @@ impl MsgHeader {
         }
     }
 
-    pub fn gen_rpc_header(session_id: usize, rpc_id: usize, payload: usize) -> Self {
+    pub fn gen_call_stub(session_id: usize, rpc_id: usize, payload: usize) -> Self {
         Self {
             marker: ReqType::Request,
             payload: payload,

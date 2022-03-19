@@ -29,6 +29,10 @@ impl ToBytes for UDMsg {
     fn get_bytes(&self) -> &BytesMut {
         &self.bytes
     }
+
+    fn get_bytes_mut(&mut self) -> &mut BytesMut { 
+        &mut self.bytes
+    }
 }
 
 impl UDMsg {

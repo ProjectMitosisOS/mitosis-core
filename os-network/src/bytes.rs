@@ -7,6 +7,7 @@ pub struct BytesMut {
 
 pub trait ToBytes {
     fn get_bytes(&self) -> &BytesMut;
+    fn get_bytes_mut(&mut self) -> &mut BytesMut;
 }
 
 impl BytesMut {

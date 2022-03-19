@@ -48,8 +48,8 @@ where
         }
     }
 
-    pub fn post_msg_buf(&mut self, msg : R::MsgBuf) -> Result<(),R::IOResult> { 
-        self.transport.post_recv_buf(msg) 
+    pub fn post_msg_buf(&mut self, msg: R::MsgBuf) -> Result<(), R::IOResult> {
+        self.transport.post_recv_buf(msg)
     }
 }
 
@@ -74,26 +74,33 @@ where
         match self.transport.poll() {
             Ok(Async::NotReady) => Ok(Async::NotReady),
             Ok(Async::Ready(msg)) => {
+                crate::log::info!("receive one msg"); 
                 // parse the request
                 let mut bytes = unsafe { msg.get_bytes().clone() };
                 let mut msg_header: MsgHeader = Default::default();
                 unsafe { bytes.memcpy_deserialize(&mut msg_header) };
 
+                let mut rpc_args = unsafe {
+                    bytes.truncate_header(core::mem::size_of::<super::header::ReqType>())
+                };
+
                 match msg_header.get_marker() {
                     super::header::ReqType::Connect => {
-                        unimplemented!()
+                        let meta = msg_header.get_connect_stub().ok_or(Error::corrupted())?;
+                        crate::log::info!("check meta in connect {:?}", meta);
                     }
                     super::header::ReqType::Request => {
-                        let mut msg = unsafe {
-                            bytes.truncate_header(core::mem::size_of::<super::header::ReqType>())                            
-                        };
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
-                        crate::log::info!("check meta {:?}", meta); 
+                        crate::log::info!("check meta in {:?}", meta);
+                        
+                        // TODO: call the message
                     }
                     _ => {}
                 }
 
-                self.transport.post_recv_buf(msg).map_err(|e|Error::inner(e))?;
+                self.transport
+                    .post_recv_buf(msg)
+                    .map_err(|e| Error::inner(e))?;
                 Ok(Async::NotReady)
             }
             Err(e) => Err(Error::inner(e)),
@@ -134,8 +141,8 @@ enum Kind<T> {
 
     /// No ID associated with the call function
     NoID,
-    
-    /// The header is corrupted 
+
+    /// The header is corrupted
     CorruptedHeader,
 }
 
@@ -154,13 +161,13 @@ impl<T> Error<T> {
         }
     }
 
-    /// Create a new `Error` representing the RPC meta data is corrupted 
+    /// Create a new `Error` representing the RPC meta data is corrupted
     pub fn corrupted() -> Error<T> {
         Error(Kind::CorruptedHeader)
     }
 
-    /// Create a new `Error` representing the function ID is not registered 
+    /// Create a new `Error` representing the function ID is not registered
     pub fn no_id() -> Error<T> {
         Error(Kind::NoID)
-    }    
+    }
 }
