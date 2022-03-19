@@ -3,7 +3,8 @@ use alloc::boxed::Box;
 use hashbrown::HashMap;
 
 pub struct Service<'a> {
-    callbacks: HashMap<usize, Box<dyn FnMut(&mut BytesMut, &mut BytesMut) + 'a>>,
+    // input, output
+    callbacks: HashMap<usize, Box<dyn FnMut(&BytesMut, &mut BytesMut) + 'a>>,
 }
 
 impl<'a> Service<'a> {}
@@ -15,7 +16,7 @@ impl<'a> Service<'a> {
         }
     }
 
-    pub fn register(&mut self, id: usize, callback: impl FnMut(&mut BytesMut, &mut BytesMut) + 'a) -> bool {
+    pub fn register(&mut self, id: usize, callback: impl FnMut(&BytesMut, &mut BytesMut) + 'a) -> bool {
         if self.callbacks.contains_key(&id) {
             return false;
         }

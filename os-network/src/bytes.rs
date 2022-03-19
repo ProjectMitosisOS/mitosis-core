@@ -1,7 +1,7 @@
 // A simple static bytes abstraction inspired by https://github.com/tokio-rs/bytes/
 // In kernel, all written pointers are static
 pub struct BytesMut {
-    ptr: *mut u8,
+    pub(crate) ptr: *mut u8,
     len: usize,
 }
 

@@ -13,7 +13,7 @@ use os_network::bytes::*;
 use os_network::rpc::*; 
 use krdma_test::*;
 
-fn test_callback(input : &mut BytesMut, output : &mut BytesMut) { 
+fn test_callback(input : &BytesMut, output : &mut BytesMut) { 
     log::info!("test callback input {:?}", input); 
     log::info!("test callback output {:?}", output); 
 }
@@ -32,7 +32,7 @@ fn test_service() {
 
     let mut out_buf = vec![0;64]; 
     let mut out_msg = unsafe { BytesMut::from_raw(out_buf.as_mut_ptr(), out_buf.len())}; 
-    write!(&mut msg, "This is the output").unwrap(); 
+    write!(&mut out_msg, "This is the output").unwrap(); 
 
     assert_eq!(true, service.execute(73, &mut msg, &mut out_msg));
 }
