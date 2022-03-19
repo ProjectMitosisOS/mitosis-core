@@ -6,6 +6,7 @@ use crate::future::{Async, Future, Poll};
 use core::marker::PhantomData;
 use core::option::Option;
 
+use KRdmaKit::cm::SidrCM;
 use KRdmaKit::device::{RContext, RNIC};
 use KRdmaKit::qp::UD;
 use KRdmaKit::rust_kernel_rdma_base::*;
@@ -37,6 +38,13 @@ pub struct UDDatagram<'a> {
 impl UDDatagram<'_> {
     pub fn get_qp(&self) -> Arc<UD> {
         self.ud.clone()
+    }
+
+    pub fn clone(&self) -> Self {
+        Self {
+            ud: self.ud.clone(),
+            phantom: PhantomData,
+        }
     }
 }
 
@@ -102,12 +110,21 @@ impl crate::conn::Factory for UDFactory<'_> {
 }
 
 impl crate::conn::MetaFactory for UDFactory<'_> {
-    type HyperMeta = ();
-    type Meta = KRdmaKit::cm::EndPoint;
-    type MetaResult = Err; 
+    // gid, service id, qd hint
+    type HyperMeta = (alloc::string::String, u64, u64);
 
-    fn create(&self, meta: Self::HyperMeta) -> Result<Self::Meta, Self::MetaResult> { 
-        unimplemented!(); 
+    // ud endpoint, local memory protection key
+    type Meta = (KRdmaKit::cm::EndPoint, u32);
+
+    type MetaResult = Err;
+
+    fn create_meta(&self, meta: Self::HyperMeta) -> Result<Self::Meta, Self::MetaResult> {
+        let (gid, service_id, qd_hint) = meta;
+        let path_res = self.rctx.explore_path(gid, service_id).ok_or(Err::Other)?;
+        let mut sidr_cm = SidrCM::new(&self.rctx, core::ptr::null_mut()).ok_or(Err::Other)?;
+        let endpoint = sidr_cm
+            .sidr_connect(path_res, service_id, qd_hint)
+            .map_err(|_| Err::Other)?;
+        Ok((endpoint, unsafe { self.rctx.get_lkey() }))
     }
-
 }

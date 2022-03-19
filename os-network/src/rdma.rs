@@ -45,7 +45,6 @@ pub enum ConnErr {
 
 #[derive(Debug, PartialEq)]
 pub enum Err {
-    // TODO: Need to be refined, should be more detailed
     /// Timeout error
     Timeout,
 
@@ -81,7 +80,7 @@ impl Err {
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq)]
 pub enum WCStatus {
-    IB_WC_SUCCESS,
+    IB_WC_SUCCESS = 0,
 	IB_WC_LOC_LEN_ERR,
 	IB_WC_LOC_QP_OP_ERR,
 	IB_WC_LOC_EEC_OP_ERR,

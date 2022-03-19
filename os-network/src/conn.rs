@@ -20,10 +20,10 @@ pub trait Factory {
     fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
 }
 
-pub trait MetaFactory : Factory {
+pub trait MetaFactory: Factory {
     type HyperMeta;
     type Meta;
     type MetaResult;
 
-    fn create(&self, meta: Self::HyperMeta) -> Result<Self::Meta, Self::MetaResult>;
+    fn create_meta(&self, meta: Self::HyperMeta) -> Result<Self::Meta, Self::MetaResult>;
 }

@@ -37,7 +37,7 @@ pub struct ReqHeader {
 }
 
 #[repr(u8)]
-enum ReplyStatus {
+pub enum ReplyStatus {
     Ok = 1,       // a success call
     NotExist = 3, // function is not registered in the service
 }
