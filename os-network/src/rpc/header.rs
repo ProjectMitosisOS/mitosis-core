@@ -48,11 +48,22 @@ pub struct MsgHeader {
 }
 
 impl MsgHeader {
-    pub fn new_connect_request<Meta: Sized>() -> Self {
+    pub fn gen_connect_header(session_id: usize, payload: usize) -> Self {
         Self {
             marker: ReqType::Connect,
-            payload: core::mem::size_of::<Meta>(),
-            meta: RPCMeta::None,
+            payload: payload,
+            meta: RPCMeta::Connect(ConnectStub(session_id)),
+        }
+    }
+
+    pub fn gen_rpc_header(session_id: usize, rpc_id: usize, payload: usize) -> Self {
+        Self {
+            marker: ReqType::Request,
+            payload: payload,
+            meta: RPCMeta::Request(CallStub {
+                session_id: session_id,
+                rpc_id: rpc_id,
+            }),
         }
     }
 

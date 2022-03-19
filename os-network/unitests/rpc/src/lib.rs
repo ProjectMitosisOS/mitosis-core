@@ -45,6 +45,7 @@ use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
 use os_network::Factory;
+use os_network::MetaFactory;
 
 const DEFAULT_QD_HINT: u64 = 73;
 
@@ -61,10 +62,21 @@ fn test_ud_rpc() {
     let ctx = factory.get_context();
 
     let server_ud = factory.create(()).unwrap();
-    // expose it
+
+    // expose the server-side connection infoit
     let service_id: u64 = 0;
     let ctrl = RCtrl::create(service_id, &ctx).unwrap();
     ctrl.reg_ud(DEFAULT_QD_HINT as usize, server_ud.get_qp());
+
+    // the client part
+    let client_ud = factory.create(()).unwrap();
+    let gid = ctx.get_gid_as_string();
+    let (endpoint, key) = factory
+        .create_meta((gid, service_id, DEFAULT_QD_HINT))
+        .unwrap();
+    log::info!("check endpoint, key: {:?}, {}", endpoint, key);
+
+    let mut client_session = client_ud.create((endpoint, key)).unwrap();        
 
     /**** The main test body****/
     let temp_ud = server_ud.clone();
@@ -75,6 +87,17 @@ fn test_ud_rpc() {
     rpc_server.get_mut_service().register(73, test_callback);
 
     log::info!("check RPCHook: {:?}", rpc_server);
+
+    for _ in 0..12 {
+        // 64 is the header
+        match rpc_server.post_msg_buf(UDMsg::new(4096, 73)) {
+            Ok(_) => {}
+            Err(e) => log::error!("post recv buf err: {:?}", e),
+        }
+    }    
+
+    // test RPC request 
+
     /****************************/
 }
 

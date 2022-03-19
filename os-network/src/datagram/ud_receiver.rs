@@ -38,6 +38,9 @@ impl<'a> UDReceiver<'a> {
 impl super::Receiver for UDReceiver<'_> {
     type MsgBuf = <Self as Future>::Output;
 
+    // FIXME: should be configurable 
+    const Header : usize = 40; // GRH header 
+
     fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult> {
         let mut op = UDOp::new(&self.inner.ud);
         let res = op.post_recv(buf.get_pa(), self.lkey, buf.len());

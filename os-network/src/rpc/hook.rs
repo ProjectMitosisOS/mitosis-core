@@ -47,9 +47,14 @@ where
             transport: transport,
         }
     }
+
+    pub fn post_msg_buf(&mut self, msg : R::MsgBuf) -> Result<(),R::IOResult> { 
+        self.transport.post_recv_buf(msg) 
+    }
 }
 
 use super::header::*;
+use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 impl<'a, F, R> Future for RPCHook<'a, F, R>
 where
@@ -63,7 +68,7 @@ where
     <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload: ToBytes,
 {
     type Output = (); // msg, session ID
-    type Error = R::Error;
+    type Error = Error<R::Error>;
 
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         match self.transport.poll() {
@@ -80,29 +85,30 @@ where
                     }
                     super::header::ReqType::Request => {
                         let mut msg = unsafe {
-                            bytes.truncate_header(core::mem::size_of::<super::header::ReqType>())
+                            bytes.truncate_header(core::mem::size_of::<super::header::ReqType>())                            
                         };
-                        
+                        let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
+                        crate::log::info!("check meta {:?}", meta); 
                     }
                     _ => {}
                 }
 
-                self.transport.post_recv_buf(msg)?;
+                self.transport.post_recv_buf(msg).map_err(|e|Error::inner(e))?;
                 Ok(Async::NotReady)
             }
-            Err(e) => Err(e),
+            Err(e) => Err(Error::inner(e)),
         }
     }
 }
 
-use core::fmt::{Debug, Display, Formatter, Result};
+use core::fmt::{Debug, Display, Formatter};
 
 impl<'a, F, R> Debug for RPCHook<'a, F, R>
 where
     F: 'a + RPCFactory,
     R: Receiver,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "RPCHook service {}", self.service)
     }
 }
@@ -112,7 +118,49 @@ where
     F: 'a + RPCFactory,
     R: Receiver,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:?}", self)
     }
+}
+
+#[derive(Debug)]
+pub struct Error<T>(Kind<T>);
+
+/// Timeout error variants
+#[derive(Debug)]
+enum Kind<T> {
+    /// Inner value returned an error
+    Inner(T),
+
+    /// No ID associated with the call function
+    NoID,
+    
+    /// The header is corrupted 
+    CorruptedHeader,
+}
+
+impl<T> Error<T> {
+    /// Create a new `Error` representing the inner value completing with `Err`.
+    pub fn inner(err: T) -> Error<T> {
+        Error(Kind::Inner(err))
+    }
+
+    /// Returns `true` if the error was caused by the inner value completing
+    /// with `Err`.
+    pub fn is_inner(&self) -> bool {
+        match self.0 {
+            Kind::Inner(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Create a new `Error` representing the RPC meta data is corrupted 
+    pub fn corrupted() -> Error<T> {
+        Error(Kind::CorruptedHeader)
+    }
+
+    /// Create a new `Error` representing the function ID is not registered 
+    pub fn no_id() -> Error<T> {
+        Error(Kind::NoID)
+    }    
 }
