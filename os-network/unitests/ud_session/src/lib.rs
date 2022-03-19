@@ -28,6 +28,7 @@ declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 
 use os_network::bytes::ToBytes;
 use os_network::datagram::ud_receiver::*;
+use os_network::rpc::*;
 
 fn test_ud_session() {
     log::info!("UD session test started!");
@@ -68,10 +69,10 @@ fn test_ud_session() {
 
     // send a hello world to the session
     let mut client_session = client_ud.create((endpoint, key)).unwrap();
-    let mut request = (UDMsg::new(MAX_SEND_MSG, 73), true);
-    write!(&mut request.0, "hello world").unwrap();
+    let mut request = UDMsg::new(MAX_SEND_MSG, 73);
+    write!(&mut request, "hello world").unwrap();
 
-    let result = client_session.post(&request);
+    let result = client_session.post(&request, true);
     if result.is_err() {
         log::error!("fail to post message");
         return;
@@ -104,8 +105,8 @@ fn test_ud_session() {
         log::debug!("received msg: {} {:?} ", received_msg.len(), received_msg);
 
         assert!(
-            unsafe { received_msg.clone_and_resize(request.0.get_bytes().len()) }.unwrap()
-                == unsafe { request.0.get_bytes().clone() }
+            unsafe { received_msg.clone_and_resize(request.get_bytes().len()) }.unwrap()
+                == unsafe { request.get_bytes().clone() }
         );
     }
 }

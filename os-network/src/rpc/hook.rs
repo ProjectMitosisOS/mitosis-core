@@ -1,6 +1,8 @@
 use KRdmaKit::cm::ServerCM;
 use KRdmaKit::rpc::data::ReqType;
 
+use hashbrown::HashMap;
+
 use super::*;
 use crate::conn::*;
 use crate::datagram::Receiver;
@@ -8,68 +10,66 @@ use crate::datagram::Receiver;
 use crate::future::*;
 
 use core::marker::PhantomData;
+use core::mem::transmute_copy;
 
 /// The hook will receive datagram requests, and call the RPC callback correspondingly.
-/// - Factory: the connection factory
-/// - M: the message type
-/// - G: a generator to generate the request according to the generator
-pub struct RPCHook<'a, F, G, M>
+/// * Factory: the connection factory that creates the session
+/// * M: the message type
+/// * R: Receiver
+pub struct RPCHook<'a, F, R, M>
 where
-    F: 'a + Factory,
-    G: super::MsgToReq<
-        ReqType = <<F as Factory>::ConnType<'a> as Conn>::ReqPayload,
-        MsgType = M,
-    >,
+    F: 'a + RPCFactory,
+    R: Receiver,
 {
     service: Service<'a>,
-    conn_factory: F,
-    _data: PhantomData<(G, M)>,
+    session_factory: F,
+    transport: R,
+    connected_sessions: HashMap<usize, F::ConnType<'a>>,
+    _data: PhantomData<M>,
 }
 
-impl<'a, F, G, M> RPCHook<'a, F, G, M>
+impl<'a, F, R, M> RPCHook<'a, F, R, M>
 where
-    F: 'a + Factory,
-    G: super::MsgToReq<
-        ReqType = <<F as Factory>::ConnType<'a> as Conn>::ReqPayload,
-        MsgType = M,
-    >,
+    F: 'a + RPCFactory,
+    R: Receiver,
 {
     pub fn get_mut_service(&mut self) -> &mut Service<'a> {
         &mut self.service
     }
 }
 
-impl<'a, F, G, M> RPCHook<'a, F, G, M>
+impl<'a, F, R, M> RPCHook<'a, F, R, M>
 where
-    F: 'a + Factory,
-    G: super::MsgToReq<
-        ReqType = <<F as Factory>::ConnType<'a> as Conn>::ReqPayload,
-        MsgType = M,
-    >,
+    F: 'a + RPCFactory,
+    R: Receiver,
 {
-    pub fn new(factory: F) -> Self {
+    pub fn new(factory: F, transport: R) -> Self {
         Self {
             service: Service::new(),
-            conn_factory: factory,
+            session_factory: factory,
+            connected_sessions: HashMap::new(),
+            transport: transport,
             _data: PhantomData,
         }
     }
 }
 
-use crate::bytes::BytesMut;
-
-impl<'a, F, G, M> Future for RPCHook<'a, F, G, M>
+impl<'a, F, R, M> Future for RPCHook<'a, F, R, M>
 where
-    F: 'a + Factory,
-    G: super::MsgToReq<
-        ReqType = <<F as Factory>::ConnType<'a> as Conn>::ReqPayload,
-        MsgType = M,
-    >,
+    F: 'a + RPCFactory,
+    // we need to ensure that the polled result can be sent back to    
+    R: Receiver<Output = <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload>, 
 {
-    type Output = &'a [u8];
-    type Error = ();
+    type Output = (&'a [u8], usize); // msg, session ID
+    type Error = R::Error;
 
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
-        unimplemented!();
+        match self.transport.poll() {
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Ok(Async::Ready(v)) => {
+                unimplemented!();
+            }
+            Err(e) => Err(e),
+        }
     }
 }

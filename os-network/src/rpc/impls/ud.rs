@@ -22,17 +22,17 @@ impl<'a> crate::future::Future for UDSession<'a> {
 }
 
 use core::pin::Pin;
+use crate::conn::Conn;
 
-impl crate::conn::Conn for UDSession<'_> {
+impl super::super::RPCConn for UDSession<'_> {
     /// #Argument
     /// * UDMsg: the message to send
     /// * bool : whether to signal the request
-    type ReqPayload = (crate::msg::UDMsg, bool);
+    type ReqPayload = crate::msg::UDMsg;
 
     #[inline]
-    fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
-        let (msg, signaled) = req;
-        let mut send_req = msg
+    fn post(&mut self, req: &Self::ReqPayload, signaled : bool) -> Result<(), Self::IOResult> {
+        let mut send_req = req
             .to_ud_wr(&self.meta)
             .set_send_flags(match signaled {
                 true => ib_send_flags::IB_SEND_SIGNALED,
@@ -47,7 +47,7 @@ impl crate::conn::Conn for UDSession<'_> {
     }
 }
 
-impl crate::conn::Factory for UDDatagram<'_> {
+impl super::super::RPCFactory for UDDatagram<'_> {
     type ConnMeta = (EndPoint, u32);
     type ConnType<'a>
     where
