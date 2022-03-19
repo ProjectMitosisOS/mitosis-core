@@ -52,6 +52,10 @@ fn test_serialize() {
 
     let mut bytes = unsafe { BytesMut::from_raw(buf.as_mut_ptr(), buf.len())}; 
     unsafe { bytes.memcpy_serialize(&test_val) };
+
+    let mut val : u64 = 0;
+    unsafe { bytes.memcpy_deserialize(&mut val)}; 
+    assert_eq!(val, test_val); 
 }
 
 #[krdma_test(test_bytes,test_serialize)]

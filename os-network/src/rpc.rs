@@ -23,46 +23,15 @@ pub trait Caller {
     ) -> Result<(), (Err, Self::IOResult)>;
 }
 
-pub trait MsgToReq {
-    type MsgType;
-    type ReqType;
+pub mod hook;
 
-    fn msg_to_req(msg: &Self::MsgType) -> Self::ReqType;
-}
+pub mod header;
 
-#[repr(u8)]
-enum ReqType {
-    Connect = 0,
-    Request = 1,
-    Reply = 2,
-    DisConenct = 3,
-}
-
-pub struct SessionID(usize); 
-
-#[repr(u8)]
-pub enum ReplyStatus {
-    Ok = 1,       // a success call
-    NotExist = 3, // function is not registered in the service
-}
-
-#[repr(u64)]
-enum RPCMeta {
-    Request(SessionID), // session ID
-    Reply(ReplyStatus),
-}
-/// Metadata of RPC messages
-pub struct MsgHeader {
-    marker: ReqType,
-    payload: usize,
-    meta: RPCMeta,
-}
-
+// modules for registering RPC callbacks
 pub mod service;
 pub use service::Service;
 
 pub mod caller;
-pub mod hook;
 
 use crate::future::Future;
 

@@ -9,7 +9,6 @@ use crate::datagram::Receiver;
 
 use crate::future::*;
 
-use core::marker::PhantomData;
 use core::mem::transmute_copy;
 
 /// The hook will receive datagram requests, and call the RPC callback correspondingly.

@@ -3,7 +3,8 @@
     generic_associated_types,
     get_mut_unchecked,
     core_intrinsics,
-    associated_type_defaults
+    associated_type_defaults,
+    derive_default_enum
 )]
 
 // Manage network connections in the OS
