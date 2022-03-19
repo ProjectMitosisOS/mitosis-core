@@ -21,7 +21,7 @@ use mitosis_macros::declare_global;
 
 use krdma_test::*;
 
-const DEFAULT_QD_HINT: u64 = 74;
+const DEFAULT_QD_HINT: u64 = 73;
 const MSG_SIZE: usize = 512;
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
