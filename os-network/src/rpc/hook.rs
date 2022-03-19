@@ -16,7 +16,7 @@ use core::mem::transmute_copy;
 /// * Factory: the connection factory that creates the session
 /// * M: the message type
 /// * R: Receiver
-pub struct RPCHook<'a, F, R, M>
+pub struct RPCHook<'a, F, R>
 where
     F: 'a + RPCFactory,
     R: Receiver,
@@ -25,10 +25,9 @@ where
     session_factory: F,
     transport: R,
     connected_sessions: HashMap<usize, F::ConnType<'a>>,
-    _data: PhantomData<M>,
 }
 
-impl<'a, F, R, M> RPCHook<'a, F, R, M>
+impl<'a, F, R> RPCHook<'a, F, R>
 where
     F: 'a + RPCFactory,
     R: Receiver,
@@ -38,7 +37,7 @@ where
     }
 }
 
-impl<'a, F, R, M> RPCHook<'a, F, R, M>
+impl<'a, F, R> RPCHook<'a, F, R>
 where
     F: 'a + RPCFactory,
     R: Receiver,
@@ -49,16 +48,15 @@ where
             session_factory: factory,
             connected_sessions: HashMap::new(),
             transport: transport,
-            _data: PhantomData,
         }
     }
 }
 
-impl<'a, F, R, M> Future for RPCHook<'a, F, R, M>
+impl<'a, F, R> Future for RPCHook<'a, F, R>
 where
     F: 'a + RPCFactory,
-    // we need to ensure that the polled result can be sent back to    
-    R: Receiver<Output = <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload>, 
+    // we need to ensure that the polled result can be sent back to
+    R: Receiver<Output = <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload>,
 {
     type Output = (&'a [u8], usize); // msg, session ID
     type Error = R::Error;
@@ -71,5 +69,27 @@ where
             }
             Err(e) => Err(e),
         }
+    }
+}
+
+use core::fmt::{Debug, Display, Formatter, Result, Write};
+
+impl<'a, F, R> Debug for RPCHook<'a, F, R>
+where
+    F: 'a + RPCFactory,
+    R: Receiver,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "RPCHook service {}", self.service)
+    }
+}
+
+impl<'a, F, R> Display for RPCHook<'a, F, R>
+where
+    F: 'a + RPCFactory,
+    R: Receiver,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{:?}", self)
     }
 }
