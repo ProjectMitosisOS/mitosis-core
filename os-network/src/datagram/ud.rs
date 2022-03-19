@@ -54,7 +54,7 @@ impl Future for UDDatagram<'_> {
                 // FIXME: should dispatch according to the wc_status
                 if wc.status != ib_wc_status::IB_WC_SUCCESS {
                     crate::log::debug!("check wc: {}", wc.status);
-                    return Err(Err::Other);
+                    return Err(Err::WCErr(wc.status.into()));
                 }
                 Ok(Async::Ready(wc))
             }

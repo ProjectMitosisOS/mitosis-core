@@ -18,10 +18,10 @@ pub mod timeout;
 
 pub mod bytes;
 pub mod remote_memory;
-/// TODO: need doc
+
+/// Connection abstraction for RC and DC
 pub mod conn;
 pub use conn::*;
-
 /// TODO: need doc
 pub mod datagram;
 pub use datagram::*;

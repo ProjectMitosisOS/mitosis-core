@@ -69,7 +69,7 @@ impl Future for DCConn<'_> {
             },
             1 => {
                 if wc.status != ib_wc_status::IB_WC_SUCCESS {
-                    return Err(super::Err::Other);
+                    return Err(super::Err::WCErr(wc.status.into()));
                 } else {
                     return Ok(Async::Ready(wc));
                 }

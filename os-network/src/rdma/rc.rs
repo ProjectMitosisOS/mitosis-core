@@ -151,7 +151,7 @@ impl Future for RCConn<'_> {
         let result = unsafe { (*result).status };
         if result != ib_wc_status::IB_WC_SUCCESS {
             log::error!("poll cq with err: {}", result);
-            return Err(super::Err::Other);
+            return Err(super::Err::WCErr(result.into()));
         } else {
             return Ok(Async::Ready(wc));
         }        
