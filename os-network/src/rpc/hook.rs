@@ -4,8 +4,8 @@ use KRdmaKit::rpc::data::ReqType;
 use hashbrown::HashMap;
 
 use super::*;
-use crate::{conn::*, bytes::ToBytes};
 use crate::datagram::Receiver;
+use crate::{bytes::ToBytes, conn::*};
 
 use crate::future::*;
 
@@ -60,7 +60,7 @@ where
         MsgBuf = <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload,
         IOResult = <R as Future>::Error,
     >,
-    <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload : ToBytes,
+    <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload: ToBytes,
 {
     type Output = (); // msg, session ID
     type Error = R::Error;
@@ -71,12 +71,20 @@ where
             Ok(Async::Ready(msg)) => {
                 // parse the request
                 let mut bytes = unsafe { msg.get_bytes().clone() };
-                let mut msg_header : MsgHeader = Default::default();
+                let mut msg_header: MsgHeader = Default::default();
                 unsafe { bytes.memcpy_deserialize(&mut msg_header) };
 
-                match msg_header.get_marker() { 
-                    super::header::ReqType::Connect => { unimplemented!() }, 
-                    _ =>  {}, 
+                match msg_header.get_marker() {
+                    super::header::ReqType::Connect => {
+                        unimplemented!()
+                    }
+                    super::header::ReqType::Request => {
+                        let mut msg = unsafe {
+                            bytes.truncate_header(core::mem::size_of::<super::header::ReqType>())
+                        };
+                        
+                    }
+                    _ => {}
                 }
 
                 self.transport.post_recv_buf(msg)?;

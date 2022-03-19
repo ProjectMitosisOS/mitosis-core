@@ -1,7 +1,17 @@
-#[derive(Debug, Default)]
-pub struct SessionID(usize);
+use KRdmaKit::qp::conn::Request;
 
-#[derive(Debug, Default)]
+use crate::Conn;
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct CallStub {
+    session_id: usize,
+    rpc_id: usize,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct ConnectStub(usize);
+
+#[derive(Debug, Default, Copy, Clone)]
 #[repr(u8)]
 pub enum ReplyStatus {
     #[default]
@@ -12,8 +22,9 @@ pub enum ReplyStatus {
 #[derive(Debug, Default)]
 #[repr(u64)]
 enum RPCMeta {
-    Request(SessionID), // session ID
+    Request(CallStub),
     Reply(ReplyStatus),
+    Connect(ConnectStub),
     #[default]
     None,
 }
@@ -42,6 +53,22 @@ impl MsgHeader {
             marker: ReqType::Connect,
             payload: core::mem::size_of::<Meta>(),
             meta: RPCMeta::None,
+        }
+    }
+
+    #[inline]
+    pub fn get_call_stub(&self) -> core::option::Option<&CallStub> {
+        match &self.meta {
+            RPCMeta::Request(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn get_connect_stub(&self) -> core::option::Option<&ConnectStub> {
+        match &self.meta {
+            RPCMeta::Connect(s) => Some(s),
+            _ => None,
         }
     }
 
