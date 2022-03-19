@@ -8,13 +8,15 @@ use super::msg::UDMsg;
 use super::ud::UDDatagram;
 
 pub struct UDReceiver<'a> {
+    lkey : u32,
     inner: UDDatagram<'a>,
     msg_queues: VecDeque<UDMsg>,
 }
 
 impl<'a> UDReceiver<'a> {
-    pub fn new(ud: UDDatagram<'a>) -> Self {
+    pub fn new(ud: UDDatagram<'a>, key : u32) -> Self {
         Self {
+            lkey : key,
             inner: ud,
             msg_queues: VecDeque::new(),
         }
@@ -34,12 +36,11 @@ impl<'a> UDReceiver<'a> {
 }
 
 impl super::Receiver for UDReceiver<'_> {
-    type MsgBuf = super::msg::UDMsg;
-    type Key = u32;
+    type MsgBuf = <Self as Future>::Output;
 
-    fn post_recv_buf(&mut self, buf: Self::MsgBuf, key: Self::Key) -> Result<(), Self::IOResult> {
+    fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult> {
         let mut op = UDOp::new(&self.inner.ud);
-        let res = op.post_recv(buf.get_pa(), key, buf.len());
+        let res = op.post_recv(buf.get_pa(), self.lkey, buf.len());
         if res.is_err() {
             return Err(Err::Other);
         }

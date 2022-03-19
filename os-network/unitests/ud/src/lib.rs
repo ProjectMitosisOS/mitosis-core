@@ -51,9 +51,9 @@ fn test_ud_factory() {
     log::info!("test ud factory passes");
 }
 
-use os_network::datagram::ud_receiver::*;
-use os_network::bytes::ToBytes;
 use core::pin::Pin;
+use os_network::bytes::ToBytes;
+use os_network::datagram::ud_receiver::*;
 
 /// A test on one-sided operation on `UDDatagram`
 /// Pre-requisition: `ctx_init`
@@ -79,10 +79,10 @@ fn test_ud_two_sided() {
         .sidr_connect(path_res, service_id, DEFAULT_QD_HINT)
         .unwrap();
 
-    let mut ud_receiver = UDReceiver::new(server_ud);
+    let mut ud_receiver = UDReceiver::new(server_ud, unsafe { ctx.get_lkey() });
     for _ in 0..12 {
         // 64 is the header
-        match ud_receiver.post_recv_buf(UDMsg::new(MSG_SIZE + 64, 73), unsafe { ctx.get_lkey() }) {
+        match ud_receiver.post_recv_buf(UDMsg::new(MSG_SIZE + 64, 73)) {
             Ok(_) => {}
             Err(e) => log::error!("post recv buf err: {:?}", e),
         }
@@ -96,9 +96,9 @@ fn test_ud_two_sided() {
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_lkey(unsafe { ctx.get_lkey() });
 
-    // pin the request to set the sge_ptr properly. 
-    let mut send_req = unsafe { Pin::new_unchecked(&mut send_req) }; 
-    os_network::rdma::payload::Payload::<ib_ud_wr>::finalize(send_req.as_mut()); 
+    // pin the request to set the sge_ptr properly.
+    let mut send_req = unsafe { Pin::new_unchecked(&mut send_req) };
+    os_network::rdma::payload::Payload::<ib_ud_wr>::finalize(send_req.as_mut());
 
     let result = client_ud.post(&send_req.as_ref());
 
@@ -125,13 +125,13 @@ fn test_ud_two_sided() {
             result.err().unwrap()
         );
     } else {
-        let received_msg = unsafe { result.unwrap().get_bytes().truncate(0).unwrap() };
+        let received_msg = unsafe { result.unwrap().get_bytes().truncate_header(0).unwrap() };
         log::info!(
             "Get received msg: {:?}",
             // if the result is correct, then the truncate size should be 40
             received_msg
         );
-        let received_msg = unsafe { received_msg.truncate(40).unwrap() };
+        let received_msg = unsafe { received_msg.truncate_header(40).unwrap() };
         log::debug!("received msg: {} {:?} ", received_msg.len(), received_msg);
 
         assert!(

@@ -4,12 +4,10 @@ use KRdmaKit::rpc::data::ReqType;
 use hashbrown::HashMap;
 
 use super::*;
-use crate::conn::*;
+use crate::{conn::*, bytes::ToBytes};
 use crate::datagram::Receiver;
 
 use crate::future::*;
-
-use core::mem::transmute_copy;
 
 /// The hook will receive datagram requests, and call the RPC callback correspondingly.
 /// * Factory: the connection factory that creates the session
@@ -51,27 +49,45 @@ where
     }
 }
 
+use super::header::*;
+
 impl<'a, F, R> Future for RPCHook<'a, F, R>
 where
     F: 'a + RPCFactory,
     // we need to ensure that the polled result can be sent back to
-    R: Receiver<Output = <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload>,
+    R: Receiver<
+        Output = <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload,
+        MsgBuf = <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload,
+        IOResult = <R as Future>::Error,
+    >,
+    <<F as RPCFactory>::ConnType<'a> as RPCConn>::ReqPayload : ToBytes,
 {
-    type Output = (&'a [u8], usize); // msg, session ID
+    type Output = (); // msg, session ID
     type Error = R::Error;
 
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         match self.transport.poll() {
             Ok(Async::NotReady) => Ok(Async::NotReady),
-            Ok(Async::Ready(v)) => {
-                unimplemented!();
+            Ok(Async::Ready(msg)) => {
+                // parse the request
+                let mut bytes = unsafe { msg.get_bytes().clone() };
+                let mut msg_header : MsgHeader = Default::default();
+                unsafe { bytes.memcpy_deserialize(&mut msg_header) };
+
+                match msg_header.get_marker() { 
+                    super::header::ReqType::Connect => { unimplemented!() }, 
+                    _ =>  {}, 
+                }
+
+                self.transport.post_recv_buf(msg)?;
+                Ok(Async::NotReady)
             }
             Err(e) => Err(e),
         }
     }
 }
 
-use core::fmt::{Debug, Display, Formatter, Result, Write};
+use core::fmt::{Debug, Display, Formatter, Result};
 
 impl<'a, F, R> Debug for RPCHook<'a, F, R>
 where

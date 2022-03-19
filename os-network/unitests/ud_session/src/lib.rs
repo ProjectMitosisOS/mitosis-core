@@ -51,10 +51,10 @@ fn test_ud_session() {
     ctrl.reg_ud(DEFAULT_QD_HINT as usize, server_ud.get_qp());
 
     // init the receiver
-    let mut ud_receiver = UDReceiver::new(server_ud);
+    let mut ud_receiver = UDReceiver::new(server_ud, unsafe { ctx.get_lkey() });
     for _ in 0..12 {
         // 64 is the header
-        match ud_receiver.post_recv_buf(UDMsg::new(MAX_RECV_MSG, 73), unsafe { ctx.get_lkey() }) {
+        match ud_receiver.post_recv_buf(UDMsg::new(MAX_RECV_MSG, 73)) {
             Ok(_) => {}
             Err(e) => log::error!("post recv buf err: {:?}", e),
         }
@@ -95,13 +95,13 @@ fn test_ud_session() {
             result.err().unwrap()
         );
     } else {
-        let received_msg = unsafe { result.unwrap().get_bytes().truncate(0).unwrap() };
+        let received_msg = unsafe { result.unwrap().get_bytes().truncate_header(0).unwrap() };
         log::info!(
             "Get received msg: {:?}",
             // if the result is correct, then the truncate size should be 40
             received_msg
         );
-        let received_msg = unsafe { received_msg.truncate(40).unwrap() };
+        let received_msg = unsafe { received_msg.truncate_header(40).unwrap() };
         log::debug!("received msg: {} {:?} ", received_msg.len(), received_msg);
 
         assert!(

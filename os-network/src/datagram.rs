@@ -4,9 +4,8 @@ pub trait Receiver<T: Future = Self>: Future
 {
     type IOResult = Self::Error;
     type MsgBuf;
-    type Key;
 
-    fn post_recv_buf(&mut self, buf: Self::MsgBuf, key: Self::Key) -> Result<(), Self::IOResult>;
+    fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult>;
 }
 
 pub mod msg;

@@ -1,15 +1,15 @@
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct SessionID(usize);
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 #[repr(u8)]
 pub enum ReplyStatus {
-    #[default]    
-    Ok = 1,       // a success call
+    #[default]
+    Ok = 1, // a success call
     NotExist = 3, // function is not registered in the service
 }
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 #[repr(u64)]
 enum RPCMeta {
     Request(SessionID), // session ID
@@ -18,17 +18,18 @@ enum RPCMeta {
     None,
 }
 /// Metadata of RPC messages
-#[derive(Debug,Default,PartialEq)]
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
 #[repr(u8)]
-enum ReqType {
-    #[default]    
+pub enum ReqType {
+    #[default]
+    Illegal = 4,
     Connect = 0,
-    Request = 1,    
+    Request = 1,
     Reply = 2,
     DisConnect = 3,
 }
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct MsgHeader {
     marker: ReqType,
     payload: usize,
@@ -44,6 +45,11 @@ impl MsgHeader {
         }
     }
 
+    #[inline]
+    pub fn get_marker(&self) -> ReqType {
+        self.marker
+    }
+
     pub fn is_connect(&self) -> bool {
         self.marker == ReqType::Connect
     }
@@ -54,9 +60,9 @@ impl MsgHeader {
 
     pub fn is_reply(&self) -> bool {
         self.marker == ReqType::Reply
-    }    
+    }
 
     pub fn is_disconnect(&self) -> bool {
         self.marker == ReqType::DisConnect
-    }    
+    }
 }

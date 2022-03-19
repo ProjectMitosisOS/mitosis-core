@@ -22,7 +22,7 @@ impl BytesMut {
         Self::from_static(slice)
     }
 
-    pub unsafe fn truncate(&self, off: usize) -> core::option::Option<Self> {
+    pub unsafe fn truncate_header(&self, off: usize) -> core::option::Option<Self> {
         if self.len > off {
             Some(Self {
                 ptr: self.ptr.offset(off as isize),

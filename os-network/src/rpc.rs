@@ -36,18 +36,18 @@ pub mod caller;
 use crate::future::Future;
 
 /// This is a simple wrapper over crate::conn::Conn
-/// The reason for doing so is to simplify customization for RPC 
+/// The reason for doing so is to simplify customization for RPC
 pub trait RPCConn<T: Future = Self>: Future {
     type ReqPayload; // the request format
     type CompPayload = Self::Output;
     type IOResult = Self::Error;
 
     // post the request to the underlying device
-    fn post(&mut self, req: &Self::ReqPayload, signaled : bool) -> Result<(), Self::IOResult>;
+    fn post(&mut self, req: &Self::ReqPayload, signaled: bool) -> Result<(), Self::IOResult>;
 }
 
 /// This is a simple wrapper over crate::conn::Factory
-/// The reason for doing so is to simplify customization for RPC 
+/// The reason for doing so is to simplify customization for RPC
 pub trait RPCFactory {
     type ConnMeta;
     type ConnType<'a>: RPCConn
@@ -59,5 +59,5 @@ pub trait RPCFactory {
     fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
 }
 
-// concrete implementations based on real transports 
+// concrete implementations based on real transports
 pub mod impls;
