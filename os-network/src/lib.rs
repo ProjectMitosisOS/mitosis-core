@@ -18,16 +18,17 @@ pub mod timeout;
 
 pub mod bytes;
 pub mod remote_memory;
-/// TODO: need doc
+
+/// Connection abstraction for RC and DC
 pub mod conn;
 pub use conn::*;
 
 
-/// TODO: need doc
+/// Datagram abstraction for UD
 pub mod datagram;
 pub use datagram::*;
 
-// impl the connection as RDMA
+// Implement the connection as RDMA
 pub mod rdma;
 
 #[allow(unused_imports)]

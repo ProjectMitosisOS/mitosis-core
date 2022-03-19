@@ -61,8 +61,7 @@ impl Future for UDReceiver<'_> {
             0 => Ok(Async::NotReady),
             1 => {
                 if wc.status != ib_wc_status::IB_WC_SUCCESS {
-                    // TODO: should reflect detailed error
-                    return Err(Err::Other);
+                    return Err(Err::WCErr(wc.status.into()));
                 } else {
                     self.msg_queues
                         .pop_front()
