@@ -92,6 +92,7 @@ where
                     super::header::ReqType::Connect => {
                         let meta = msg_header.get_connect_stub().ok_or(Error::corrupted())?;
                         crate::log::info!("check meta in connect {:?}", meta);
+                                                
                     }
                     super::header::ReqType::Request => {
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;

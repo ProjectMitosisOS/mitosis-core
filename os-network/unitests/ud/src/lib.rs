@@ -79,7 +79,11 @@ fn test_ud_two_sided() {
         .sidr_connect(path_res, service_id, DEFAULT_QD_HINT)
         .unwrap();
 
-    let mut ud_receiver = UDReceiver::new(server_ud, unsafe { ctx.get_lkey() });
+    let mut ud_receiver = UDReceiverFactory::new()
+        .set_qd_hint(0)
+        .set_lkey(unsafe { ctx.get_lkey() })
+        .create(server_ud);
+        
     for _ in 0..12 {
         // 64 is the header
         match ud_receiver.post_recv_buf(UDMsg::new(MSG_SIZE + 64, 73)) {

@@ -51,7 +51,11 @@ fn test_ud_session() {
     ctrl.reg_ud(DEFAULT_QD_HINT as usize, server_ud.get_qp());
 
     // init the receiver
-    let mut ud_receiver = UDReceiver::new(server_ud, unsafe { ctx.get_lkey() });
+    let mut ud_receiver = UDReceiverFactory::new()
+        .set_qd_hint(0)
+        .set_lkey(unsafe {ctx.get_lkey()})
+        .create(server_ud);
+
     for _ in 0..12 {
         // 64 is the header
         match ud_receiver.post_recv_buf(UDMsg::new(MAX_RECV_MSG, 73)) {

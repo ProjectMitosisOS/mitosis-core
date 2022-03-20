@@ -94,8 +94,12 @@ fn test_ud_rpc() {
     let temp_ud = server_ud.clone();
     let mut rpc_server = UDRPCHook::new(
         server_ud,
-        UDReceiver::new(temp_ud, unsafe { ctx.get_lkey() }),
+        UDReceiverFactory::new()
+            .set_qd_hint(DEFAULT_QD_HINT)
+            .set_lkey(unsafe { ctx.get_lkey() })
+            .create(temp_ud),
     );
+
     rpc_server
         .get_mut_service()
         .register(TEST_RPC_ID, test_callback);
