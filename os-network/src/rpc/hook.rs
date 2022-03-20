@@ -13,7 +13,7 @@ pub struct RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,
-    Self : 'a
+    Self: 'a,
 {
     service: Service<'b>,
     session_factory: F,
@@ -32,10 +32,17 @@ where
     }
 }
 
+use super::header_factory::*;
+
 impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
 where
-    F: RPCFactory,
-    R: Receiver,
+    F: RPCFactory + 'a,
+    // we need to ensure that the polled result can be sent back to
+    R: Receiver<
+        Output = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
+        MsgBuf = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
+        IOResult = <R as Future>::Error,
+    >,
 {
     pub fn new(meta_f: &'a MF, factory: F, transport: R) -> Self {
         Self {
@@ -50,12 +57,20 @@ where
     pub fn post_msg_buf(&mut self, msg: R::MsgBuf) -> Result<(), R::IOResult> {
         self.transport.post_recv_buf(msg)
     }
+
+    pub fn send_reply(
+        &mut self,
+        session_id: usize,
+        reply: ReplyStubFactory,
+    ) -> Result<(), Error<R::Error>> {
+        unimplemented!();
+    }
 }
 
 use super::header::*;
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
-impl<'a, 'b, F, R, MF, > Future for RPCHook<'a, 'b, F, R, MF>
+impl<'a, 'b, F, R, MF> Future for RPCHook<'a, 'b, F, R, MF>
 where
     F: RPCFactory + 'a,
     // we need to ensure that the polled result can be sent back to
@@ -70,8 +85,7 @@ where
     type Output = (); // msg, session ID
     type Error = Error<R::Error>;
 
-    fn poll<'r>(&'r mut self) -> Poll<Self::Output, Self::Error>     
-    {
+    fn poll<'r>(&'r mut self) -> Poll<Self::Output, Self::Error> {
         match self.transport.poll() {
             Ok(Async::NotReady) => Ok(Async::NotReady),
             Ok(Async::Ready(msg)) => {
@@ -112,8 +126,7 @@ where
                                 .session_factory
                                 .create(connect_meta)
                                 .map_err(|_| Error::session_creation_error())?;
-                            
-                            
+
                             self.connected_sessions
                                 .insert(meta.get_session_id(), session);
                         } else {
@@ -129,9 +142,9 @@ where
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
                         crate::log::info!("check meta in {:?}", meta);
 
-                        // TODO @Yuhan: handle the request part 
+                        // TODO @Yuhan: handle the request part
                     }
-                    super::header::ReqType::DisConnect => { 
+                    super::header::ReqType::DisConnect => {
                         // TODO @Yuhan: handle the dis connect part
                         todo!();
                     }
@@ -153,7 +166,7 @@ where
 
 use core::fmt::{Debug, Display, Formatter};
 
-impl<'a, 'b, F, R, MF> Debug for RPCHook<'a,'b, F, R, MF>
+impl<'a, 'b, F, R, MF> Debug for RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,
