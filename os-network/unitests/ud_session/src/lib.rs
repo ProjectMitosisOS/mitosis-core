@@ -65,7 +65,8 @@ fn test_ud_session() {
     }
 
     // the client part
-    let gid = ctx.get_gid_as_string();
+    let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();   
+
     let (endpoint, key) = factory
         .create_meta((gid, service_id, DEFAULT_QD_HINT))
         .unwrap();

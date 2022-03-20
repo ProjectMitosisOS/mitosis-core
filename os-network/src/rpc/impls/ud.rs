@@ -69,9 +69,10 @@ impl super::super::RPCFactory for UDDatagram<'_> {
 impl<UDFactory : crate::conn::MetaFactory> super::super::GenHyperMeta<UDFactory>
     for crate::datagram::ud_receiver::UDReceiver<'_>    
 {
-    type Args = ();
+    type Args = (alloc::string::String, u64); // gid, service ID
 
     fn generate_hyper(&self, args: &Self::Args) -> UDFactory::HyperMeta {
+        
         unimplemented!();
     }
 }

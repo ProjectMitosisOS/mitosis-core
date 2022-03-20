@@ -82,7 +82,8 @@ fn test_ud_rpc() {
 
     // the client part
     let client_ud = factory.create(()).unwrap();
-    let gid = ctx.get_gid_as_string();
+    let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();   
+    
     let (endpoint, key) = factory
         .create_meta((gid, service_id, DEFAULT_QD_HINT))
         .unwrap();

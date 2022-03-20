@@ -1,3 +1,4 @@
+use alloc::string::ToString;
 // TODO: should move ot the datagram folder
 use alloc::sync::Arc;
 
@@ -111,16 +112,24 @@ impl crate::conn::Factory for UDFactory<'_> {
 
 impl crate::conn::MetaFactory for UDFactory<'_> {
     // gid, service id, qd hint
-    type HyperMeta = (alloc::string::String, u64, u64);
+    type HyperMeta = (crate::rdma::RawGID, u64, u64);
 
     // ud endpoint, local memory protection key
     type Meta = (KRdmaKit::cm::EndPoint, u32);
 
     type MetaResult = Err;
 
+    /// Note: this function is not optimized, but since it is not on the (important) critical 
+    /// path of the execution, it is ok to do this
     fn create_meta(&self, meta: Self::HyperMeta) -> Result<Self::Meta, Self::MetaResult> {
         let (gid, service_id, qd_hint) = meta;
-        let path_res = self.rctx.explore_path(gid, service_id).ok_or(Err::Other)?;
+        let path_res = self
+            .rctx
+            .explore_path(
+                gid.to_string(),
+                service_id,
+            )
+            .ok_or(Err::Other)?;
         let mut sidr_cm = SidrCM::new(&self.rctx, core::ptr::null_mut()).ok_or(Err::Other)?;
         let endpoint = sidr_cm
             .sidr_connect(path_res, service_id, qd_hint)
