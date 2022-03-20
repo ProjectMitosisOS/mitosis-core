@@ -24,3 +24,21 @@ impl ConnectStubFactory {
         }
     }
 }
+
+pub struct ReplyStubFactory {
+    status: ReplyStatus,
+    payload: usize,
+}
+
+impl ReplyStubFactory {
+    pub fn new(status: ReplyStatus, sz: usize) -> Self {
+        Self {
+            status: status,
+            payload: sz,
+        }
+    }
+
+    pub fn generate(self, msg: &mut BytesMut) -> core::option::Option<usize> {
+        unsafe { msg.memcpy_serialize_at(0, &MsgHeader::gen_reply_stub(self.status, self.payload)) }
+    }
+}

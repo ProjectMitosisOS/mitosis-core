@@ -11,7 +11,7 @@ use KRdmaKit::KDriver;
 use rust_kernel_linux_util as log;
 
 use os_network::block_on;
-use os_network::conn::{Conn, Factory, MetaFactory};
+use os_network::conn::{Factory, MetaFactory};
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::timeout::Timeout;
@@ -68,7 +68,11 @@ fn test_ud_session() {
     let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();   
 
     let (endpoint, key) = factory
-        .create_meta((gid, service_id, DEFAULT_QD_HINT))
+        .create_meta(UDHyperMeta {
+            gid: gid,
+            service_id: service_id,
+            qd_hint: DEFAULT_QD_HINT,
+        },)
         .unwrap();
     log::info!("check endpoint, key: {:?}, {}", endpoint, key);
 

@@ -1,5 +1,3 @@
-use KRdmaKit::rpc::data::ReqType;
-
 use hashbrown::HashMap;
 
 use super::*;
@@ -78,7 +76,7 @@ where
             Ok(Async::NotReady) => Ok(Async::NotReady),
             Ok(Async::Ready(msg)) => {
                 // parse the request
-                let mut bytes = unsafe { msg.get_bytes().clone() };
+                let bytes = unsafe { msg.get_bytes().clone() };
                 let mut msg_header: MsgHeader = Default::default();
 
                 let mut msg_header_bytes =
@@ -114,7 +112,8 @@ where
                                 .session_factory
                                 .create(connect_meta)
                                 .map_err(|_| Error::session_creation_error())?;
-                                                       
+                            
+                            
                             self.connected_sessions
                                 .insert(meta.get_session_id(), session);
                         } else {
@@ -130,10 +129,14 @@ where
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
                         crate::log::info!("check meta in {:?}", meta);
 
-                        // TODO: call the message
+                        // TODO @Yuhan: handle the request part 
+                    }
+                    super::header::ReqType::DisConnect => { 
+                        // TODO @Yuhan: handle the dis connect part
+                        todo!();
                     }
                     _ => {
-                        // should never happen at the hooker!
+                        // should never happen at the hooker if no error happens !
                         crate::log::error!("unknown message header {:?}", msg_header);
                     }
                 }

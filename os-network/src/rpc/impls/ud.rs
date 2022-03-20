@@ -68,7 +68,7 @@ impl<UDFactory : crate::conn::MetaFactory> super::super::GenHyperMeta<UDFactory>
 {
     type Args = (alloc::string::String, u64); // gid, service ID
 
-    fn generate_hyper(&self, args: &Self::Args) -> UDFactory::HyperMeta {        
+    fn generate_hyper(&self, _args: &Self::Args) -> UDFactory::HyperMeta {
         unimplemented!();
     }
 }

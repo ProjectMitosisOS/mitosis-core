@@ -1,7 +1,3 @@
-use KRdmaKit::qp::conn::Request;
-
-use crate::Conn;
-
 /// Data structures used to generate the RPC request struct 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct CallStub {
@@ -73,6 +69,14 @@ impl MsgHeader {
                 session_id: session_id,
                 rpc_id: rpc_id,
             }),
+        }
+    }
+
+    pub fn gen_reply_stub(status : ReplyStatus, sz : usize) -> Self { 
+        Self { 
+            marker : ReqType::Reply,
+            payload : sz, 
+            meta : RPCMeta::Reply(status)
         }
     }
 

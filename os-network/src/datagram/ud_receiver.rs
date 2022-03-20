@@ -7,6 +7,7 @@ use crate::rdma::Err;
 use super::msg::UDMsg;
 use super::ud::UDDatagram;
 
+#[allow(dead_code)]
 pub struct UDReceiver<'a> {
     qd_hint: usize,
     lkey: u32,

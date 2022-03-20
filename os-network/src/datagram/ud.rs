@@ -143,7 +143,7 @@ impl crate::conn::MetaFactory for UDFactory<'_> {
 }
 
 
-use core::fmt::{Debug, Display, Formatter};
+use core::fmt::{Debug, Formatter};
 
 impl Debug for UDHyperMeta
 {

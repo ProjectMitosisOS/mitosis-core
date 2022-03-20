@@ -35,7 +35,6 @@ pub mod rdma;
 
 #[allow(unused_imports)]
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util as log;
-use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util;
 
 /// Block on the future until it is ready or error
 #[allow(non_snake_case)]

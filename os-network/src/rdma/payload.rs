@@ -9,6 +9,8 @@ pub trait SendWR {
     fn get_opcode(&self) -> u32;
 
     fn set_send_flags(&mut self, send_flags: i32);
+    fn get_send_flags(&self) -> i32;
+
     fn set_imm_data(&mut self, imm_data: u32);
 
     fn set_sge_ptr(&mut self, sge: *mut ib_sge);
@@ -81,6 +83,10 @@ where
     pub fn set_send_flags(mut self, send_flags: i32) -> Self {
         self.wr.set_send_flags(send_flags);
         self
+    }
+
+    pub fn get_send_flags(&self) -> i32 {
+        self.wr.get_send_flags()
     }
 
     pub fn set_imm_data(mut self, imm_data: u32) -> Self {
