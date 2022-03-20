@@ -9,7 +9,6 @@ pub struct CallStub {
     rpc_id: usize,
 }
 
-
 /// Data structures used to generate the RPC connect struct 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct ConnectStub(usize);

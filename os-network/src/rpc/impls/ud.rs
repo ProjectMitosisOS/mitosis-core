@@ -20,17 +20,18 @@ impl<'a> crate::future::Future for UDSession<'a> {
     }
 }
 
-use core::pin::Pin;
 use crate::conn::Conn;
+use core::pin::Pin;
 
 impl super::super::RPCConn for UDSession<'_> {
     /// #Argument
     /// * UDMsg: the message to send
     /// * bool : whether to signal the request
     type ReqPayload = crate::msg::UDMsg;
+    type HyperMeta = ();
 
     #[inline]
-    fn post(&mut self, req: &Self::ReqPayload, signaled : bool) -> Result<(), Self::IOResult> {
+    fn post(&mut self, req: &Self::ReqPayload, signaled: bool) -> Result<(), Self::IOResult> {
         let mut send_req = req
             .to_ud_wr(&self.meta)
             .set_send_flags(match signaled {
@@ -56,11 +57,21 @@ impl super::super::RPCFactory for UDDatagram<'_> {
     type ConnResult = crate::rdma::Err;
 
     fn create<'a>(&'a self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult> {
-        let (endpoint, key) = meta; 
-        Ok(UDSession::<'a> { 
-            meta : endpoint, 
-            key : key, 
-            inner : self.clone(),
+        let (endpoint, key) = meta;
+        Ok(UDSession::<'a> {
+            meta: endpoint,
+            key: key,
+            inner: self.clone(),
         })
+    }
+}
+
+impl<UDFactory : crate::conn::MetaFactory> super::super::GenHyperMeta<UDFactory>
+    for crate::datagram::ud_receiver::UDReceiver<'_>    
+{
+    type Args = ();
+
+    fn generate_hyper(&self, args: &Self::Args) -> UDFactory::HyperMeta {
+        unimplemented!();
     }
 }

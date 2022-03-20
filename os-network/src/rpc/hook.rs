@@ -11,20 +11,20 @@ use crate::future::*;
 
 /// The hook will receive datagram requests, and call the RPC callback correspondingly.
 /// * Factory: the connection factory that creates the session
-/// * M: the message type
 /// * R: Receiver
-pub struct RPCHook<'a, F, R>
+pub struct RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,
 {
     service: Service<'a>,
     session_factory: F,
+    meta_factory: &'b MF,
     transport: R,
     connected_sessions: HashMap<usize, F::ConnType<'a>>,
 }
 
-impl<'a, F, R> RPCHook<'a, F, R>
+impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,
@@ -34,14 +34,15 @@ where
     }
 }
 
-impl<'a, F, R> RPCHook<'a, F, R>
+impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,
 {
-    pub fn new(factory: F, transport: R) -> Self {
+    pub fn new(meta_f: &'b MF, factory: F, transport: R) -> Self {
         Self {
             service: Service::new(),
+            meta_factory: meta_f,
             session_factory: factory,
             connected_sessions: HashMap::new(),
             transport: transport,
@@ -56,7 +57,7 @@ where
 use super::header::*;
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
-impl<'a, F, R> Future for RPCHook<'a, F, R>
+impl<'a, 'b, F, R, MF> Future for RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     // we need to ensure that the polled result can be sent back to
@@ -92,7 +93,6 @@ where
                     super::header::ReqType::Connect => {
                         let meta = msg_header.get_connect_stub().ok_or(Error::corrupted())?;
                         crate::log::info!("check meta in connect {:?}", meta);
-                                                
                     }
                     super::header::ReqType::Request => {
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
@@ -118,7 +118,7 @@ where
 
 use core::fmt::{Debug, Display, Formatter};
 
-impl<'a, F, R> Debug for RPCHook<'a, F, R>
+impl<'a, 'b, F, R, MF> Debug for RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,
@@ -128,7 +128,7 @@ where
     }
 }
 
-impl<'a, F, R> Display for RPCHook<'a, F, R>
+impl<'a, 'b, F, R, MF> Display for RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,

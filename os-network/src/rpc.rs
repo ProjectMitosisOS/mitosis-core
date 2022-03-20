@@ -26,6 +26,7 @@ pub trait Caller {
 pub mod hook;
 
 pub mod header;
+pub mod header_factory;
 
 // modules for registering RPC callbacks
 pub mod service;
@@ -41,6 +42,7 @@ pub trait RPCConn<T: Future = Self>: Future {
     type ReqPayload; // the request format
     type CompPayload = Self::Output;
     type IOResult = Self::Error;
+    type HyperMeta; 
 
     // post the request to the underlying device
     fn post(&mut self, req: &Self::ReqPayload, signaled: bool) -> Result<(), Self::IOResult>;
@@ -57,6 +59,14 @@ pub trait RPCFactory {
 
     // create and connect the connection
     fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
+}
+
+/// The connection should provide a GenHyperMeta trait, 
+/// such that the RPC hook can use it to create a session corresponding to the sender
+pub trait GenHyperMeta<F : crate::conn::MetaFactory> { 
+    type Args;
+
+    fn generate_hyper(&self, args : &Self::Args) -> F::HyperMeta;
 }
 
 // concrete implementations based on real transports

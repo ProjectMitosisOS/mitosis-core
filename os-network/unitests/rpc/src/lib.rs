@@ -65,7 +65,7 @@ fn test_ud_rpc() {
     log::info!("Test RPC backed by RDMA's UD.");
     let timeout_usec = 1000_000;
 
-    type UDRPCHook<'a> = hook::RPCHook<'a, UDDatagram<'a>, UDReceiver<'a>>;
+    type UDRPCHook<'a,'b> = hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
 
     // init RDMA_related data structures
     let driver = unsafe { KDriver::create().unwrap() };
@@ -91,12 +91,14 @@ fn test_ud_rpc() {
     let mut client_session = client_ud.create((endpoint, key)).unwrap();
 
     /**** The main test body****/
+    let lkey = unsafe { ctx.get_lkey() }; 
     let temp_ud = server_ud.clone();
     let mut rpc_server = UDRPCHook::new(
+        &factory, 
         server_ud,
         UDReceiverFactory::new()
             .set_qd_hint(DEFAULT_QD_HINT as _)
-            .set_lkey(unsafe { ctx.get_lkey() })
+            .set_lkey(lkey)
             .create(temp_ud),
     );
 
