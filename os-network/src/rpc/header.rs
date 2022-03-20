@@ -2,12 +2,15 @@ use KRdmaKit::qp::conn::Request;
 
 use crate::Conn;
 
+/// Data structures used to generate the RPC request struct 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct CallStub {
     session_id: usize,
     rpc_id: usize,
 }
 
+
+/// Data structures used to generate the RPC connect struct 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct ConnectStub(usize);
 
@@ -17,6 +20,7 @@ impl ConnectStub {
     }
 }
 
+/// Data structures used to generate the RPC reply struct 
 #[derive(Debug, Default, Copy, Clone)]
 #[repr(u8)]
 pub enum ReplyStatus {
