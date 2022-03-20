@@ -44,10 +44,21 @@ use KRdmaKit::KDriver;
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
+use os_network::rpc::header::*;
 use os_network::Factory;
 use os_network::MetaFactory;
 
 const DEFAULT_QD_HINT: u64 = 73;
+const TEST_RPC_ID: usize = 73;
+
+fn test_rpc_headers() {
+    let my_session_id = 21;
+    let payload = 14;
+    let connect_header = MsgHeader::gen_connect_stub(my_session_id, payload);
+
+    assert!(connect_header.get_connect_stub().is_some());
+    assert!(connect_header.get_connect_stub().unwrap().get_session_id() == my_session_id);
+}
 
 // a test RPC with RDMA
 fn test_ud_rpc() {
@@ -77,7 +88,7 @@ fn test_ud_rpc() {
         .unwrap();
     log::info!("check endpoint, key: {:?}, {}", endpoint, key);
 
-    let mut client_session = client_ud.create((endpoint, key)).unwrap();        
+    let mut client_session = client_ud.create((endpoint, key)).unwrap();
 
     /**** The main test body****/
     let temp_ud = server_ud.clone();
@@ -85,7 +96,9 @@ fn test_ud_rpc() {
         server_ud,
         UDReceiver::new(temp_ud, unsafe { ctx.get_lkey() }),
     );
-    rpc_server.get_mut_service().register(73, test_callback);
+    rpc_server
+        .get_mut_service()
+        .register(TEST_RPC_ID, test_callback);
 
     log::info!("check RPCHook: {:?}", rpc_server);
 
@@ -97,13 +110,15 @@ fn test_ud_rpc() {
         }
     }
 
-    use os_network::rpc::header::*;
-    use os_network::timeout::Timeout;    
     use os_network::block_on;
+    use os_network::rpc::header::*;
+    use os_network::timeout::Timeout;
 
-    // test RPC connect request 
-    let connect_header = MsgHeader::gen_connect_stub(0,0); 
-    let mut request = UDMsg::new(512, 73);
+    // test RPC connect request
+    let my_session_id = 73;
+    let connect_header = MsgHeader::gen_connect_stub(my_session_id, 64);
+
+    let mut request = UDMsg::new(64, 73);
     unsafe { request.get_bytes_mut().memcpy_serialize(&connect_header) };
 
     let result = client_session.post(&request, true);
@@ -121,9 +136,10 @@ fn test_ud_rpc() {
     }
 
     let mut rpc_server = Timeout::new(rpc_server, 10000);
-    assert!(block_on(&mut rpc_server).err().unwrap().is_elapsed());
+    let res = block_on(&mut rpc_server);
+    log::debug!("sanity check result: {:?}", res);
     /****************************/
 }
 
-#[krdma_test(test_service, test_ud_rpc)]
+#[krdma_test(test_service, test_rpc_headers, test_ud_rpc)]
 fn init() {}

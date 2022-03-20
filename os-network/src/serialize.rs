@@ -1,31 +1,18 @@
 /// provide simple serialization support for basic types
 use super::bytes::*;
 
-use crate::rust_kernel_linux_util::bindings::memcpy;
-use crate::rust_kernel_linux_util::linux_kernel_module::c_types;
-
 impl BytesMut {
     pub unsafe fn memcpy_serialize<T: Sized>(&mut self, v: &T) -> bool {
-        let vlen = core::mem::size_of::<T>();
-        if core::intrinsics::likely(vlen <= self.len()) {
-            memcpy(
-                (v as *const T as *mut T).cast::<c_types::c_void>(),
-                self.ptr.cast::<c_types::c_void>(),
-                vlen as u64,
-            );
+        if core::intrinsics::likely(core::mem::size_of::<T>() <= self.len()) {
+            unsafe { core::ptr::copy_nonoverlapping(v, self.ptr as _, 1) };
             return true;
         }
         false
     }
 
-    pub unsafe fn memcpy_deserialize<T: Sized>(&mut self, target : &mut T) -> bool { 
-        let vlen = core::mem::size_of::<T>();
-        if core::intrinsics::likely(vlen <= self.len()) {
-            memcpy(
-                self.ptr.cast::<c_types::c_void>(),
-                (target as *const T as *mut T).cast::<c_types::c_void>(),
-                vlen as u64,
-            );
+    pub unsafe fn memcpy_deserialize<T: Sized>(&mut self, target: &mut T) -> bool {
+        if core::intrinsics::likely(core::mem::size_of::<T>() <= self.len()) {
+            unsafe { core::ptr::copy_nonoverlapping(self.ptr as _, target, 1) };
             return true;
         }
         false

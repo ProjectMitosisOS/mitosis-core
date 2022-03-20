@@ -74,14 +74,18 @@ where
         match self.transport.poll() {
             Ok(Async::NotReady) => Ok(Async::NotReady),
             Ok(Async::Ready(msg)) => {
-                crate::log::info!("receive one msg"); 
                 // parse the request
                 let mut bytes = unsafe { msg.get_bytes().clone() };
                 let mut msg_header: MsgHeader = Default::default();
-                unsafe { bytes.memcpy_deserialize(&mut msg_header) };
+
+                let mut msg_header_bytes =
+                    unsafe { bytes.truncate_header(R::HEADER).ok_or(Error::corrupted()) }?;
+                unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
 
                 let mut rpc_args = unsafe {
-                    bytes.truncate_header(core::mem::size_of::<super::header::ReqType>())
+                    msg_header_bytes
+                        .truncate_header(core::mem::size_of::<super::header::MsgHeader>())
+                        .ok_or(Error::corrupted())?
                 };
 
                 match msg_header.get_marker() {
@@ -92,10 +96,13 @@ where
                     super::header::ReqType::Request => {
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
                         crate::log::info!("check meta in {:?}", meta);
-                        
+
                         // TODO: call the message
                     }
-                    _ => {}
+                    _ => {
+                        // should never happen at the hooker!
+                        crate::log::error!("unknown message header {:?}", msg_header);
+                    }
                 }
 
                 self.transport

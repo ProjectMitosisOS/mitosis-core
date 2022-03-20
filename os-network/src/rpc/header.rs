@@ -11,6 +11,12 @@ pub struct CallStub {
 #[derive(Debug, Default, Copy, Clone)]
 pub struct ConnectStub(usize);
 
+impl ConnectStub {
+    pub fn get_session_id(&self) -> usize {
+        self.0
+    }
+}
+
 #[derive(Debug, Default, Copy, Clone)]
 #[repr(u8)]
 pub enum ReplyStatus {
