@@ -95,7 +95,7 @@ fn test_ud_rpc() {
     let mut rpc_server = UDRPCHook::new(
         server_ud,
         UDReceiverFactory::new()
-            .set_qd_hint(DEFAULT_QD_HINT)
+            .set_qd_hint(DEFAULT_QD_HINT as _)
             .set_lkey(unsafe { ctx.get_lkey() })
             .create(temp_ud),
     );
