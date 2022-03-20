@@ -31,9 +31,12 @@ impl<'a> UDFactory<'a> {
     }
 }
 
+/// Note:
+/// - we assume that the datagram is only used by one **thread**
 pub struct UDDatagram<'a> {
     pub(crate) ud: Arc<UD>,
     phantom: PhantomData<&'a ()>,
+    pending : usize,
 }
 
 impl UDDatagram<'_> {
@@ -41,10 +44,15 @@ impl UDDatagram<'_> {
         self.ud.clone()
     }
 
+    pub fn get_pending(&self) -> usize { 
+        self.pending
+    }
+
     pub fn clone(&self) -> Self {
         Self {
             ud: self.ud.clone(),
             phantom: PhantomData,
+            pending : 0
         }
     }
 }
@@ -60,6 +68,7 @@ impl Future for UDDatagram<'_> {
         match unsafe { bd_ib_poll_cq(self.ud.get_cq(), 1, &mut wc) } {
             0 => Ok(Async::NotReady),
             1 => {
+                self.pending = 0;
                 // FIXME: should dispatch according to the wc_status
                 if wc.status != ib_wc_status::IB_WC_SUCCESS {
                     crate::log::debug!("check wc: {}", wc.status);
@@ -72,11 +81,13 @@ impl Future for UDDatagram<'_> {
     }
 }
 
-impl crate::conn::Conn for UDDatagram<'_> {
+impl crate::conn::Conn for UDDatagram<'_> 
+{
     type ReqPayload = crate::rdma::payload::Payload<ib_ud_wr>;
 
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
         let mut bad_wr: *mut ib_send_wr = core::ptr::null_mut();
+
         let err = unsafe {
             bd_ib_post_send(
                 self.ud.get_qp(),
@@ -87,6 +98,7 @@ impl crate::conn::Conn for UDDatagram<'_> {
         if err != 0 {
             return Err(Err::Other);
         }
+        self.pending += 1;
 
         Ok(())
     }
@@ -106,6 +118,7 @@ impl crate::conn::Factory for UDFactory<'_> {
         Ok(UDDatagram {
             ud: ud,
             phantom: PhantomData,
+            pending : 0,
         })
     }
 }

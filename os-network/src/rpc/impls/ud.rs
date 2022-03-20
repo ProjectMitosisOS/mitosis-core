@@ -45,6 +45,11 @@ impl super::super::RPCConn for UDSession<'_> {
 
         self.inner.post(&send_req.as_ref())
     }
+
+    #[inline]
+    fn get_pending_reqs(&self) -> usize { 
+        self.inner.get_pending()
+    }
 }
 
 impl<'a> super::super::RPCFactory for UDDatagram<'a> {

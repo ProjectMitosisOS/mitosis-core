@@ -162,7 +162,7 @@ fn test_ud_rpc() {
     let res = block_on(&mut rpc_server);
     log::debug!("sanity check result: {:?}", res);
 
-    let mut rpc_server = rpc_server.into_inner();
+    let rpc_server = rpc_server.into_inner();
     /****************************/
 
     log::debug!("final check hook status {:?}", rpc_server);

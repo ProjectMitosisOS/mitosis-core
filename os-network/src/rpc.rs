@@ -47,6 +47,9 @@ pub trait RPCConn<T: Future = Self>: Future {
 
     // post the request to the underlying device
     fn post(&mut self, req: &Self::ReqPayload, signaled: bool) -> Result<(), Self::IOResult>;
+
+    // a call specific to RDMA
+    fn get_pending_reqs(&self) -> usize; 
 }
 
 /// This is a simple wrapper over crate::conn::Factory
