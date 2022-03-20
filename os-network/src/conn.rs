@@ -21,7 +21,7 @@ pub trait Factory {
 }
 
 pub trait MetaFactory: Factory {
-    type HyperMeta;
+    type HyperMeta : Default;
     type Meta;
     type MetaResult;
 

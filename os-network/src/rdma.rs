@@ -6,9 +6,20 @@ use KRdmaKit::rust_kernel_rdma_base::sa_path_rec;
 // use KRdmaKit::rust_kernel_rdma_base::bindings::ib_wc_status;
 
 pub const MAX_GID_LEN: usize = 40; // The maximum string length of IPv6
+
+#[derive(Debug)]
 pub struct RawGID {
     inner: [u8; MAX_GID_LEN],
     real_len: usize,
+}
+
+impl Default for RawGID {
+    fn default() -> Self {
+        Self {
+            inner: [0; MAX_GID_LEN],
+            real_len: 0,
+        }
+    }
 }
 
 impl RawGID {

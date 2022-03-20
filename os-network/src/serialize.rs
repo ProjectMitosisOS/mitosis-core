@@ -15,18 +15,18 @@ impl BytesMut {
         off: usize,
         v: &T,
     ) -> core::option::Option<usize> {
-        match self.clone_and_resize(off) {
+        match self.truncate_header(off) {
             Some(mut bytes) => bytes.memcpy_serialize(v),
             _ => None,
         }
     }
 
-    pub unsafe fn memcpy_deserialize<T: Sized>(&mut self, target: &mut T) -> bool {
+    pub unsafe fn memcpy_deserialize<T: Sized>(&mut self, target: &mut T) -> core::option::Option<usize>  {
         if core::intrinsics::likely(core::mem::size_of::<T>() <= self.len()) {
             unsafe { core::ptr::copy_nonoverlapping(self.ptr as _, target, 1) };
-            return true;
-        }
-        false
+            return Some(core::mem::size_of::<T>());
+        }        
+        None
     }
 }
 

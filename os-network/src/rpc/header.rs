@@ -97,6 +97,11 @@ impl MsgHeader {
         self.marker
     }
 
+    #[inline]
+    pub fn get_payload(&self) -> usize { 
+        self.payload
+    }
+
     pub fn is_connect(&self) -> bool {
         self.marker == ReqType::Connect
     }

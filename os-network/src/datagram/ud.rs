@@ -110,30 +110,47 @@ impl crate::conn::Factory for UDFactory<'_> {
     }
 }
 
+#[derive(Default)]
+pub struct UDHyperMeta {
+    pub gid: crate::rdma::RawGID,
+    pub service_id: u64,
+    pub qd_hint: u64,
+}
+
 impl crate::conn::MetaFactory for UDFactory<'_> {
     // gid, service id, qd hint
-    type HyperMeta = (crate::rdma::RawGID, u64, u64);
+    type HyperMeta = UDHyperMeta;
 
     // ud endpoint, local memory protection key
     type Meta = (KRdmaKit::cm::EndPoint, u32);
 
     type MetaResult = Err;
 
-    /// Note: this function is not optimized, but since it is not on the (important) critical 
+    /// Note: this function is not optimized, but since it is not on the (important) critical
     /// path of the execution, it is ok to do this
     fn create_meta(&self, meta: Self::HyperMeta) -> Result<Self::Meta, Self::MetaResult> {
-        let (gid, service_id, qd_hint) = meta;
+        let (gid, service_id, qd_hint) = (meta.gid, meta.service_id, meta.qd_hint);
         let path_res = self
             .rctx
-            .explore_path(
-                gid.to_string(),
-                service_id,
-            )
+            .explore_path(gid.to_string(), service_id)
             .ok_or(Err::Other)?;
         let mut sidr_cm = SidrCM::new(&self.rctx, core::ptr::null_mut()).ok_or(Err::Other)?;
         let endpoint = sidr_cm
             .sidr_connect(path_res, service_id, qd_hint)
             .map_err(|_| Err::Other)?;
         Ok((endpoint, unsafe { self.rctx.get_lkey() }))
+    }
+}
+
+
+use core::fmt::{Debug, Display, Formatter};
+
+impl Debug for UDHyperMeta
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f, "UDHyperMeta {{ gid : {}, service_id : {}, qd : {} }}", 
+            self.gid.to_string(), self.service_id, self.qd_hint
+        )
     }
 }

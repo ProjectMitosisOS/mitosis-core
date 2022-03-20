@@ -47,16 +47,13 @@ impl super::super::RPCConn for UDSession<'_> {
     }
 }
 
-impl super::super::RPCFactory for UDDatagram<'_> {
+impl<'a> super::super::RPCFactory for UDDatagram<'a> {
     type ConnMeta = (EndPoint, u32);
-    type ConnType<'a>
-    where
-        Self: 'a,
-    = UDSession<'a>;
+    type ConnType = UDSession<'a>;
 
     type ConnResult = crate::rdma::Err;
 
-    fn create<'a>(&'a self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult> {
+    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult> {
         let (endpoint, key) = meta;
         Ok(UDSession::<'a> {
             meta: endpoint,
@@ -71,8 +68,7 @@ impl<UDFactory : crate::conn::MetaFactory> super::super::GenHyperMeta<UDFactory>
 {
     type Args = (alloc::string::String, u64); // gid, service ID
 
-    fn generate_hyper(&self, args: &Self::Args) -> UDFactory::HyperMeta {
-        
+    fn generate_hyper(&self, args: &Self::Args) -> UDFactory::HyperMeta {        
         unimplemented!();
     }
 }

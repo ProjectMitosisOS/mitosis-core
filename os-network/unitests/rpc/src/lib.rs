@@ -49,6 +49,7 @@ use os_network::Factory;
 use os_network::MetaFactory;
 
 const DEFAULT_QD_HINT: u64 = 73;
+const CLIENT_QD_HINT: u64 = 12;
 const TEST_RPC_ID: usize = 73;
 
 fn test_rpc_headers() {
@@ -65,7 +66,7 @@ fn test_ud_rpc() {
     log::info!("Test RPC backed by RDMA's UD.");
     let timeout_usec = 1000_000;
 
-    type UDRPCHook<'a,'b> = hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
+    type UDRPCHook<'a, 'b> = hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
 
     // init RDMA_related data structures
     let driver = unsafe { KDriver::create().unwrap() };
@@ -74,28 +75,33 @@ fn test_ud_rpc() {
     let ctx = factory.get_context();
 
     let server_ud = factory.create(()).unwrap();
+    let client_ud = factory.create(()).unwrap();
 
     // expose the server-side connection infoit
     let service_id: u64 = 0;
     let ctrl = RCtrl::create(service_id, &ctx).unwrap();
     ctrl.reg_ud(DEFAULT_QD_HINT as usize, server_ud.get_qp());
+    ctrl.reg_ud(CLIENT_QD_HINT as usize, client_ud.get_qp());
 
     // the client part
-    let client_ud = factory.create(()).unwrap();
-    let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();   
-    
+    let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();
+
     let (endpoint, key) = factory
-        .create_meta((gid, service_id, DEFAULT_QD_HINT))
+        .create_meta(UDHyperMeta {
+            gid: gid,
+            service_id: service_id,
+            qd_hint: DEFAULT_QD_HINT,
+        })
         .unwrap();
     log::info!("check endpoint, key: {:?}, {}", endpoint, key);
 
     let mut client_session = client_ud.create((endpoint, key)).unwrap();
 
     /**** The main test body****/
-    let lkey = unsafe { ctx.get_lkey() }; 
+    let lkey = unsafe { ctx.get_lkey() };
     let temp_ud = server_ud.clone();
     let mut rpc_server = UDRPCHook::new(
-        &factory, 
+        &factory,
         server_ud,
         UDReceiverFactory::new()
             .set_qd_hint(DEFAULT_QD_HINT as _)
@@ -123,10 +129,20 @@ fn test_ud_rpc() {
 
     // test RPC connect request
     let my_session_id = 73;
-    let connect_header = MsgHeader::gen_connect_stub(my_session_id, 64);
 
-    let mut request = UDMsg::new(64, 73);
-    unsafe { request.get_bytes_mut().memcpy_serialize(&connect_header) };
+    let mut request = UDMsg::new(1024, 73);
+    os_network::rpc::ConnectStubFactory::new(my_session_id).generate(
+        &UDHyperMeta {
+            gid: os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
+            service_id: service_id,
+            qd_hint: DEFAULT_QD_HINT,
+        },
+        request.get_bytes_mut(),
+    );
+    log::debug!(
+        "sanity check connect stub {:?}",
+        unsafe { request.get_bytes().clone_and_resize(64) }
+    );
 
     let result = client_session.post(&request, true);
     if result.is_err() {
@@ -145,7 +161,11 @@ fn test_ud_rpc() {
     let mut rpc_server = Timeout::new(rpc_server, 10000);
     let res = block_on(&mut rpc_server);
     log::debug!("sanity check result: {:?}", res);
+
+    let mut rpc_server = rpc_server.into_inner();
     /****************************/
+
+    log::debug!("final check hook status {:?}", rpc_server);
 }
 
 #[krdma_test(test_service, test_rpc_headers, test_ud_rpc)]
