@@ -7,6 +7,7 @@ use crate::rdma::Err;
 use super::msg::UDMsg;
 use super::ud::UDDatagram;
 
+/// UDReceiver wraps a UD qp and serves as server-sided message receiver
 #[allow(dead_code)]
 pub struct UDReceiver<'a> {
     qd_hint: usize,
@@ -85,6 +86,11 @@ impl super::Receiver for UDReceiver<'_> {
 
     const MTU: usize = 4096;
 
+    /// Post the receive buffer to receive future incoming requests
+    /// 
+    /// #Arguments
+    /// * `buf` - the memory buffer used for receiving future requests
+    /// * `key` - the local key of this memory
     fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult> {
         let mut op = UDOp::new(&self.inner.ud);
         let res = op.post_recv(buf.get_pa(), self.lkey, buf.len());
@@ -103,6 +109,11 @@ impl Future for UDReceiver<'_> {
     type Output = UDMsg;
     type Error = Err;
 
+    /// Poll the underlying completion queue for the UD receive operation
+    /// 
+    /// Return
+    /// * If succeed, return the UDMsg poped from internal queue
+    /// * If fail, return NotReady, work-completion-related error or other general error
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         let mut wc: ib_wc = Default::default();
         match unsafe { bd_ib_poll_cq(self.inner.ud.get_recv_cq(), 1, &mut wc) } {

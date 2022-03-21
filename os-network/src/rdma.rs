@@ -3,7 +3,6 @@ use alloc::string::String;
 
 use KRdmaKit::device::RContext;
 use KRdmaKit::rust_kernel_rdma_base::sa_path_rec;
-// use KRdmaKit::rust_kernel_rdma_base::bindings::ib_wc_status;
 
 pub const MAX_GID_LEN: usize = 40; // The maximum string length of IPv6
 

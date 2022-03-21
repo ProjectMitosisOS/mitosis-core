@@ -273,4 +273,8 @@ impl<T> Error<T> {
     pub fn fatal() -> Error<T> { 
         Error(Kind::Fatal)
     }
+
+    pub fn invalid_sz() -> Error<T> { 
+        Error(Kind::InValidSz)
+    }
 }

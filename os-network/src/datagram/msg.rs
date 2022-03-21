@@ -12,6 +12,10 @@ pub struct UDMsg {
 use KRdmaKit::rust_kernel_rdma_base::*;
 
 impl UDMsg {
+    /// Transform this UDMsg to raw C data structure - ib_ud_wr
+    /// 
+    /// #Argument
+    /// * `addr` - the endpoint of the target receiver
     pub fn to_ud_wr(
         &self,
         addr: &KRdmaKit::cm::EndPoint,
@@ -44,6 +48,11 @@ impl ToBytes for UDMsg {
 }
 
 impl UDMsg {
+    /// Create a UDMsg from a kernel physical memory
+    /// 
+    /// #Argument
+    /// * `phy` - allocated physical memory
+    /// * `imm` - immediate number in the UD message
     pub fn new_from_phy(mut phy: RMemPhy, imm: u32) -> Self {
         let pa = phy.get_pa(0);
         Self {
@@ -54,7 +63,12 @@ impl UDMsg {
         }
     }
 
-    pub fn new(size: usize, imm: u32) -> Self {
+    /// Allocate memory and create a UDMsg
+    /// 
+    /// #Argument
+    /// * `size` - the memory to be allocated
+    /// * `imm` - immediate number in the UD message
+    pub fn new(size: usize, imm : u32) -> Self {
         Self::new_from_phy(RMemPhy::new(size), imm)
     }
 
