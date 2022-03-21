@@ -8,7 +8,7 @@ pub trait Device {
     // remote memory address
     type Address;
 
-    // local address
+    // local memory address
     type LocalMemory;
 
     type IOResult;
