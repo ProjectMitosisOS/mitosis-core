@@ -190,7 +190,8 @@ fn test_ud_rpc() {
     // make a stress test
     client_receiver.reset_timer(20000);
 
-    for _ in 0..1000000 {
+    // TODO: need to move to a stress test folder
+    for _ in 0..10000 {
         let req_sz = os_network::rpc::CallStubFactory::new(my_session_id, 73)
             .generate(&(0 as u64), request.get_bytes_mut()) // 0 is a dummy RPC argument
             .unwrap();
