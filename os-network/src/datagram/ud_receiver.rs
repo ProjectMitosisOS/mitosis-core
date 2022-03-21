@@ -83,6 +83,8 @@ impl super::Receiver for UDReceiver<'_> {
     // FIXME: should be configurable
     const HEADER: usize = 40; // GRH header
 
+    const MTU: usize = 4096;
+
     fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult> {
         let mut op = UDOp::new(&self.inner.ud);
         let res = op.post_recv(buf.get_pa(), self.lkey, buf.len());

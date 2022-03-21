@@ -40,27 +40,36 @@ use crate::future::Future;
 /// This is a simple wrapper over crate::conn::Conn
 /// The reason for doing so is to simplify customization for RPC
 pub trait RPCConn<T: Future = Self>: Future {
-    type ReqPayload; // the request format
+    type ReqPayload: AllocMsgBuf; // the request format
     type CompPayload = Self::Output;
     type IOResult = Self::Error;
     type HyperMeta;
 
     // post the request to the underlying device
-    fn post(&mut self, req: &Self::ReqPayload, signaled: bool) -> Result<(), Self::IOResult>;
+    fn post(
+        &mut self,
+        req: &Self::ReqPayload,
+        sz: usize,
+        signaled: bool,
+    ) -> Result<(), Self::IOResult>;
 
     // a call specific to RDMA
-    fn get_pending_reqs(&self) -> usize; 
+    fn get_pending_reqs(&self) -> usize;
 }
 
 /// This is a simple wrapper over crate::conn::Factory
 /// The reason for doing so is to simplify customization for RPC
 pub trait RPCFactory {
     type ConnMeta;
-    type ConnType : RPCConn;
+    type ConnType: RPCConn;
     type ConnResult;
 
     // create and connect the connection
     fn create<'a>(&'a self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult>;
+}
+
+pub trait AllocMsgBuf {
+    fn create(size: usize, imm: u32) -> Self;
 }
 
 /// The connection should provide a GenHyperMeta trait,

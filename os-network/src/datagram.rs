@@ -4,7 +4,9 @@ pub trait Receiver<T: Future = Self>: Future
 {
     type IOResult = Self::Error;
     type MsgBuf;
+
     const HEADER : usize; 
+    const MTU : usize;
 
     fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult>;
 }

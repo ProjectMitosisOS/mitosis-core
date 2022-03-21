@@ -131,20 +131,20 @@ fn test_ud_rpc() {
     let my_session_id = 73;
 
     let mut request = UDMsg::new(1024, 73);
-    os_network::rpc::ConnectStubFactory::new(my_session_id).generate(
+    let req_sz = os_network::rpc::ConnectStubFactory::new(my_session_id).generate(
         &UDHyperMeta {
             gid: os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
             service_id: service_id,
             qd_hint: DEFAULT_QD_HINT,
         },
         request.get_bytes_mut(),
-    );
+    ).unwrap();
     log::debug!(
         "sanity check connect stub {:?}",
         unsafe { request.get_bytes().clone_and_resize(64) }
     );
 
-    let result = client_session.post(&request, true);
+    let result = client_session.post(&request, req_sz, true);
     if result.is_err() {
         log::error!("fail to post message");
         return;

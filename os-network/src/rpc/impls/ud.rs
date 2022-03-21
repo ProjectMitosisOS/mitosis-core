@@ -31,7 +31,12 @@ impl super::super::RPCConn for UDSession<'_> {
     type HyperMeta = ();
 
     #[inline]
-    fn post(&mut self, req: &Self::ReqPayload, signaled: bool) -> Result<(), Self::IOResult> {
+    fn post(
+        &mut self,
+        req: &Self::ReqPayload,
+        sz: usize,
+        signaled: bool,
+    ) -> Result<(), Self::IOResult> {
         let mut send_req = req
             .to_ud_wr(&self.meta)
             .set_send_flags(match signaled {
@@ -47,7 +52,7 @@ impl super::super::RPCConn for UDSession<'_> {
     }
 
     #[inline]
-    fn get_pending_reqs(&self) -> usize { 
+    fn get_pending_reqs(&self) -> usize {
         self.inner.get_pending()
     }
 }
@@ -68,8 +73,8 @@ impl<'a> super::super::RPCFactory for UDDatagram<'a> {
     }
 }
 
-impl<UDFactory : crate::conn::MetaFactory> super::super::GenHyperMeta<UDFactory>
-    for crate::datagram::ud_receiver::UDReceiver<'_>    
+impl<UDFactory: crate::conn::MetaFactory> super::super::GenHyperMeta<UDFactory>
+    for crate::datagram::ud_receiver::UDReceiver<'_>
 {
     type Args = (alloc::string::String, u64); // gid, service ID
 

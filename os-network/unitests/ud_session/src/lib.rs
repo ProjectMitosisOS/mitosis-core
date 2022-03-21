@@ -81,7 +81,7 @@ fn test_ud_session() {
     let mut request = UDMsg::new(MAX_SEND_MSG, 73);
     write!(&mut request, "hello world").unwrap();
 
-    let result = client_session.post(&request, true);
+    let result = client_session.post(&request, 64, true);
     if result.is_err() {
         log::error!("fail to post message");
         return;

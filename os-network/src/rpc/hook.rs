@@ -19,7 +19,7 @@ where
     session_factory: F,
     meta_factory: &'a MF,
     transport: R,
-    connected_sessions: HashMap<usize, F::ConnType>,
+    connected_sessions: HashMap<usize, (F::ConnType, R::MsgBuf)>,
 }
 
 impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
@@ -93,6 +93,8 @@ where
                 let bytes = unsafe { msg.get_bytes().clone() };
                 let mut msg_header: MsgHeader = Default::default();
 
+                // the datagram may have a extra header (e.g., GRH_HEADER in UD)
+                // so we must truncate it first 
                 let mut msg_header_bytes =
                     unsafe { bytes.truncate_header(R::HEADER).ok_or(Error::corrupted()) }?;
                 unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
@@ -127,8 +129,13 @@ where
                                 .create(connect_meta)
                                 .map_err(|_| Error::session_creation_error())?;
 
+                            let session_buf = R::MsgBuf::create(R::MTU,0);
+
+                            // send a reply 
+
+                            // add to my connected session
                             self.connected_sessions
-                                .insert(meta.get_session_id(), session);
+                                .insert(meta.get_session_id(), (session, session_buf));
                         } else {
                             crate::log::debug!(
                                 "duplicate connect session ID: {}",
