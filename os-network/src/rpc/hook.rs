@@ -36,13 +36,15 @@ use super::header_factory::*;
 
 impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
 where
-    F: RPCFactory + 'a,
+    F: RPCFactory+ 'a,
     // we need to ensure that the polled result can be sent back to
     R: Receiver<
         Output = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
         MsgBuf = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
         IOResult = <R as Future>::Error,
     >,
+    <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload: ToBytes,
+    <F as RPCFactory>::ConnType: crate::future::Future,
 {
     pub fn new(meta_f: &'a MF, factory: F, transport: R) -> Self {
         Self {
@@ -58,12 +60,23 @@ where
         self.transport.post_recv_buf(msg)
     }
 
-    pub fn send_reply(
+    fn send_reply(
         &mut self,
         session_id: usize,
         reply: ReplyStubFactory,
     ) -> Result<(), Error<R::Error>> {
-        unimplemented!();
+        let (session, buf) = self
+            .connected_sessions
+            .get_mut(&session_id)
+            .ok_or(Error::session_creation_error())?;
+
+        // FIXME: 32 is a magic number I used here 
+        if session.get_pending_reqs() > 32 {
+            crate::block_on(session).map_err(|_| Error::fatal())?;
+        }
+
+        let msg_sz = reply.get_payload() + reply.generate(buf.get_bytes_mut()).unwrap(); // should succeed
+        session.post(&buf, msg_sz, session.get_pending_reqs() == 0).map_err(|_| Error::fatal())
     }
 }
 
@@ -94,7 +107,7 @@ where
                 let mut msg_header: MsgHeader = Default::default();
 
                 // the datagram may have a extra header (e.g., GRH_HEADER in UD)
-                // so we must truncate it first 
+                // so we must truncate it first
                 let mut msg_header_bytes =
                     unsafe { bytes.truncate_header(R::HEADER).ok_or(Error::corrupted()) }?;
                 unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
@@ -129,9 +142,9 @@ where
                                 .create(connect_meta)
                                 .map_err(|_| Error::session_creation_error())?;
 
-                            let session_buf = R::MsgBuf::create(R::MTU,0);
+                            let session_buf = R::MsgBuf::create(R::MTU, 0);
 
-                            // send a reply 
+                            // send a reply
 
                             // add to my connected session
                             self.connected_sessions
@@ -215,6 +228,11 @@ enum Kind<T> {
 
     /// Failed to create the in-coming session
     SessionCreationError,
+
+    /// The reply message exceeds the maximum msg buffers
+    InValidSz, 
+
+    Fatal,
 }
 
 impl<T> Error<T> {
@@ -244,5 +262,9 @@ impl<T> Error<T> {
     /// Create a new `Error` representing the function ID is not registered
     pub fn no_id() -> Error<T> {
         Error(Kind::NoID)
+    }
+
+    pub fn fatal() -> Error<T> { 
+        Error(Kind::Fatal)
     }
 }

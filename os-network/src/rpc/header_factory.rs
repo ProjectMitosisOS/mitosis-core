@@ -38,6 +38,10 @@ impl ReplyStubFactory {
         }
     }
 
+    pub fn get_payload(&self) -> usize { 
+        self.payload
+    }
+
     pub fn generate(self, msg: &mut BytesMut) -> core::option::Option<usize> {
         unsafe { msg.memcpy_serialize_at(0, &MsgHeader::gen_reply_stub(self.status, self.payload)) }
     }
