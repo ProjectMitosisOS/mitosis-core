@@ -7,7 +7,7 @@ use KRdmaKit::cm::EndPoint;
 
 use crate::conn::Conn;
 use crate::rdma::dc::DCConn;
-
+/*
 pub struct LocalMemoryBuffer {
     paddr: u64,
     len: usize,
@@ -27,7 +27,7 @@ impl super::ToPhys for LocalMemoryBuffer {
         (self.paddr, self.len)
     }
 }
-
+*/
 pub struct DCRemoteDevice<'a, LocalMemory> {
     dc: Arc<DCConn<'a>>,
     phantom: PhantomData<LocalMemory>,
@@ -72,7 +72,7 @@ where
     type IOResult = super::super::rdma::Err;
     type LocalMemory = LocalMemory;
 
-    fn read(
+    unsafe fn read(
         &mut self,
         loc: &Self::Location,
         addr: &Self::Address,
@@ -89,10 +89,8 @@ where
             .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
             .set_ah(loc);
         
-        let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
-        let dc = unsafe {
-            Arc::get_mut_unchecked(&mut self.dc)
-        };
+        let mut payload =  Pin::new_unchecked(&mut payload);
+        let dc = Arc::get_mut_unchecked(&mut self.dc);
         crate::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
 
         dc.post(&payload.as_ref())?;

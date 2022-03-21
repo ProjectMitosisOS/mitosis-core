@@ -13,18 +13,21 @@ use rust_kernel_linux_util as log;
 use KRdmaKit::KDriver;
 use KRdmaKit::cm::SidrCM;
 use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::mem::{RMemPhy, Memory};
 
 use os_network::Factory;
 use os_network::bytes::*;
+use os_network::msg::UDMsg;
 use os_network::rdma::dc::DCFactory;
 use os_network::remote_memory::Device;
-use os_network::remote_memory::rdma::{DCRemoteDevice, DCKey, LocalMemoryBuffer};
+use os_network::remote_memory::ToPhys;
+use os_network::remote_memory::rdma::{DCRemoteDevice, DCKey};
 
 use krdma_test::*;
 
 static MEM_SIZE: usize = 1024;
 static DEFAULT_QD_HINT: u64 = 73;
+
+type RMemory = UDMsg;
 
 /// A test on `LocalDevice`
 fn test_local() {
@@ -47,7 +50,7 @@ fn test_local() {
     let mut dev = LocalDevice::<(),(), os_network::rdma::Err>::new(); 
 
     log::info!("pre check dst {:?}", dst);     
-    dev.read(&(), &src.get_raw(), &(), &mut dst).unwrap(); 
+    unsafe { dev.read(&(), &src.get_raw(), &(), &mut dst).unwrap() };
     log::info!("after check dst {:?}", dst); 
     assert_eq!(src,dst); 
 }
@@ -91,22 +94,27 @@ fn test_dc_remote() {
         .unwrap();
     
     // Prepare memory regions
-    let mut mem = RMemPhy::new(MEM_SIZE);
-    let local_bytes = unsafe { BytesMut::from_raw(mem.get_ptr() as _, MEM_SIZE/2 as usize) };
-    let mut remote_bytes = unsafe { BytesMut::from_raw(mem.get_ptr().add(MEM_SIZE/2) as _, MEM_SIZE/2 as usize) };
+    let mut local_mem = RMemory::new(MEM_SIZE, 0);
+    let remote_mem = RMemory::new(MEM_SIZE, 0);
+    let local_bytes = unsafe { BytesMut::from_raw(local_mem.get_bytes().get_ptr(), local_mem.len()) };
+    let mut remote_bytes = unsafe { BytesMut::from_raw(remote_mem.get_bytes().get_ptr(), remote_mem.len()) };
 
     write!(&mut remote_bytes, "hello world").unwrap();
 
+    // Create a remote device and perform one-sided read
     let mut dev = DCRemoteDevice::new(dc);
-    let res = dev.read(&endpoint,
-                    &mem.get_pa((MEM_SIZE/2) as u64),
-                    &DCKey::new(lkey, rkey, 73),
-                    &mut unsafe { LocalMemoryBuffer::new(mem.get_pa(0), MEM_SIZE/2) });
+    let res = unsafe {
+        dev.read(&endpoint,
+            &remote_mem.to_phys().0,
+            &DCKey::new(lkey, rkey, 73),
+            &mut local_mem)
+    };
     if res.is_err() {
         log::error!("unable to read remote memory");
         return;
     }
 
+    // Sanity check after one-sided operation
     if local_bytes == remote_bytes {
         log::info!("equal after remote memory read operation!");
     } else {

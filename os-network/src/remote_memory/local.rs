@@ -27,7 +27,7 @@ impl<KeyType, LocationType,IO> super::Device for LocalDevice<KeyType, LocationTy
     type LocalMemory = BytesMut;
 
     /// the addr must be a valid virtual address that can be read by the kernel
-    fn read(
+    unsafe fn read(
         &mut self,
         _loc: &Self::Location,
         addr: &Self::Address,
@@ -35,7 +35,7 @@ impl<KeyType, LocationType,IO> super::Device for LocalDevice<KeyType, LocationTy
         to: &mut Self::LocalMemory,
     ) -> Result<(), Self::IOResult> {
         // to do: shall we check the validity of the in-passing address?
-        unsafe { to.copy(&BytesMut::from_raw(*addr as _, to.len()), 0) };
+        to.copy(&BytesMut::from_raw(*addr as _, to.len()), 0);
         Ok(())
     }
 

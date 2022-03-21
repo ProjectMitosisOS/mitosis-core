@@ -13,7 +13,7 @@ pub trait Device {
 
     type IOResult;
 
-    fn read(
+    unsafe fn read(
         &mut self,
         loc: &Self::Location,
         addr: &Self::Address,
