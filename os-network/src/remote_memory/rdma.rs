@@ -7,27 +7,7 @@ use KRdmaKit::cm::EndPoint;
 
 use crate::conn::Conn;
 use crate::rdma::dc::DCConn;
-/*
-pub struct LocalMemoryBuffer {
-    paddr: u64,
-    len: usize,
-}
 
-impl LocalMemoryBuffer {
-    pub unsafe fn new(paddr: u64, len: usize) -> Self {
-        Self {
-            paddr: paddr,
-            len: len,
-        }
-    }
-}
-
-impl super::ToPhys for LocalMemoryBuffer {
-    fn to_phys(&self) -> (u64, usize) {
-        (self.paddr, self.len)
-    }
-}
-*/
 pub struct DCRemoteDevice<'a, LocalMemory> {
     dc: Arc<DCConn<'a>>,
     phantom: PhantomData<LocalMemory>,
