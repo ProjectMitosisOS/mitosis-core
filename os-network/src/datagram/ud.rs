@@ -1,4 +1,3 @@
-// TODO: should move ot the datagram folder
 use alloc::sync::Arc;
 
 use crate::future::{Async, Future, Poll};
@@ -46,6 +45,11 @@ impl Future for UDDatagram<'_> {
     type Output = ib_wc;
     type Error = Err;
 
+    /// Poll the underlying completion queue for the UD send operation
+    /// 
+    /// Return
+    /// - If succeed, return the ib_wc
+    /// - If fail, return NotReady, work-completion-related error or other general error
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         let mut wc: ib_wc = Default::default();
         match unsafe { bd_ib_poll_cq(self.ud.get_cq(), 1, &mut wc) } {
@@ -66,6 +70,11 @@ impl Future for UDDatagram<'_> {
 impl crate::conn::Conn for UDDatagram<'_> {
     type ReqPayload = crate::rdma::payload::Payload<ib_ud_wr>;
 
+    /// Post the send requests to the underlying qp
+    /// 
+    /// Return
+    /// - If succeed, return Ok(())
+    /// - If fail, return a general error
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
         let mut bad_wr: *mut ib_send_wr = core::ptr::null_mut();
         let err = unsafe {
@@ -92,6 +101,11 @@ impl crate::conn::Factory for UDFactory<'_> {
 
     type ConnResult = Err;
 
+    /// Create a ud qp
+    /// 
+    /// Return
+    /// - If succeed, return a Ok result with UDDatagram
+    /// - If fail, return a general error
     fn create(&self, _meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult> {
         let ud = UD::new(&self.rctx).ok_or(Err::Other)?;
         Ok(UDDatagram {

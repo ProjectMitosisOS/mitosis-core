@@ -4,7 +4,6 @@ use alloc::string::String;
 
 use KRdmaKit::device::RContext;
 use KRdmaKit::rust_kernel_rdma_base::sa_path_rec;
-// use KRdmaKit::rust_kernel_rdma_base::bindings::ib_wc_status;
 
 pub struct ConnMeta {
     pub gid: String,
