@@ -212,6 +212,7 @@ fn test_ud_rpc() {
             log::error!("stress server receiver process err {:?}", res.err().unwrap());
             break;
         }
+        client_receiver.reset_timer(1000_000);
         let res = block_on(&mut client_receiver);
         match res {
             Ok(msg) => {
