@@ -20,7 +20,7 @@ use os_network::msg::UDMsg;
 use os_network::rdma::dc::DCFactory;
 use os_network::remote_memory::Device;
 use os_network::remote_memory::ToPhys;
-use os_network::remote_memory::rdma::{DCRemoteDevice, DCKey};
+use os_network::remote_memory::rdma::{DCRemoteDevice, DCKeys};
 
 use krdma_test::*;
 
@@ -106,7 +106,7 @@ fn test_dc_remote() {
     let res = unsafe {
         dev.read(&endpoint,
             &remote_mem.to_phys().0,
-            &DCKey::new(lkey, rkey, 73),
+            &DCKeys::new(lkey, rkey, 73),
             &mut local_mem)
     };
     if res.is_err() {

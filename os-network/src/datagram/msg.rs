@@ -91,7 +91,7 @@ impl UDMsg {
 }
 
 impl crate::remote_memory::ToPhys for UDMsg {
-    fn to_phys(&self) -> (u64, usize) {
+    unsafe fn to_phys(&self) -> (u64, usize) {
         // ugly hack: get_pa requires a mutable reference 
         let inner = unsafe {
             &mut *(&self.inner as *const _ as *mut RMemPhy)

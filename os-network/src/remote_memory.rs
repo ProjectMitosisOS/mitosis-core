@@ -33,7 +33,7 @@ pub trait Device {
 /// Any structure implement ToPhys should return
 /// its physical address and size
 pub trait ToPhys {
-    fn to_phys(&self) -> (u64, usize);
+    unsafe fn to_phys(&self) -> (u64, usize);
 }
 
 pub mod local;

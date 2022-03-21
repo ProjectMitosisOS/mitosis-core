@@ -14,13 +14,13 @@ pub struct DCRemoteDevice<'a, LocalMemory> {
 }
 
 #[allow(dead_code)]
-pub struct DCKey {
+pub struct DCKeys {
     lkey: u32,
     rkey: u32,
     dct_access_key: u32,
 }
 
-impl DCKey {
+impl DCKeys {
     pub fn new(lkey: u32, rkey: u32, dct_access_key: u32) -> Self {
         Self {
             lkey: lkey,
@@ -48,7 +48,7 @@ where
     // remote memory read/write will succeed or return rdma specific error
     type Address = u64;
     type Location = EndPoint;
-    type Key = DCKey;
+    type Key = DCKeys;
     type IOResult = super::super::rdma::Err;
     type LocalMemory = LocalMemory;
 
