@@ -4,11 +4,17 @@ use core::pin::Pin;
 use KRdmaKit::cm::EndPoint;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
+pub trait IsSignaled {
+    fn is_signaled(&self) -> bool;
+}
+
 pub trait SendWR {
     fn set_opcode(&mut self, opcode: u32);
     fn get_opcode(&self) -> u32;
 
     fn set_send_flags(&mut self, send_flags: i32);
+    fn get_send_flags(&self) -> i32;
+
     fn set_imm_data(&mut self, imm_data: u32);
 
     fn set_sge_ptr(&mut self, sge: *mut ib_sge);
@@ -43,6 +49,15 @@ where
             let sge_ptr = self.get_sge_ptr();
             Pin::get_unchecked_mut(self).wr.set_sge_ptr(sge_ptr);
         }
+    }
+}
+
+impl<T> IsSignaled for Payload<T>
+where
+    T: Default + SendWR,
+{
+    fn is_signaled(&self) -> bool {
+        (self.get_send_flags() & ib_send_flags::IB_SEND_SIGNALED) != 0
     }
 }
 
@@ -81,6 +96,10 @@ where
     pub fn set_send_flags(mut self, send_flags: i32) -> Self {
         self.wr.set_send_flags(send_flags);
         self
+    }
+
+    pub fn get_send_flags(&self) -> i32 {
+        self.wr.get_send_flags()
     }
 
     pub fn set_imm_data(mut self, imm_data: u32) -> Self {

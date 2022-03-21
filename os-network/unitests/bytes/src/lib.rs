@@ -3,17 +3,17 @@
 extern crate alloc;
 
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
-
 use rust_kernel_linux_util as log;
 
 use os_network::bytes::*;
+use os_network::serialize::*;
 
 use krdma_test::*;
 
+use alloc::vec;
+
 /// A test on `BytesMut`
-#[krdma_main]
 fn test_bytes() {
-    use alloc::vec;
     use core::fmt::Write;
 
     let max_buf_len = 32; 
@@ -44,3 +44,19 @@ fn test_bytes() {
     }
     assert_eq!(bytes, bytes_2);
 }
+
+fn test_serialize() { 
+    log::info!("test serialize!"); 
+    let mut buf = vec![0; 64]; 
+    let test_val : u64 = 73; 
+
+    let mut bytes = unsafe { BytesMut::from_raw(buf.as_mut_ptr(), buf.len())}; 
+    unsafe { bytes.memcpy_serialize(&test_val) };
+
+    let mut val : u64 = 0;
+    unsafe { bytes.memcpy_deserialize(&mut val)}; 
+    assert_eq!(val, test_val); 
+}
+
+#[krdma_test(test_bytes,test_serialize)]
+fn init() {}

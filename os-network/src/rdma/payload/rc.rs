@@ -13,6 +13,10 @@ impl super::SendWR for ib_rdma_wr {
         self.wr.send_flags = send_flags;
     }
 
+    fn get_send_flags(&self) -> i32 {
+        self.wr.send_flags
+    }    
+
     fn set_imm_data(&mut self, imm_data: u32) {
         self.wr.ex.imm_data = imm_data;
     }

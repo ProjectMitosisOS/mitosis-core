@@ -3,7 +3,8 @@
     generic_associated_types,
     get_mut_unchecked,
     core_intrinsics,
-    associated_type_defaults
+    associated_type_defaults,
+    derive_default_enum
 )]
 
 // Manage network connections in the OS
@@ -17,18 +18,19 @@ pub use future::Future;
 pub mod timeout;
 
 pub mod bytes;
+pub mod serialize;
 pub mod remote_memory;
 
 /// Connection abstraction for RC and DC
 pub mod conn;
 pub use conn::*;
-
-
-/// Datagram abstraction for UD
+/// TODO: need doc
 pub mod datagram;
 pub use datagram::*;
 
-// Implement the connection as RDMA
+pub mod rpc;
+
+// impl the connection as RDMA
 pub mod rdma;
 
 #[allow(unused_imports)]

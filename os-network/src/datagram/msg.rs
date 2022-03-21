@@ -1,4 +1,4 @@
-use crate::bytes::BytesMut;
+use crate::bytes::*;
 use KRdmaKit::mem::{Memory, RMemPhy};
 
 /// UD must use physical address.
@@ -20,12 +20,30 @@ impl UDMsg {
         &self,
         addr: &KRdmaKit::cm::EndPoint,
     ) -> crate::rdma::payload::Payload<ib_ud_wr> {
+        self.to_ud_wr_w_resize(addr, self.bytes.len())
+    }
+
+    pub fn to_ud_wr_w_resize(
+        &self,
+        addr: &KRdmaKit::cm::EndPoint,
+        sz: usize,
+    ) -> crate::rdma::payload::Payload<ib_ud_wr> {
         let res: crate::rdma::payload::Payload<ib_ud_wr> = Default::default();
         res.set_ah(addr)
             .set_laddr(self.pa)
-            .set_sz(self.bytes.len())
+            .set_sz(core::cmp::min(self.bytes.len(), sz))
             .set_opcode(ib_wr_opcode::IB_WR_SEND_WITH_IMM)
             .set_imm_data(self.imm)
+    }
+}
+
+impl ToBytes for UDMsg {
+    fn get_bytes(&self) -> &BytesMut {
+        &self.bytes
+    }
+
+    fn get_bytes_mut(&mut self) -> &mut BytesMut {
+        &mut self.bytes
     }
 }
 
@@ -52,10 +70,6 @@ impl UDMsg {
     /// * `imm` - immediate number in the UD message
     pub fn new(size: usize, imm : u32) -> Self {
         Self::new_from_phy(RMemPhy::new(size), imm)
-    }
-
-    pub fn get_bytes(&self) -> &BytesMut {
-        &self.bytes
     }
 
     pub fn get_pa(&self) -> u64 {
@@ -87,5 +101,11 @@ impl Write for UDMsg {
     #[inline]
     fn write_fmt(&mut self, args: Arguments<'_>) -> Result {
         core::fmt::write(self, args)
+    }
+}
+
+impl crate::rpc::AllocMsgBuf for UDMsg {
+    fn create(size: usize, imm: u32) -> Self {
+        Self::new(size, imm)
     }
 }

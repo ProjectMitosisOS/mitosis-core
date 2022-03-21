@@ -22,6 +22,6 @@ pub trait Future {
     type Output;
     type Error;
 
-    fn poll(&mut self) -> Poll<Self::Output, Self::Error>; 
+    fn poll<'a>(&'a mut self) -> Poll<Self::Output, Self::Error>; 
 }
 
