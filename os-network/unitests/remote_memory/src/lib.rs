@@ -124,7 +124,74 @@ fn test_dc_remote() {
     }
 }
 
-#[krdma_test(test_local, test_dc_remote)]
+use os_network::rdma::ConnMeta;
+use os_network::rdma::rc::RCFactory;
+use os_network::remote_memory::rdma::{RCRemoteDevice, RCKeys};
+
+fn test_rc_remote() {
+    let driver = unsafe {
+        KDriver::create().unwrap()
+    };
+
+    // Prepare for server side RCtrl
+    let server_ctx = driver
+        .devices()
+        .into_iter()
+        .next()
+        .expect("no rdma device available")
+        .open()
+        .unwrap();
+    let service_id: u64 = 0;
+    let gid = server_ctx.get_gid_as_string();
+    let rkey = unsafe { server_ctx.get_rkey() };
+    let _ctrl = RCtrl::create(service_id, &server_ctx);
+
+    let conn_meta = ConnMeta {
+        gid: gid,
+        service_id: service_id,
+        qd_hint: 0,
+    };
+
+    // Create the rc qp
+    let client_nic = driver.devices().into_iter().next().unwrap();
+    let client_factory = RCFactory::new(client_nic).unwrap();
+    let client_ctx = client_factory.get_context();
+    let lkey = unsafe { client_ctx.get_lkey() };
+    let rc = client_factory.create(conn_meta).unwrap();
+    let rc = Arc::new(rc);
+    
+    // Prepare memory regions
+    let mut local_mem = RMemory::new(MEM_SIZE, 0);
+    let remote_mem = RMemory::new(MEM_SIZE, 0);
+    let local_bytes = unsafe { BytesMut::from_raw(local_mem.get_bytes().get_ptr(), local_mem.len()) };
+    let mut remote_bytes = unsafe { BytesMut::from_raw(remote_mem.get_bytes().get_ptr(), remote_mem.len()) };
+
+    write!(&mut remote_bytes, "hello world").unwrap();
+
+    // Create a remote device and perform one-sided read
+    let mut dev = RCRemoteDevice::new(rc);
+    let res = unsafe {
+        dev.read(&(),
+            &remote_mem.to_phys().0,
+            &RCKeys::new(lkey, rkey),
+            &mut local_mem)
+    };
+    if res.is_err() {
+        log::error!("unable to read remote memory");
+        return;
+    }
+
+    // Sanity check after one-sided operation
+    if local_bytes == remote_bytes {
+        log::info!("equal after remote memory read operation!");
+    } else {
+        log::error!("not equal after remote memory read operation!");
+        log::info!("local {:?}", local_bytes); 
+        log::info!("remote {:?}", remote_bytes); 
+    }
+}
+
+#[krdma_test(test_local, test_dc_remote, test_rc_remote)]
 fn ctx_init() {
     // do nothing
 }
