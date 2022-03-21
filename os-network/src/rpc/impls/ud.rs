@@ -38,7 +38,7 @@ impl super::super::RPCConn for UDSession<'_> {
         signaled: bool,
     ) -> Result<(), Self::IOResult> {
         let mut send_req = req
-            .to_ud_wr(&self.meta)
+            .to_ud_wr_w_resize(&self.meta, sz)
             .set_send_flags(match signaled {
                 true => ib_send_flags::IB_SEND_SIGNALED,
                 false => 0,

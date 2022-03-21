@@ -80,6 +80,7 @@ where
     }
 }
 
+#[allow(unused_imports)]
 use super::header::*;
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
@@ -110,7 +111,8 @@ where
                 // so we must truncate it first
                 let mut msg_header_bytes =
                     unsafe { bytes.truncate_header(R::HEADER).ok_or(Error::corrupted()) }?;
-                unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
+                unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };                
+                crate::log::debug!("sanity check header {:?}",msg_header);
 
                 let mut rpc_args = unsafe {
                     msg_header_bytes
@@ -144,11 +146,11 @@ where
 
                             let session_buf = R::MsgBuf::create(R::MTU, 0);
 
-                            // send a reply
-
                             // add to my connected session
                             self.connected_sessions
                                 .insert(meta.get_session_id(), (session, session_buf));
+                            // send the reply
+                            self.send_reply(meta.get_session_id(), ReplyStubFactory::new(ReplyStatus::Ok, 0))?;
                         } else {
                             crate::log::debug!(
                                 "duplicate connect session ID: {}",
@@ -158,12 +160,15 @@ where
 
                         // handle connect message done
                     }
+                    // handle the RPC request 
                     super::header::ReqType::Request => {
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
                         crate::log::info!("check meta in {:?}", meta);
 
                         // TODO @Yuhan: handle the request part
                     }
+
+                    // handle the session dis-connect
                     super::header::ReqType::DisConnect => {
                         // TODO @Yuhan: handle the dis connect part
                         todo!();
@@ -174,6 +179,7 @@ where
                     }
                 }
 
+                // FIXME: Is the post_recv on the last ok? 
                 self.transport
                     .post_recv_buf(msg)
                     .map_err(|e| Error::inner(e))?;

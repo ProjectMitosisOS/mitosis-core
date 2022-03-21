@@ -1,9 +1,13 @@
 use super::header::*;
 use crate::bytes::BytesMut;
 
+#[allow(unused_imports)]
+use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
+
 pub struct ConnectStubFactory(usize);
 
 impl ConnectStubFactory {
+    #[inline]
     pub fn new(id: usize) -> Self {
         Self(id)
     }
@@ -13,6 +17,7 @@ impl ConnectStubFactory {
     /// Return
     /// * if succeed, return the real message size
     ///
+    #[inline]
     pub fn generate<T: Sized>(self, meta: &T, msg: &mut BytesMut) -> core::option::Option<usize> {
         unsafe {
             Some(
@@ -31,6 +36,7 @@ pub struct ReplyStubFactory {
 }
 
 impl ReplyStubFactory {
+    #[inline]
     pub fn new(status: ReplyStatus, sz: usize) -> Self {
         Self {
             status: status,
@@ -38,10 +44,12 @@ impl ReplyStubFactory {
         }
     }
 
+    #[inline]
     pub fn get_payload(&self) -> usize { 
         self.payload
     }
 
+    #[inline]
     pub fn generate(self, msg: &mut BytesMut) -> core::option::Option<usize> {
         unsafe { msg.memcpy_serialize_at(0, &MsgHeader::gen_reply_stub(self.status, self.payload)) }
     }

@@ -95,10 +95,15 @@ fn test_ud_rpc() {
         .unwrap();
     log::info!("check endpoint, key: {:?}, {}", endpoint, key);
 
+    let lkey = unsafe { ctx.get_lkey() };
+
     let mut client_session = client_ud.create((endpoint, key)).unwrap();
+    let mut client_receiver = UDReceiverFactory::new()
+        .set_qd_hint(CLIENT_QD_HINT as _)
+        .set_lkey(lkey)
+        .create(client_ud);
 
     /**** The main test body****/
-    let lkey = unsafe { ctx.get_lkey() };
     let temp_ud = server_ud.clone();
     let mut rpc_server = UDRPCHook::new(
         &factory,
@@ -121,28 +126,30 @@ fn test_ud_rpc() {
             Ok(_) => {}
             Err(e) => log::error!("post recv buf err: {:?}", e),
         }
+        client_receiver.post_recv_buf(UDMsg::new(4096, 73)).unwrap(); // should succeed
     }
 
     use os_network::block_on;
-    use os_network::rpc::header::*;
     use os_network::timeout::Timeout;
 
     // test RPC connect request
     let my_session_id = 73;
 
     let mut request = UDMsg::new(1024, 73);
-    let req_sz = os_network::rpc::ConnectStubFactory::new(my_session_id).generate(
-        &UDHyperMeta {
-            gid: os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
-            service_id: service_id,
-            qd_hint: DEFAULT_QD_HINT,
-        },
-        request.get_bytes_mut(),
-    ).unwrap();
-    log::debug!(
-        "sanity check connect stub {:?}",
-        unsafe { request.get_bytes().clone_and_resize(64) }
-    );
+    let req_sz = os_network::rpc::ConnectStubFactory::new(my_session_id)
+        .generate(
+            &UDHyperMeta {
+                gid: os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
+                service_id: service_id,
+                qd_hint: CLIENT_QD_HINT,
+            },
+            request.get_bytes_mut(),
+        )
+        .unwrap();
+
+    log::debug!("sanity check connect stub {:?}", unsafe {
+        request.get_bytes().clone_and_resize(64)
+    });
 
     let result = client_session.post(&request, req_sz, true);
     if result.is_err() {
@@ -158,9 +165,25 @@ fn test_ud_rpc() {
         log::info!("post msg done");
     }
 
+    // run the server event loop to receive message
     let mut rpc_server = Timeout::new(rpc_server, 10000);
     let res = block_on(&mut rpc_server);
     log::debug!("sanity check result: {:?}", res);
+
+    // check the client reply
+    let mut client_receiver = Timeout::new(client_receiver, 10000);
+    let res = block_on(&mut client_receiver);
+    match res {
+        Ok(msg) => {
+            let bytes = unsafe { msg.get_bytes().clone() };
+            let mut msg_header_bytes =
+                unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
+            let mut msg_header: MsgHeader = Default::default();
+            unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
+            log::info!("sanity check decoded reply {:?}", msg_header);
+        }
+        Err(e) => log::error!("client receiver reply err {:?}", e),
+    }
 
     let rpc_server = rpc_server.into_inner();
     /****************************/
