@@ -3,7 +3,6 @@
 extern crate alloc;
 
 use alloc::vec;
-use core::fmt::Write;
 
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
@@ -18,28 +17,11 @@ fn test_callback(input: &BytesMut, output: &mut BytesMut) {
     log::info!("test callback output {:?}", output);
 }
 
-// a local test
-fn test_service() {
-    let mut service = Service::new();
-    assert_eq!(true, service.register(73, test_callback));
-    log::info!("rpc service created! {}", service);
-
-    let mut buf = vec![0; 64];
-    let mut msg = unsafe { BytesMut::from_raw(buf.as_mut_ptr(), buf.len()) };
-    write!(&mut msg, "hello world").unwrap();
-
-    log::info!("test msg {:?}", msg);
-
-    let mut out_buf = vec![0; 64];
-    let mut out_msg = unsafe { BytesMut::from_raw(out_buf.as_mut_ptr(), out_buf.len()) };
-    write!(&mut out_msg, "This is the output").unwrap();
-
-    assert_eq!(true, service.execute(73, &mut msg, &mut out_msg));
-}
-
 use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
+use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
+use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
 
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
@@ -51,15 +33,6 @@ use os_network::MetaFactory;
 const DEFAULT_QD_HINT: u64 = 73;
 const CLIENT_QD_HINT: u64 = 12;
 const TEST_RPC_ID: usize = 73;
-
-fn test_rpc_headers() {
-    let my_session_id = 21;
-    let payload = 14;
-    let connect_header = MsgHeader::gen_connect_stub(my_session_id, payload);
-
-    assert!(connect_header.get_connect_stub().is_some());
-    assert!(connect_header.get_connect_stub().unwrap().get_session_id() == my_session_id);
-}
 
 // a test RPC with RDMA
 fn test_ud_rpc() {
@@ -186,11 +159,118 @@ fn test_ud_rpc() {
         }
         Err(e) => log::error!("client receiver reply err {:?}", e),
     }
-    /****************************/
 
+    // make a stress test
+    let stress_count = 10_000_000;
+    client_receiver.reset_timer(20_000);
+
+    // first, test the signaled performance
+    let timer = KTimer::new();
+    for i in 0..stress_count {
+        if i % 10000 == 0 { 
+            // prevent softlock
+            kthread::yield_now();
+        }
+        let req_sz = os_network::rpc::CallStubFactory::new(my_session_id, 73)
+            .generate(&(0 as u64), request.get_bytes_mut()) // 0 is a dummy RPC argument
+            .unwrap();
+
+        let result = client_session.post(&request, req_sz, true);
+        if result.is_err() {
+            log::error!("fail to post message in a stress test");
+            break;
+        }
+        // check the message has been sent
+        let mut timeout_client = Timeout::new(client_session, timeout_usec);
+        block_on(&mut timeout_client);
+        client_session = timeout_client.into_inner();
+
+        // poll the RPC completions
+        rpc_server.reset_timer(1000_000);
+        let res = block_on(&mut rpc_server);
+        if res.is_err() {
+            log::error!(
+                "stress server receiver process err {:?}",
+                res.err().unwrap()
+            );
+            break;
+        }
+        client_receiver.reset_timer(1000_000);
+        let res = block_on(&mut client_receiver);
+        match res {
+            Ok(msg) => {
+                client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
+            }
+            Err(e) => {
+                log::error!("stress client receiver reply err {:?}", e);
+                break;
+            }
+        }
+    }
+    log::info!("[Pass #1 done] passed {} secs",timer.get_passed_usec()/1000000);
+
+    client_receiver.reset_timer(20_000);
+
+    // then, test the un-signaled performance
+    let timer = KTimer::new();
+    for i in 0..stress_count {
+        if i % 10000 == 0 { 
+            // prevent softlock
+            kthread::yield_now();
+        }
+        let req_sz = os_network::rpc::CallStubFactory::new(my_session_id, 73)
+            .generate(&(0 as u64), request.get_bytes_mut()) // 0 is a dummy RPC argument
+            .unwrap();
+
+        let result = if client_session.get_pending_reqs() == 0 { 
+            client_session.post(&request, req_sz, true)
+        } else {
+            client_session.post(&request, req_sz, false)
+        };
+        if result.is_err() {
+            log::error!("fail to post message in a stress test");
+            break;
+        }
+
+        if client_session.get_pending_reqs() >= 16 { 
+            block_on(&mut client_session).unwrap();
+        }
+
+        // poll the RPC completions
+        rpc_server.reset_timer(1000_000);
+        let res = block_on(&mut rpc_server);
+        if res.is_err() {
+            log::error!(
+                "stress server receiver process err {:?}",
+                res.err().unwrap()
+            );
+            break;
+        }
+        client_receiver.reset_timer(1000_000);
+        let res = block_on(&mut client_receiver);
+        match res {
+            Ok(msg) => {
+                client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
+            }
+            Err(e) => {
+                log::error!("stress client receiver reply err {:?}", e);
+                break;
+            }
+        }
+    }
+    log::info!("[Pass #2 done] passed {} secs",timer.get_passed_usec()/1000000);
+
+    /****************************/
     let rpc_server = rpc_server.into_inner();
     log::debug!("final check hook status {:?}", rpc_server);
+
+    if rpc_server.get_analysis().get_ncalls() != stress_count * 2 {
+        log::error!(
+            "failed to handle all the stress calls {}",
+            rpc_server.get_analysis().get_ncalls()
+        );
+    }
 }
 
-#[krdma_test(test_service, test_rpc_headers, test_ud_rpc)]
+#[krdma_test(test_ud_rpc)]
 fn init() {}

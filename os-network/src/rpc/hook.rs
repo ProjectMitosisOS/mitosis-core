@@ -64,6 +64,10 @@ where
         self.transport.post_recv_buf(msg)
     }
 
+    pub fn get_analysis(&self) -> &super::analysis::RPCAnalysis { 
+        & self.analysis
+    }
+
     fn send_reply(
         &mut self,
         session_id: usize,
