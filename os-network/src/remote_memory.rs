@@ -1,5 +1,3 @@
-use crate::bytes::BytesMut;
-
 pub trait Device {
     // data for authentication the validity of the operation
     type Key;
@@ -7,17 +5,20 @@ pub trait Device {
     // network address, e.g., IP
     type Location;
 
-    // memory address
+    // remote memory address
     type Address;
 
-    type IOResult; 
+    // local memory address
+    type LocalMemory;
 
-    fn read(
+    type IOResult;
+
+    unsafe fn read(
         &mut self,
         loc: &Self::Location,
         addr: &Self::Address,
         key: &Self::Key,
-        to: &mut BytesMut,
+        to: &mut Self::LocalMemory,
     ) -> Result<(), Self::IOResult>;
 
     unsafe fn write(
@@ -25,9 +26,15 @@ pub trait Device {
         loc: &Self::Location,
         addr: &Self::Address,
         key: &Self::Key,
-        payload: &BytesMut,
+        payload: &Self::LocalMemory,
     ) -> Result<(), Self::IOResult>;
 }
 
+/// Any structure implement ToPhys should return
+/// its physical address and size
+pub trait ToPhys {
+    unsafe fn to_phys(&self) -> (u64, usize);
+}
+
 pub mod local;
-// pub mod rdma; 
+pub mod rdma;

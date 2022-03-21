@@ -90,6 +90,16 @@ impl UDMsg {
     }
 }
 
+impl crate::remote_memory::ToPhys for UDMsg {
+    unsafe fn to_phys(&self) -> (u64, usize) {
+        // ugly hack: get_pa requires a mutable reference 
+        let inner = unsafe {
+            &mut *(&self.inner as *const _ as *mut RMemPhy)
+        };
+        (inner.get_pa(0), inner.get_sz() as usize)
+    }
+}
+
 use core::fmt::{Arguments, Result, Write};
 
 impl Write for UDMsg {
