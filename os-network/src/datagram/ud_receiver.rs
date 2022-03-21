@@ -7,7 +7,7 @@ use crate::rdma::Err;
 use super::msg::UDMsg;
 use super::ud::UDDatagram;
 
-/// UDReceiver wraps a UD qp and uses a VecDeque to maintain the posted WRs
+/// UDReceiver wraps a UD qp and serves as server-sided message receiver
 pub struct UDReceiver<'a> {
     inner: UDDatagram<'a>,
     msg_queues: VecDeque<UDMsg>,

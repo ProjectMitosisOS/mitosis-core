@@ -27,7 +27,7 @@ impl<'a> UDFactory<'a> {
         &self.rctx
     }
 }
-
+/// UDDatagram wraps a UD qp and serves as client-sided message sender
 pub struct UDDatagram<'a> {
     pub(crate) ud: Arc<UD>,
     phantom: PhantomData<&'a ()>,
