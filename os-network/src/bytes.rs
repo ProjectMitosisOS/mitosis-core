@@ -1,8 +1,13 @@
 // A simple static bytes abstraction inspired by https://github.com/tokio-rs/bytes/
 // In kernel, all written pointers are static
 pub struct BytesMut {
-    ptr: *mut u8,
+    pub(crate) ptr: *mut u8,
     len: usize,
+}
+
+pub trait ToBytes {
+    fn get_bytes(&self) -> &BytesMut;
+    fn get_bytes_mut(&mut self) -> &mut BytesMut;
 }
 
 impl BytesMut {
@@ -18,7 +23,7 @@ impl BytesMut {
         Self::from_static(slice)
     }
 
-    pub unsafe fn truncate(&self, off: usize) -> core::option::Option<Self> {
+    pub unsafe fn truncate_header(&self, off: usize) -> core::option::Option<Self> {
         if self.len > off {
             Some(Self {
                 ptr: self.ptr.offset(off as isize),
@@ -64,7 +69,12 @@ impl BytesMut {
         self.ptr as u64
     }
 
-    #[inline(always)]
+    pub fn resize(&mut self, sz: usize) {
+        if core::intrinsics::likely(sz < self.len()) {
+            self.len = sz;
+        }
+    }
+
     pub unsafe fn get_ptr(&self) -> *mut u8 {
         self.ptr
     }
