@@ -1,6 +1,7 @@
 use alloc::sync::Arc;
 
 use core::pin::Pin;
+use core::marker::PhantomData;
 
 use KRdmaKit::cm::EndPoint;
 
@@ -13,7 +14,7 @@ pub struct LocalMemoryBuffer {
 }
 
 impl LocalMemoryBuffer {
-    pub fn new(paddr: u64, len: usize) -> Self {
+    pub unsafe fn new(paddr: u64, len: usize) -> Self {
         Self {
             paddr: paddr,
             len: len,
@@ -21,8 +22,15 @@ impl LocalMemoryBuffer {
     }
 }
 
-pub struct DCRemoteDevice<'a> {
+impl super::ToPhys for LocalMemoryBuffer {
+    fn to_phys(&self) -> (u64, usize) {
+        (self.paddr, self.len)
+    }
+}
+
+pub struct DCRemoteDevice<'a, LocalMemory> {
     dc: Arc<DCConn<'a>>,
+    phantom: PhantomData<LocalMemory>,
 }
 
 #[allow(dead_code)]
@@ -42,23 +50,27 @@ impl DCKey {
     }
 }
 
-impl<'a> DCRemoteDevice<'a> {
+impl<'a, LocalMemory> DCRemoteDevice<'a, LocalMemory> {
     pub fn new(dc: Arc<DCConn<'a>>) -> Self {
         Self {
             dc: dc,
+            phantom: PhantomData
         }
     }
 }
 
 use KRdmaKit::rust_kernel_rdma_base::{ib_send_flags, ib_wr_opcode, ib_dc_wr};
 type DCReqPayload = crate::rdma::payload::Payload<ib_dc_wr>;
-impl super::Device for DCRemoteDevice<'_> {
+impl<LocalMemory> super::Device for DCRemoteDevice<'_, LocalMemory>
+where
+    LocalMemory: super::ToPhys,
+{
     // remote memory read/write will succeed or return rdma specific error
     type Address = u64;
     type Location = EndPoint;
     type Key = DCKey;
     type IOResult = super::super::rdma::Err;
-    type LocalMemory = LocalMemoryBuffer;
+    type LocalMemory = LocalMemory;
 
     fn read(
         &mut self,
@@ -68,9 +80,9 @@ impl super::Device for DCRemoteDevice<'_> {
         to: &mut Self::LocalMemory,
     ) -> Result<(), Self::IOResult> {
         let mut payload = DCReqPayload::default()
-            .set_laddr(to.paddr)
+            .set_laddr(to.to_phys().0)
             .set_raddr(*addr)
-            .set_sz(to.len)
+            .set_sz(to.to_phys().1)
             .set_lkey(key.lkey)
             .set_rkey(key.rkey)
             .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
@@ -96,9 +108,9 @@ impl super::Device for DCRemoteDevice<'_> {
         payload: &Self::LocalMemory,
     ) -> Result<(), Self::IOResult> {
         let mut payload = DCReqPayload::default()
-            .set_laddr(payload.paddr)
+            .set_laddr(payload.to_phys().0)
             .set_raddr(*addr)
-            .set_sz(payload.len)
+            .set_sz(payload.to_phys().1)
             .set_lkey(key.lkey)
             .set_rkey(key.rkey)
             .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)

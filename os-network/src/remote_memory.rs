@@ -8,6 +8,7 @@ pub trait Device {
     // remote memory address
     type Address;
 
+    // local address
     type LocalMemory;
 
     type IOResult;
@@ -27,6 +28,12 @@ pub trait Device {
         key: &Self::Key,
         payload: &Self::LocalMemory,
     ) -> Result<(), Self::IOResult>;
+}
+
+/// Any structure implement ToPhys should return
+/// its physical address and size
+pub trait ToPhys {
+    fn to_phys(&self) -> (u64, usize);
 }
 
 pub mod local;

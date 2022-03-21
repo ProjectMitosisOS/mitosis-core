@@ -101,7 +101,7 @@ fn test_dc_remote() {
     let res = dev.read(&endpoint,
                     &mem.get_pa((MEM_SIZE/2) as u64),
                     &DCKey::new(lkey, rkey, 73),
-                    &mut LocalMemoryBuffer::new(mem.get_pa(0), MEM_SIZE/2));
+                    &mut unsafe { LocalMemoryBuffer::new(mem.get_pa(0), MEM_SIZE/2) });
     if res.is_err() {
         log::error!("unable to read remote memory");
         return;
