@@ -1,7 +1,7 @@
 use alloc::sync::Arc;
 
-use core::pin::Pin;
 use core::marker::PhantomData;
+use core::pin::Pin;
 
 use KRdmaKit::cm::EndPoint;
 
@@ -22,7 +22,10 @@ pub struct DCKeys {
 impl DCKeys {
     pub fn new(lkey: u32, rkey: u32, dct_access_key: u32) -> Self {
         Self {
-            key_pair: super::MemoryKeys { lkey: lkey, rkey: rkey },
+            key_pair: super::MemoryKeys {
+                lkey: lkey,
+                rkey: rkey,
+            },
             dct_access_key: dct_access_key,
         }
     }
@@ -32,13 +35,15 @@ impl<'a, LocalMemory> DCRemoteDevice<'a, LocalMemory> {
     pub fn new(dc: Arc<DCConn<'a>>) -> Self {
         Self {
             dc: dc,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 }
 
-use KRdmaKit::rust_kernel_rdma_base::{ib_send_flags, ib_wr_opcode, ib_dc_wr};
+use KRdmaKit::rust_kernel_rdma_base::{ib_dc_wr, ib_send_flags, ib_wr_opcode};
+
 type DCReqPayload = crate::rdma::payload::Payload<ib_dc_wr>;
+
 impl<LocalMemory> crate::remote_memory::Device for DCRemoteDevice<'_, LocalMemory>
 where
     LocalMemory: crate::remote_memory::ToPhys,
@@ -66,8 +71,8 @@ where
             .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
             .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
             .set_ah(loc);
-        
-        let mut payload =  Pin::new_unchecked(&mut payload);
+
+        let mut payload = Pin::new_unchecked(&mut payload);
         let dc = Arc::get_mut_unchecked(&mut self.dc);
         crate::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
 
@@ -92,7 +97,7 @@ where
             .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
             .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE)
             .set_ah(loc);
-        
+
         let mut payload = Pin::new_unchecked(&mut payload);
         let dc = Arc::get_mut_unchecked(&mut self.dc);
         crate::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
