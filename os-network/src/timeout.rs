@@ -88,6 +88,10 @@ impl<T> Timeout<T> {
         self.value
     }
 
+    pub fn get_inner_mut(&mut self) -> &mut T { 
+        &mut self.value
+    }
+
     /// Reset the counting of the timeout 
     pub fn reset_timer(&mut self, timeout_usec : i64) { 
         self.delay.reset_timer(timeout_usec); 

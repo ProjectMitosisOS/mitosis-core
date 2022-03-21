@@ -23,6 +23,7 @@ pub trait Caller {
     ) -> Result<(), (Err, Self::IOResult)>;
 }
 
+pub mod analysis;
 pub mod hook;
 
 pub mod header;

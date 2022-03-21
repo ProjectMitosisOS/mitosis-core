@@ -5,6 +5,12 @@ pub struct CallStub {
     rpc_id: usize,
 }
 
+impl CallStub { 
+    pub fn get_session_id(&self) -> usize {
+        self.session_id
+    }    
+}
+
 /// Data structures used to generate the RPC connect struct 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct ConnectStub(usize);

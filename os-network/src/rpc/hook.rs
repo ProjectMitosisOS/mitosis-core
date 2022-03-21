@@ -20,6 +20,9 @@ where
     meta_factory: &'a MF,
     transport: R,
     connected_sessions: HashMap<usize, (F::ConnType, R::MsgBuf)>,
+
+    // counting data 
+    analysis : super::analysis::RPCAnalysis, 
 }
 
 impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
@@ -53,6 +56,7 @@ where
             session_factory: factory,
             connected_sessions: HashMap::new(),
             transport: transport,
+            analysis : super::analysis::RPCAnalysis::new()
         }
     }
 
@@ -112,7 +116,7 @@ where
                 let mut msg_header_bytes =
                     unsafe { bytes.truncate_header(R::HEADER).ok_or(Error::corrupted()) }?;
                 unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };                
-                crate::log::debug!("sanity check header {:?}",msg_header);
+                // crate::log::debug!("sanity check header {:?}",msg_header);
 
                 let mut rpc_args = unsafe {
                     msg_header_bytes
@@ -163,9 +167,11 @@ where
                     // handle the RPC request 
                     super::header::ReqType::Request => {
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
-                        crate::log::info!("check meta in {:?}", meta);
 
                         // TODO @Yuhan: handle the request part
+                        self.analysis.handle_one();
+                        self.send_reply(meta.get_session_id(), ReplyStubFactory::new(ReplyStatus::Ok, 0))?;
+
                     }
 
                     // handle the session dis-connect
@@ -183,7 +189,7 @@ where
                 self.transport
                     .post_recv_buf(msg)
                     .map_err(|e| Error::inner(e))?;
-                Ok(Async::NotReady)
+                Ok(Async::Ready(()))
             }
             Err(e) => Err(Error::inner(e)),
         }
@@ -196,13 +202,15 @@ impl<'a, 'b, F, R, MF> Debug for RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,
+
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "RPCHook\n  \t service: {}\n\t connected_sessions: {}",
+            "RPCHook\n  \t service: {}\n\t connected_sessions: {}, ncalls handled {}",
             self.service,
-            self.connected_sessions.len()
+            self.connected_sessions.len(),
+            self.analysis.get_ncalls()
         )
     }
 }

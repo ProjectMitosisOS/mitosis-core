@@ -159,6 +159,8 @@ fn test_ud_rpc() {
     // check the message has been sent
     let mut timeout_client = Timeout::new(client_session, timeout_usec);
     let result = block_on(&mut timeout_client);
+    let mut client_session = timeout_client.into_inner();
+
     if result.is_err() {
         log::error!("polling send ud qp with error: {:?}", result.err().unwrap());
     } else {
@@ -183,6 +185,43 @@ fn test_ud_rpc() {
             log::info!("sanity check decoded reply {:?}", msg_header);
         }
         Err(e) => log::error!("client receiver reply err {:?}", e),
+    }
+
+    // make a stress test
+    client_receiver.reset_timer(20000);
+
+    for _ in 0..1000000 {
+        let req_sz = os_network::rpc::CallStubFactory::new(my_session_id, 73)
+            .generate(&(0 as u64), request.get_bytes_mut()) // 0 is a dummy RPC argument
+            .unwrap();
+
+        let result = client_session.post(&request, req_sz, true);
+        if result.is_err() {
+            log::error!("fail to post message in a stress test");
+            break;
+        }
+        // check the message has been sent
+        let mut timeout_client = Timeout::new(client_session, timeout_usec);
+        let result = block_on(&mut timeout_client);
+        client_session = timeout_client.into_inner();
+
+        // poll the RPC completions
+        rpc_server.reset_timer(1000_000);
+        let res = block_on(&mut rpc_server);
+        if res.is_err() {
+            log::error!("stress server receiver process err {:?}", res.err().unwrap());
+            break;
+        }
+        let res = block_on(&mut client_receiver);
+        match res {
+            Ok(msg) => {
+                client_receiver.get_inner_mut().post_recv_buf(msg);
+            }
+            Err(e) => {
+                log::error!("stress client receiver reply err {:?}", e);
+                break;
+            }
+        }
     }
 
     let rpc_server = rpc_server.into_inner();
