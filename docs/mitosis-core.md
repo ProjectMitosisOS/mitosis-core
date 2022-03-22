@@ -43,7 +43,7 @@ User-space libraries to provide lean container, similar to runC.
 
 
 
-### 3.2 Kernel Space Data structures 
+### 3.2 Kernel Space Data structures (Services)
 
 **Process**: the overall process data abstraction in MITOSIS
 
@@ -77,6 +77,42 @@ D <--> F
 
 Z <--> B
 Z --> A
+```
+
+
+
+**SnapshotService**: data structure to prepare the descriptor 
+
+**ResumeService**: module to retore friom the descriptor
+
+**DescriptorService**: data structure that store the prepared descriptors 
+
+**FallbackService**: fallback daemon. 
+
+**RemotePagingService**: a wrapper over remote memory devices.
+
+**SysCallsService**: module to handle system calls 
+
+
+
+```mermaid
+flowchart LR
+A[SnapshotService]
+B[DescriptorService]
+A --> B 
+
+C[RemotePagingService]
+D[FallbackService] 
+C --> D
+
+F[ResumeService]
+
+E[SysCallsService]
+
+
+E --> A
+E --> F
+F --> C
 ```
 
 
