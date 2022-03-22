@@ -14,6 +14,15 @@ deps-job:
   script:
     - chmod +x ci/install_deps.sh
     - ./ci/install_deps.sh
+  only:
+    refs:
+      - branches
+      - merge_requests
+    changes:
+      - mitosis/*
+      - mitosis-macros/*
+      - mitosis-util/*
+      - os-network/*
 
 unittest-mitosis-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
@@ -26,6 +35,15 @@ unittest-mitosis-job:   # This job runs in the test stage.
     - python3 mitosis/unitests/run_tests.py
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
+  only:
+    refs:
+      - branches
+      - merge_requests
+    changes:
+      - mitosis/*
+      - mitosis-macros/*
+      - mitosis-util/*
+      - os-network/*
 
 unittest-os-network-job:   # This job also runs in the test stage.
   stage: test    # It can run at the same time as unit-test-job (in parallel).
@@ -35,3 +53,12 @@ unittest-os-network-job:   # This job also runs in the test stage.
     - python3 os-network/unitests/run_tests.py
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
+  only:
+    refs:
+      - branches
+      - merge_requests
+    changes:
+      - mitosis/*
+      - mitosis-macros/*
+      - mitosis-util/*
+      - os-network/*
