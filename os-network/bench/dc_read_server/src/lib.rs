@@ -17,14 +17,12 @@ use mitosis_macros::{declare_module_param, declare_global};
 
 declare_module_param!(nic_count, c_uint);
 declare_module_param!(service_id_base, c_uint);
-declare_module_param!(memory_size, c_ulong);
 
 use rust_kernel_linux_util::linux_kernel_module;
 use rust_kernel_linux_util as log;
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(RCONTEXTS, alloc::boxed::Box<alloc::vec::Vec<KRdmaKit::device::RContext<'static>>>);
-declare_global!(GLOBAL_MEMORY, alloc::boxed::Box<KRdmaKit::mem::RMemPhy>);
 
 struct Module<'a> {
     rctrls: Vec<Pin<Box<RCtrl<'a>>>>,
@@ -45,18 +43,10 @@ impl linux_kernel_module::KernelModule for Module<'_> {
                 .devices()[i as usize]
                 .open()
                 .unwrap();
-            log::info!("the rkey of ctx {}: {}", i, unsafe { ctx.get_rkey() });
             unsafe { 
                 RCONTEXTS::get_mut().push(ctx);
             };
         }
-
-        let mut pmem = RMemPhy::new(memory_size::read() as usize);
-        let paddr = pmem.get_pa(0);
-        unsafe {
-            GLOBAL_MEMORY::init(Box::new(pmem));
-        }
-        log::info!("the physical addr {}", paddr);
 
         for i in 0..nic_count::read() {
             let service_id = service_id_base::read();
@@ -78,7 +68,6 @@ impl Drop for Module<'_> {
         unsafe {
             RCONTEXTS::drop();
             KDRIVER::drop();
-            GLOBAL_MEMORY::drop();
         }
     }
 }

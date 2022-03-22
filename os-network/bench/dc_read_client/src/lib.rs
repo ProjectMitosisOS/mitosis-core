@@ -41,13 +41,10 @@ declare_module_param!(running_secs, c_uint);
 declare_module_param!(report_interval, c_uint);
 declare_module_param!(thread_count, c_uint);
 declare_module_param!(gids, *mut u8);
-declare_module_param!(remote_pa, c_ulong);
-declare_module_param!(rkeys, *mut u8);
 declare_module_param!(memory_size, c_ulong);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(REMOTE_GIDS, alloc::vec::Vec<alloc::string::String>);
-declare_global!(RKEYS, alloc::vec::Vec<u32>);
 declare_global!(DCFACTORIES, alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>);
 
 static DEFAULT_QD_HINT: u64 = 73;
@@ -83,14 +80,13 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
 
     fn thread_local_init(args: &Self::Args) -> Self {
         let thread_id = *args;
-        let index = thread_id % unsafe { RKEYS::get_ref().len() };
-        let rkey = unsafe { RKEYS::get_ref()[index] };
         let factory = unsafe {
             &DCFACTORIES::get_ref()[thread_id as usize]
         };
         let dc = factory.create(()).unwrap();
         let ctx = factory.get_context();
         let endpoint = Self::get_my_endpoint(ctx, thread_id);
+        let rkey = endpoint.mr.get_rkey();
         Self {
             endpoint: endpoint,
             local_mem: RMemory::new(memory_size::read() as usize, 0),
@@ -101,10 +97,11 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
     }
 
     fn op(&mut self) -> Result<(), ()> {
+        let remote_addr = self.endpoint.mr.get_addr();
         unsafe {
             self.dc.read(
                 &self.endpoint,
-                &remote_pa::read(),
+                &remote_addr,
                 &DCKeys::new(self.lkey, self.rkey, 73),
                 &mut self.local_mem,
             )
@@ -120,12 +117,6 @@ fn ctx_init() {
             ptr2string(gids::read())
                 .split(",")
                 .map(|x| String::from(x.trim()))
-                .collect(),
-        );
-        RKEYS::init(
-            ptr2string(rkeys::read())
-                .split(",")
-                .map(|x| x.parse::<u32>().unwrap())
                 .collect(),
         );
         KDRIVER::init(KDriver::create().unwrap());
@@ -178,7 +169,6 @@ fn module_main() {
 #[krdma_drop]
 fn module_drop() {
     unsafe {
-        RKEYS::drop();
         REMOTE_GIDS::drop();
         KDRIVER::drop();
     }
