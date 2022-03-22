@@ -11,7 +11,6 @@ use linux_kernel_module::c_types::*;
 
 use KRdmaKit::KDriver;
 use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::mem::{RMemPhy, Memory};
 
 use mitosis_macros::{declare_module_param, declare_global};
 

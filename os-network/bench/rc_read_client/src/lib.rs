@@ -30,7 +30,6 @@ use os_network::rdma::ConnMeta;
 
 use KRdmaKit::device::RNIC;
 use KRdmaKit::KDriver;
-use KRdmaKit::device::RContext;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
 use mitosis_macros::{declare_global, declare_module_param};
@@ -81,7 +80,6 @@ impl<'a> BenchRoutine for RCBenchWorker<'a> {
             &RCFACTORIES::get_ref()[thread_id as usize]
         };
         let rc = factory.create(Self::get_my_conn_meta(thread_id)).unwrap();
-        let ctx = factory.get_context();
         let rkey = rc.get_qp().get_remote_mr().get_rkey();
         let remote_addr = rc.get_qp().get_remote_mr().get_addr();
         Self {
