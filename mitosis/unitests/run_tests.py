@@ -16,7 +16,6 @@ def run(*args, **kwargs):
 
 
 def main(argv):
-    print("I am in", BASE_DIR)
     for path in argv[1:] or os.listdir(BASE_DIR):
         if (
             not os.path.isdir(os.path.join(BASE_DIR, path)) or
