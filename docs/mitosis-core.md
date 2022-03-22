@@ -33,6 +33,8 @@ The kernel extension includes:
 
 ## 3. Container related 
 
+Container = process + protections & isolations. MITOSIS kernel only handles the process fork, while the isolations and protections (e.g., `cgroup` and `namesapces` )are set by the user-space shim layer. 
+
 ### 3.1 User-space data structures
 
 User-space libraries to provide lean container, similar to runC. 
@@ -43,7 +45,7 @@ User-space libraries to provide lean container, similar to runC.
 
 ### 3.2 Kernel Space Data structures 
 
-**Container**: the overall container data abstraction in MITOSIS
+**Process**: the overall process data abstraction in MITOSIS
 
 **IO**: module to handle remote IOs 
 
@@ -51,11 +53,11 @@ User-space libraries to provide lean container, similar to runC.
 
 ```mermaid
 flowchart LR 
-A[Container]
+A[Process]
 B[Descriptor]
 C[RemoteIO]
 D[RemoteMapping]
-E[ConatinerFactory]
+E[ProcessFactory]
 F[PTEExt]
 G[PTEEncoder]
 H[PTEDecoder]
