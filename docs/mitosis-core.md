@@ -16,7 +16,7 @@ A --> B
 C --> A
 ```
 
-PGLoader: load the user's page table into the forked container. 
+PGLoader: load a page table into the forked contasiner 
 - **Note**: we should carefully evaluate whether pre-loading is faster, or we just do it during the runtime. 
 
 ## 2. Kernel extensions 
@@ -30,5 +30,18 @@ The kernel extension includes:
 
 ## 3. Container related 
 
+User-space libraries to provide lean container, similar to runC. 
+
+**TODO**: @TianXia, please fill this 
+
+
+
 ## 4. Systemcall wrappers
+
+C-library to provide a systemcall interfaces. Currently, we only need to support two wrappers:
+
+- Python wrapper -> In order to support evaluations 
+- C wrapper -> for basic tests 
+
+The *C wrapper* is preferred for the test. 
 
