@@ -170,6 +170,7 @@ fn module_main() {
 fn module_drop() {
     unsafe {
         REMOTE_GIDS::drop();
+        DCFACTORIES::drop();
         KDRIVER::drop();
     }
 }
