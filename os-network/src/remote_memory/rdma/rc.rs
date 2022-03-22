@@ -48,7 +48,7 @@ where
 
     unsafe fn read(
         &mut self,
-        loc: &Self::Location,
+        _loc: &Self::Location,
         addr: &Self::Address,
         key: &Self::Key,
         to: &mut Self::LocalMemory,
@@ -73,7 +73,7 @@ where
 
     unsafe fn write(
         &mut self,
-        loc: &Self::Location,
+        _loc: &Self::Location,
         addr: &Self::Address,
         key: &Self::Key,
         payload: &Self::LocalMemory,
