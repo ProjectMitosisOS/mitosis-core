@@ -17,7 +17,6 @@ TBD
 This project is licensed under the XXX license.
 
 
-
-
-
-
+## Credits 
+- [nix](https://docs.rs/nix/latest/nix/)
+- [tokio](https://tokio.rs)

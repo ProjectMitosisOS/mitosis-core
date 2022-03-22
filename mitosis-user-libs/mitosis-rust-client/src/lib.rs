@@ -1,4 +1,9 @@
 use std::os::unix::prelude::{AsRawFd, RawFd};
+
+#[allow(unused_imports)]
+pub(crate) use nix; 
+pub(crate) use libc; 
+
 /// The client ot issue MITOSIS system calls in rust
 /// Must be created using MClientOptions
 ///
@@ -13,6 +18,25 @@ use std::os::unix::prelude::{AsRawFd, RawFd};
 pub struct MClient {
     fd: RawFd,
     file: std::fs::File,
+}
+
+/// The core system calls 
+/// A process is identified globally a (u64, u64), 
+/// where the first u64 is the container ID, and the second u64 is a user-provided key 
+/// 
+impl MClient {
+    pub fn prepare(&mut self, _key : u64) { 
+        unimplemented!();
+    }
+
+    // query the prepared results
+    pub fn query(&mut self) -> Option<u64> {
+        unimplemented!();
+    }
+
+    pub fn resume(&mut self, _id : u64, _key: u64) { 
+        unimplemented!();
+    }
 }
 
 impl MClient {
@@ -65,10 +89,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn ioctrl() {
+    fn client_option() {
         let _client = MClientOptions::new()
             .set_device_name("Cargo.toml".to_string())
             .open()
             .unwrap();
     }
 }
+
+pub mod macros;

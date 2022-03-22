@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 libc = "*"
+nix = "0.23"
