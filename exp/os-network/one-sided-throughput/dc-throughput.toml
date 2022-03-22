@@ -1,4 +1,4 @@
-global_configs = 'remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=12 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" memory_size=64'
+global_configs = 'remote_service_id_base=50 nic_count=1 running_secs=40 report_interval=1 thread_count=12 gids="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" memory_size=4096'
 
 [[pass]]
 host = 'val01'
@@ -25,22 +25,22 @@ host = 'val06'
 path = ''
 cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
 
-# [[pass]]
-# host = 'val07'
-# path = ''
-# cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
-# 
-# [[pass]]
-# host = 'val08'
-# path = ''
-# cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
-# 
-# [[pass]]
-# host = 'val09'
-# path = ''
-# cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
-# 
-# [[pass]]
-# host = 'val10'
-# path = ''
-# cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
+[[pass]]
+host = 'val07'
+path = ''
+cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
+
+[[pass]]
+host = 'val08'
+path = ''
+cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
+
+[[pass]]
+host = 'val09'
+path = ''
+cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
+
+[[pass]]
+host = 'val10'
+path = ''
+cmd = 'sudo rmmod dc_read_client_tests.ko > /dev/null 2>&1; sudo dmesg -c > /dev/null && sudo insmod dc_read_client_tests.ko {} & dmesg -wH'
