@@ -58,3 +58,43 @@ The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.
 | --------------- | ----------------------- | ---------------- |
 | 1               | 2747098 = 2.74M         | 83.8             |
 | 8               | 2941154 = 2.94M         | 89.7             |
+
+### RC Throughput
+
+We measure the RC one-sided read throughput similarly.
+
+#### Running
+
+```bash
+python3 ../../../scripts/bootstrap_proxy.py -f rc-throughput.toml -u USER -p PASSWORD
+```
+
+Remember to remove the kernel module after the benchmark.
+```bash
+python3 ../../../scripts/bootstrap_proxy.py -f rc-clean.toml -u USER -p PASSWORD
+```
+
+#### Reference Results
+
+Sample Output:
+
+```
+Omitted...
+```
+
+The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.1-Ubuntu.)
+
+64B payload
+
+| #client machine | total throughput (op/s) | bandwidth (Gb/s) |
+| --------------- | ----------------------- | ---------------- |
+| 1               | 4383084 = 4.38M         | 2.09             |
+| 4               | 9910845 = 9.91M         | 4.72             |
+| 8               | 9938576 = 9.93M         | 4.74             |
+
+4096B payload
+
+| #client machine | total throughput (op/s) | bandwidth (Gb/s) |
+| --------------- | ----------------------- | ---------------- |
+| 1               | 2866641 = 2.86M         | 87.4             |
+| 8               | 2947166 = 2.95M         | 89.9             |
