@@ -1,7 +1,7 @@
 [[pass]]
 host = 'val01'
 path = ''
-cmd = 'sudo rmmod dc_read_server_tests.ko'
+cmd = 'sudo rmmod one_sided_read_server_tests.ko'
 
 [[pass]]
 host = 'val00'
