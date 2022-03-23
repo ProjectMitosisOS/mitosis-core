@@ -217,11 +217,12 @@ pmem_get_current_cpu(void)
 unsigned int
 pmem_get_cpu(void)
 {
-  get_cpu();
+  return get_cpu();
 }
 
 unsigned int
 pmem_put_cpu(void)
 {
   put_cpu();
+  return 0;
 }
