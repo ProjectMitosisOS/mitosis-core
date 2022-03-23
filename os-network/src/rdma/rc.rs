@@ -109,6 +109,10 @@ impl RCConn<'_> {
             _ => super::QPStatus::Other,
         })
     }
+
+    pub fn get_qp(&self) -> Arc<RC> {
+        self.rc.clone()
+    } 
 }
 
 use core::sync::atomic::compiler_fence;

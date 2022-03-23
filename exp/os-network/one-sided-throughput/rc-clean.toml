@@ -1,0 +1,74 @@
+[[pass]]
+host = 'val01'
+path = ''
+cmd = 'sudo rmmod one_sided_read_server_tests.ko'
+
+[[pass]]
+host = 'val00'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val02'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val03'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val04'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val05'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val06'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val07'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val08'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val09'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val10'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val11'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val12'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val13'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
+
+[[pass]]
+host = 'val14'
+path = ''
+cmd = 'sudo rmmod rc_read_client_tests.ko'
