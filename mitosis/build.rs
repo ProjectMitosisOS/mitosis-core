@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 // types from customized syscalls
-const INCLUDED_TYPES: &[&str] = &["LibSwapCmd"];
+const INCLUDED_TYPES : &[&str] = &[];
 
 // types from kernel
 const INCLUDED_KERNEL_TYPES: &[&str] = &[
@@ -141,8 +141,6 @@ fn main() {
         .header("src/native/kernel_helper.h")
         .whitelist_function("pmem_*");
 
-    builder = builder.constified_enum_module("LibSwapCmd");
-
     // non-rust translatable type
     builder = builder.opaque_type("xregs_state");
 
@@ -166,7 +164,7 @@ fn main() {
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings
-        .write_to_file(out_path.join("bindings-swap.rs"))
+        .write_to_file(out_path.join("bindings-mitosis-core.rs"))
         .expect("Couldn't write bindings!");
 
     // build kernel_helper.c

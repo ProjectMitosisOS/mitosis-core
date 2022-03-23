@@ -2,7 +2,9 @@ use std::os::unix::prelude::{AsRawFd, RawFd};
 
 #[allow(unused_imports)]
 pub(crate) use nix; 
-pub(crate) use libc; 
+pub(crate) use libc;
+
+pub const DEFAULT_SYSCALL_PATH : &'static str =  "/dev/mitosis-syscalls";
 
 /// The client ot issue MITOSIS system calls in rust
 /// Must be created using MClientOptions
@@ -20,11 +22,19 @@ pub struct MClient {
     file: std::fs::File,
 }
 
+pub mod signatures; 
+pub use signatures::*;
+
 /// The core system calls 
 /// A process is identified globally a (u64, u64), 
 /// where the first u64 is the container ID, and the second u64 is a user-provided key 
 /// 
 impl MClient {
+    pub fn nil(&mut self) -> crate::nix::Result<crate::libc::c_int> { 
+        let data : usize = 0;
+        unsafe { mitosis_syscall_nil(self.fd, &data) }
+    }
+
     pub fn prepare(&mut self, _key : u64) { 
         unimplemented!();
     }
@@ -78,6 +88,7 @@ impl MClientOptions {
         Ok(MClient::new(
             std::fs::File::options()
                 .read(true)
+                .write(true)
                 .open(self.ioctl_device_name.clone())?,
         ))
     }
@@ -94,6 +105,21 @@ mod tests {
             .set_device_name("Cargo.toml".to_string())
             .open()
             .unwrap();
+    }
+
+    #[test]
+    fn test_protocol() {
+        use mitosis_protocol::*;
+        println!("check CALL nil {}", CALL_NIL);
+    }
+
+    #[cfg(target_os = "linux")]    
+    #[test]
+    fn test_call_nil() { 
+        let _client = MClientOptions::new()
+            .set_device_name(crate::DEFAULT_SYSCALL_PATH.to_string())
+            .open()
+            .unwrap();        
     }
 }
 
