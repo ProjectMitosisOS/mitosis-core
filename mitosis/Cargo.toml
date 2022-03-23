@@ -18,6 +18,7 @@ default = ["KRdmaKit"]
 
 [dependencies]
 KRdmaKit = { path = "../deps/rust-kernel-rdma/KRdmaKit", optional = true, features = ["dct"] }
+mitosis-protocol = { path = "../mitosis-user-libs/mitosis-protocol"}
 bitflags = "1"
 
 [dependencies.lazy_static]

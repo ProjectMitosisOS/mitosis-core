@@ -2,14 +2,33 @@
 
 extern crate alloc;
 
-use krdma_test::*;
-
 use rust_kernel_linux_util as log;
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
-use mitosis::VERSION;
+use mitosis::syscalls::SysCallsService;
 
-#[krdma_main]
-fn syscall_main() {
-    log::info!("MITOSIS version {}", VERSION); 
+#[allow(dead_code)]
+struct Module {
+    service : SysCallsService,
 }
+
+impl linux_kernel_module::KernelModule for Module {
+    fn init() -> linux_kernel_module::KernelResult<Self> {
+        Ok(Self { 
+            service : SysCallsService::new()?
+        })
+    }
+}
+
+impl Drop for Module {
+    fn drop(&mut self) {
+        log::info!("drop System call modules")
+    }
+}
+
+linux_kernel_module::kernel_module!(
+    Module,
+    author: b"xmm",
+    description: b"A kernel module for implement os.swap()",
+    license: b"GPL"
+);

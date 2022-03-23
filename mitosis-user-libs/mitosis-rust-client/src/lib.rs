@@ -2,7 +2,9 @@ use std::os::unix::prelude::{AsRawFd, RawFd};
 
 #[allow(unused_imports)]
 pub(crate) use nix; 
-pub(crate) use libc; 
+pub(crate) use libc;
+
+pub const DEFAULT_SYSCALL_PATH : &'static str =  "/dev/mitosis-syscalls";
 
 /// The client ot issue MITOSIS system calls in rust
 /// Must be created using MClientOptions
