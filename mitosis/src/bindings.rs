@@ -9,7 +9,7 @@
 )]
 mod bindings {
     use crate::linux_kernel_module::c_types;
-    include!(concat!(env!("OUT_DIR"), "/bindings-swap.rs"));
+    include!(concat!(env!("OUT_DIR"), "/bindings-mitosis-core.rs"));
 
     unsafe impl Send for page {}
     unsafe impl Sync for page {}
