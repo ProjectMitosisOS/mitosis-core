@@ -95,6 +95,12 @@ mod tests {
             .open()
             .unwrap();
     }
+
+    #[test]
+    fn test_protocl() {
+        use mitosis_protocol::*;
+        println!("check CALL nil {}", CALL_NIL);
+    }
 }
 
 pub mod macros;
