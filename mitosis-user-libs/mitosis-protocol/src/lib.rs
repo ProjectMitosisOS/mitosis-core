@@ -1,5 +1,5 @@
 #![no_std]
 
-pub type IOCTL_CMD_TYPE = u32;
+pub type IoctlCmdType = u32;
 
-pub const CALL_NIL : IOCTL_CMD_TYPE = 0;
+pub const CALL_NIL : IoctlCmdType = 0;

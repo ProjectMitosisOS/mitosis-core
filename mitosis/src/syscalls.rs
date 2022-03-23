@@ -24,7 +24,7 @@ impl SysCallsService {
 #[allow(non_upper_case_globals)]
 impl crate::linux_kernel_module::file_operations::FileOperations for SysCallsHandler {
     fn open(
-        file: *mut crate::linux_kernel_module::bindings::file,
+        _file: *mut crate::linux_kernel_module::bindings::file,
     ) -> crate::linux_kernel_module::KernelResult<Self> {
         Ok(Self {})
     }
