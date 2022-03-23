@@ -32,10 +32,7 @@ impl crate::linux_kernel_module::file_operations::FileOperations for SysCallsHan
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
         crate::log::debug!("in ioctrl");
         match cmd {
-            CALL_NIL => {
-                crate::log::debug!("handle nil call");
-                0
-            }
+            CALL_NIL => self.handle_nil(arg), 
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -45,5 +42,14 @@ impl crate::linux_kernel_module::file_operations::FileOperations for SysCallsHan
 
     fn mmap(&mut self, _vma_p: *mut vm_area_struct) -> c_int {
         unimplemented!();
+    }
+}
+
+// real system call implementations
+impl SysCallsHandler {
+    #[inline(always)]
+    fn handle_nil(&self, arg : c_ulong) -> c_long {
+        crate::log::debug!("handle nil call, with arg {}", arg);
+        0
     }
 }

@@ -29,6 +29,6 @@ impl Drop for Module {
 linux_kernel_module::kernel_module!(
     Module,
     author: b"xmm",
-    description: b"A kernel module for implement os.swap()",
+    description: b"A kernel module for implement test system calls",
     license: b"GPL"
 );
