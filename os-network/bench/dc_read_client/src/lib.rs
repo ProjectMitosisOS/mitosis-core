@@ -27,10 +27,11 @@ use os_network::remote_memory::rdma::DCRemoteDevice;
 use os_network::remote_memory::Device;
 use os_network::remote_memory::rdma::DCKeys;
 
-use KRdmaKit::device::RNIC;
 use KRdmaKit::KDriver;
-use KRdmaKit::cm::{EndPoint, SidrCM};
+use KRdmaKit::device::RNIC;
 use KRdmaKit::device::RContext;
+use KRdmaKit::random::FastRandom;
+use KRdmaKit::cm::{EndPoint, SidrCM};
 use KRdmaKit::rust_kernel_rdma_base::*;
 
 use mitosis_macros::{declare_global, declare_module_param};
@@ -55,6 +56,7 @@ pub struct DCBenchWorker<'a> {
     rkey: u32,
     lkey: u32,
     dc: DCRemoteDevice<'a, RMemory>,
+    random: FastRandom,
 }
 
 impl DCBenchWorker<'_> {
@@ -93,11 +95,15 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
             rkey: rkey,
             lkey: unsafe { factory.get_context().get_lkey() },
             dc: DCRemoteDevice::new(Arc::new(dc)),
+            random: FastRandom::new(thread_id as u64),
         }
     }
 
     fn op(&mut self) -> Result<(), ()> {
         let remote_addr = self.endpoint.mr.get_addr();
+        let range = self.endpoint.mr.get_capacity() as u64 / memory_size::read();
+        let offset = (self.random.get_next() % range) * memory_size::read();
+        let remote_addr = remote_addr + offset;
         unsafe {
             self.dc.read(
                 &self.endpoint,

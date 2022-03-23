@@ -48,9 +48,9 @@ The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.
 
 | #client machine | total throughput (op/s) | bandwidth (Gb/s) |
 | --------------- | ----------------------- | ---------------- |
-| 1               | 4074876 = 4.07M         | 1.94             |
-| 4               | 9940997 = 9.94M         | 4.74             |
-| 8               | 9944456 = 9.94M         | 4.74             |
+| 1               | 4091195 = 4.09M         | 1.95             |
+| 4               | 15763042 = 15.76M       | 7.51             |
+| 8               | 31121141 = 31.12M       | 14.84            |
 
 4096B payload
 
@@ -88,9 +88,9 @@ The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.
 
 | #client machine | total throughput (op/s) | bandwidth (Gb/s) |
 | --------------- | ----------------------- | ---------------- |
-| 1               | 4383084 = 4.38M         | 2.09             |
-| 4               | 9910845 = 9.91M         | 4.72             |
-| 8               | 9938576 = 9.93M         | 4.74             |
+| 1               | 4429191 = 4.43M         | 2.11             |
+| 4               | 17247574 = 17.24M       | 8.22             |
+| 8               | 33524966 = 33.52M       | 15.99            |
 
 4096B payload
 
@@ -98,3 +98,8 @@ The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.
 | --------------- | ----------------------- | ---------------- |
 | 1               | 2866641 = 2.86M         | 87.4             |
 | 8               | 2947166 = 2.95M         | 89.9             |
+
+## Conclusion
+
+- With small payload size like 64B, the throughput of RC qp's one-sided read operation is **7%~8%** higher than that of DC qp.
+- With large payload size like 4096B, the gap is smaller. And the peak throughput is nearly the same.

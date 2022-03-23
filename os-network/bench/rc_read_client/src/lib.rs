@@ -28,8 +28,9 @@ use os_network::remote_memory::Device;
 use os_network::remote_memory::rdma::RCKeys;
 use os_network::rdma::ConnMeta;
 
-use KRdmaKit::device::RNIC;
 use KRdmaKit::KDriver;
+use KRdmaKit::device::RNIC;
+use KRdmaKit::random::FastRandom;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
 use mitosis_macros::{declare_global, declare_module_param};
@@ -51,7 +52,9 @@ pub struct RCBenchWorker<'a> {
     rkey: u32,
     lkey: u32,
     remote_addr: u64,
+    remote_capacity: usize,
     rc: RCRemoteDevice<'a, RMemory>,
+    random: FastRandom,
 }
 
 impl RCBenchWorker<'_> {
@@ -82,20 +85,26 @@ impl<'a> BenchRoutine for RCBenchWorker<'a> {
         let rc = factory.create(Self::get_my_conn_meta(thread_id)).unwrap();
         let rkey = rc.get_qp().get_remote_mr().get_rkey();
         let remote_addr = rc.get_qp().get_remote_mr().get_addr();
+        let remote_capacity = rc.get_qp().get_remote_mr().get_capacity();
         Self {
             local_mem: RMemory::new(memory_size::read() as usize, 0),
             rkey: rkey,
             lkey: unsafe { factory.get_context().get_lkey() },
             remote_addr: remote_addr,
             rc: RCRemoteDevice::new(Arc::new(rc)),
+            random: FastRandom::new(thread_id as u64),
+            remote_capacity: remote_capacity as usize,
         }
     }
 
     fn op(&mut self) -> Result<(), ()> {
+        let range = self.remote_capacity as u64 / memory_size::read();
+        let offset = (self.random.get_next() % range) * memory_size::read();
+        let remote_addr = self.remote_addr + offset;
         unsafe {
             self.rc.read(
                 &(),
-                &self.remote_addr,
+                &remote_addr,
                 &RCKeys::new(self.lkey, self.rkey),
                 &mut self.local_mem,
             )
