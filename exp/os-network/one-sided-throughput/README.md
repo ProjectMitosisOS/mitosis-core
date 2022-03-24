@@ -46,15 +46,11 @@ Sample Output:
 
 ```
 ...
-@val00      [  +1.016451] src/lib.rs@156: [INFO ] - check global reporter states: 2788405, passed: 1016458. thpt : 2743256
-@val00      [  +1.023991] src/lib.rs@156: [INFO ] - check global reporter states: 2817749, passed: 1023998. thpt : 2751713
-@val00      [  +1.023994] src/lib.rs@156: [INFO ] - check global reporter states: 2812865, passed: 1023998. thpt : 2746943
-@val00      [  +1.023994] src/lib.rs@156: [INFO ] - check global reporter states: 2815108, passed: 1023999. thpt : 2749131
+@val00      [  +1.021706] src/lib.rs@210: [INFO ] - check global reporter thpt 32,710,592 reqs/sec
+@val00      [  +1.023992] src/lib.rs@210: [INFO ] - check global reporter thpt 33,273,170 reqs/sec
+@val00      [  +1.024001] src/lib.rs@210: [INFO ] - check global reporter thpt 33,217,748 reqs/sec
 ...
 ```
-
-PS: In the Outstanding Requests benchmark, the throughput in the output shows the number of batches completed.
-We should multiply it with the batch size to get the final throughput.
 
 The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.1-Ubuntu.)
 
@@ -114,9 +110,6 @@ Sample Output:
 ```
 Omitted...
 ```
-
-PS: In the Outstanding Requests benchmark, the throughput in the output shows the number of batches completed.
-We should multiply it with the batch size to get the final throughput.
 
 The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.1-Ubuntu.)
 

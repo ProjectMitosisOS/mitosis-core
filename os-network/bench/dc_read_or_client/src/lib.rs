@@ -150,27 +150,6 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
         Ok(())
     }
 
-    /*
-    fn op(&mut self) -> Result<(), ()> {
-        let mut signaled = self.get_my_payload_signaled();
-        let mut signaled = unsafe { Pin::new_unchecked(&mut signaled) };
-        payload::Payload::<ib_dc_wr>::finalize(signaled.as_mut());
-
-        let mut unsignaled = self.get_my_payload();
-        let mut unsignaled = unsafe { Pin::new_unchecked(&mut unsignaled) };
-        payload::Payload::<ib_dc_wr>::finalize(unsignaled.as_mut());
-
-        let dc = unsafe { Arc::get_mut_unchecked(&mut self.dc) };
-        dc.post(&signaled.as_ref()).map_err(|_| ())?;
-
-        for _ in 1..or_factor::read() {
-            dc.post(&unsignaled.as_ref()).map_err(|_| ())?;
-        }
-
-        block_on(dc).map_err(|_| ())?;
-        Ok(())
-    }*/
-
     // avoid destroying a CQ/QP when there is on-going requests
     fn finalize(&mut self) -> Result<(), ()> {
         let mut signaled = self.get_my_payload_signaled();

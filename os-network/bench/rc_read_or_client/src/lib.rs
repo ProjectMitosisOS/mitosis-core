@@ -60,6 +60,7 @@ pub struct RCBenchWorker<'a> {
     remote_capacity: usize,
     rc: Arc<RCConn<'a>>,
     random: FastRandom,
+    pending_cnts: usize,
 }
 
 impl RCBenchWorker<'_> {
@@ -120,28 +121,28 @@ impl<'a> BenchRoutine for RCBenchWorker<'a> {
             rc: Arc::new(rc),
             random: FastRandom::new(thread_id as u64),
             remote_capacity: remote_capacity as usize,
+            pending_cnts: 0,
         }
     }
 
     fn op(&mut self) -> Result<(), ()> {
-        let mut signaled = self.get_my_payload_signaled();
-        let mut signaled = unsafe { Pin::new_unchecked(&mut signaled) };
-        payload::Payload::<ib_rdma_wr>::finalize(signaled.as_mut());
+        let mut req = self.get_my_payload();
 
-        let mut unsignaled = self.get_my_payload();
-        let mut unsignaled = unsafe { Pin::new_unchecked(&mut unsignaled) };
-        payload::Payload::<ib_rdma_wr>::finalize(unsignaled.as_mut());
-
-        let rc = unsafe {
-            Arc::get_mut_unchecked(&mut self.rc)
-        };
-        rc.post(&signaled.as_ref()).map_err(|_| ())?;
-
-        for _ in 1..or_factor::read() {
-            rc.post(&unsignaled.as_ref()).map_err(|_| ())?;
+        let rc = unsafe { Arc::get_mut_unchecked(&mut self.rc) };
+        if self.pending_cnts >= or_factor::read() as _ {
+            block_on(rc).map_err(|_| ())?;
+            self.pending_cnts = 0;
         }
 
-        block_on(rc).map_err(|_| ())?;
+        if self.pending_cnts == 0 {
+            req = req.set_send_flags(ib_send_flags::IB_SEND_SIGNALED);            
+        }
+
+        let mut req = unsafe { Pin::new_unchecked(&mut req) };
+        payload::Payload::<ib_rdma_wr>::finalize(req.as_mut());
+
+        rc.post(&req.as_ref()).map_err(|_| ())?;
+        self.pending_cnts += 1;
         Ok(())
     }
 
@@ -150,11 +151,14 @@ impl<'a> BenchRoutine for RCBenchWorker<'a> {
         let mut signaled = unsafe { Pin::new_unchecked(&mut signaled) };
         payload::Payload::<ib_rdma_wr>::finalize(signaled.as_mut());
 
-        let rc = unsafe {
-            Arc::get_mut_unchecked(&mut self.rc)
-        };
+        let rc = unsafe { Arc::get_mut_unchecked(&mut self.rc) };
         rc.post(&signaled.as_ref()).map_err(|_| ())?;
         block_on(rc).map_err(|_| ())?;
+
+        if self.pending_cnts > 0 { 
+            // should block two times
+            block_on(rc).map_err(|_| ())?;
+        }
         Ok(())
     }
 }
@@ -204,10 +208,8 @@ fn module_main() {
 
         timer.reset();
         log::info!(
-            "check global reporter states: {}, passed: {}. thpt : {}",
-            count,
-            passed,
-            thpt
+            "check global reporter thpt {} reqs/sec",
+            mitosis_util::pretty_print_int(thpt)
         );
     }
 
