@@ -144,6 +144,19 @@ impl<'a> BenchRoutine for RCBenchWorker<'a> {
         block_on(rc).map_err(|_| ())?;
         Ok(())
     }
+
+    fn finalize(&mut self) -> Result<(), ()> {
+        let mut signaled = self.get_my_payload_signaled();
+        let mut signaled = unsafe { Pin::new_unchecked(&mut signaled) };
+        payload::Payload::<ib_rdma_wr>::finalize(signaled.as_mut());
+
+        let rc = unsafe {
+            Arc::get_mut_unchecked(&mut self.rc)
+        };
+        rc.post(&signaled.as_ref()).map_err(|_| ())?;
+        block_on(rc).map_err(|_| ())?;
+        Ok(())
+    }
 }
 
 use alloc::boxed::Box;

@@ -148,6 +148,19 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
         block_on(dc).map_err(|_| ())?;
         Ok(())
     }
+
+    fn finalize(&mut self) -> Result<(), ()> {
+        let mut signaled = self.get_my_payload_signaled();
+        let mut signaled = unsafe { Pin::new_unchecked(&mut signaled) };
+        payload::Payload::<ib_dc_wr>::finalize(signaled.as_mut());
+
+        let dc = unsafe {
+            Arc::get_mut_unchecked(&mut self.dc)
+        };
+        dc.post(&signaled.as_ref()).map_err(|_| ())?;
+        block_on(dc).map_err(|_| ())?;
+        Ok(())
+    }
 }
 
 use alloc::boxed::Box;

@@ -25,6 +25,11 @@ pub trait BenchRoutine {
     /// This is called in the critical path of each benchmark thread
     /// and recorded by reporter.
     fn op(&mut self) -> Result<(), ()>;
+
+    /// This is called after each benchmark thread stops running
+    /// 
+    /// The default implementation is empty
+    fn finalize(&mut self) -> Result<(), ()> { Ok(()) }
 }
 
 /// Define all the essential info for the benchmark
@@ -129,7 +134,10 @@ where
         }
 
         log::debug!("Bench thread {} finished", ctx.id);
-        kthread::sleep(1); // Wait 1 second to let the resources in the kthread to be destroyed. E.g.: on-flight outstanding requests
+        let result = bench.finalize();
+        if result.is_err() {
+            log::error!("error in finalize benchmark in thread {}", ctx.id);
+        }
         0
     }
 }
