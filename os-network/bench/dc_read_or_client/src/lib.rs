@@ -3,39 +3,39 @@
 
 extern crate alloc;
 
-use core::pin::Pin;
-use alloc::vec::Vec;
-use alloc::sync::Arc;
 use alloc::string::String;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::pin::Pin;
 
 use krdma_test::{krdma_drop, krdma_main};
 
 use rust_kernel_linux_util as log;
 use rust_kernel_linux_util::kthread;
-use rust_kernel_linux_util::timer::KTimer;
-use rust_kernel_linux_util::string::ptr2string;
 use rust_kernel_linux_util::linux_kernel_module;
+use rust_kernel_linux_util::string::ptr2string;
+use rust_kernel_linux_util::timer::KTimer;
 
 use linux_kernel_module::c_types::*;
 
 use mitosis_util::bench::*;
 use mitosis_util::reporter::*;
 
-use os_network::Conn;
-use os_network::Factory;
 use os_network::block_on;
-use os_network::rdma::payload;
+use os_network::msg::UDMsg as RMemory;
 use os_network::rdma::dc::DCConn;
 use os_network::rdma::dc::DCFactory;
+use os_network::rdma::payload;
 use os_network::remote_memory::ToPhys;
-use os_network::msg::UDMsg as RMemory;
+use os_network::Conn;
+use os_network::Factory;
 
-use KRdmaKit::KDriver;
-use KRdmaKit::device::RNIC;
-use KRdmaKit::device::RContext;
-use KRdmaKit::random::FastRandom;
 use KRdmaKit::cm::{EndPoint, SidrCM};
+use KRdmaKit::device::RContext;
+use KRdmaKit::device::RNIC;
+use KRdmaKit::random::FastRandom;
 use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::KDriver;
 
 use mitosis_macros::{declare_global, declare_module_param};
 
@@ -50,7 +50,10 @@ declare_module_param!(or_factor, c_ulong);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(REMOTE_GIDS, alloc::vec::Vec<alloc::string::String>);
-declare_global!(DCFACTORIES, alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>);
+declare_global!(
+    DCFACTORIES,
+    alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
+);
 
 static DEFAULT_QD_HINT: u64 = 73;
 
@@ -63,6 +66,7 @@ pub struct DCBenchWorker<'a> {
     lkey: u32,
     dc: Arc<DCConn<'a>>,
     random: FastRandom,
+    pending_cnts: usize,
 }
 
 impl DCBenchWorker<'_> {
@@ -77,8 +81,7 @@ impl DCBenchWorker<'_> {
         let service_id = remote_service_id_base::read();
         let path_res = ctx.explore_path(gid, service_id as u64).unwrap();
         let mut sidr_cm = SidrCM::new(ctx, core::ptr::null_mut()).unwrap();
-        let remote_info = sidr_cm.sidr_connect(
-            path_res, service_id as u64, DEFAULT_QD_HINT);
+        let remote_info = sidr_cm.sidr_connect(path_res, service_id as u64, DEFAULT_QD_HINT);
         remote_info.unwrap()
     }
 
@@ -110,9 +113,7 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
 
     fn thread_local_init(args: &Self::Args) -> Self {
         let thread_id = *args;
-        let factory = unsafe {
-            &DCFACTORIES::get_ref()[thread_id as usize]
-        };
+        let factory = unsafe { &DCFACTORIES::get_ref()[thread_id as usize] };
         let dc = factory.create(()).unwrap();
         let ctx = factory.get_context();
         let endpoint = Self::get_my_endpoint(ctx, thread_id);
@@ -124,9 +125,32 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
             lkey: unsafe { factory.get_context().get_lkey() },
             dc: Arc::new(dc),
             random: FastRandom::new(thread_id as u64),
+            pending_cnts: 0,
         }
     }
 
+    fn op(&mut self) -> Result<(), ()> {
+        let mut req = self.get_my_payload();
+
+        let dc = unsafe { Arc::get_mut_unchecked(&mut self.dc) };
+        if self.pending_cnts >= or_factor::read() as _ {
+            block_on(dc).map_err(|_| ())?;
+            self.pending_cnts = 0;
+        }
+
+        if self.pending_cnts == 0 {
+            req = req.set_send_flags(ib_send_flags::IB_SEND_SIGNALED);            
+        }
+
+        let mut req = unsafe { Pin::new_unchecked(&mut req) };
+        payload::Payload::<ib_dc_wr>::finalize(req.as_mut());
+
+        dc.post(&req.as_ref()).map_err(|_| ())?;
+        self.pending_cnts += 1;
+        Ok(())
+    }
+
+    /*
     fn op(&mut self) -> Result<(), ()> {
         let mut signaled = self.get_my_payload_signaled();
         let mut signaled = unsafe { Pin::new_unchecked(&mut signaled) };
@@ -136,9 +160,7 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
         let mut unsignaled = unsafe { Pin::new_unchecked(&mut unsignaled) };
         payload::Payload::<ib_dc_wr>::finalize(unsignaled.as_mut());
 
-        let dc = unsafe {
-            Arc::get_mut_unchecked(&mut self.dc)
-        };
+        let dc = unsafe { Arc::get_mut_unchecked(&mut self.dc) };
         dc.post(&signaled.as_ref()).map_err(|_| ())?;
 
         for _ in 1..or_factor::read() {
@@ -147,16 +169,15 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
 
         block_on(dc).map_err(|_| ())?;
         Ok(())
-    }
+    }*/
 
+    // avoid destroying a CQ/QP when there is on-going requests
     fn finalize(&mut self) -> Result<(), ()> {
         let mut signaled = self.get_my_payload_signaled();
         let mut signaled = unsafe { Pin::new_unchecked(&mut signaled) };
         payload::Payload::<ib_dc_wr>::finalize(signaled.as_mut());
 
-        let dc = unsafe {
-            Arc::get_mut_unchecked(&mut self.dc)
-        };
+        let dc = unsafe { Arc::get_mut_unchecked(&mut self.dc) };
         dc.post(&signaled.as_ref()).map_err(|_| ())?;
         block_on(dc).map_err(|_| ())?;
         Ok(())
@@ -176,7 +197,8 @@ fn ctx_init() {
         KDRIVER::init(KDriver::create().unwrap());
         DCFACTORIES::init(Vec::new());
         for i in 0..thread_count::read() {
-            DCFACTORIES::get_mut().push(DCFactory::new(DCBenchWorker::get_local_nic(i as usize)).unwrap());
+            DCFACTORIES::get_mut()
+                .push(DCFactory::new(DCBenchWorker::get_local_nic(i as usize)).unwrap());
         }
     }
 }
@@ -208,16 +230,16 @@ fn module_main() {
 
         timer.reset();
         log::info!(
-            "check global reporter states: {}, passed: {}. thpt : {}",
-            count,
-            passed,
-            thpt
+            "check global reporter thpt {} reqs/sec",
+            mitosis_util::pretty_print_int(thpt)
         );
     }
 
     for _ in 0..thread_count::read() {
         bench.stop_one().unwrap();
     }
+
+    log::info!("done");
 }
 
 #[krdma_drop]
