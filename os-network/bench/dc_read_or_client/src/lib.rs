@@ -180,6 +180,11 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
         let dc = unsafe { Arc::get_mut_unchecked(&mut self.dc) };
         dc.post(&signaled.as_ref()).map_err(|_| ())?;
         block_on(dc).map_err(|_| ())?;
+
+        if self.pending_cnts > 0 { 
+            // should block two times
+            block_on(dc).map_err(|_| ())?;
+        }
         Ok(())
     }
 }
