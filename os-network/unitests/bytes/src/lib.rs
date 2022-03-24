@@ -6,7 +6,6 @@ use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 use rust_kernel_linux_util as log;
 
 use os_network::bytes::*;
-use os_network::serialize::*;
 
 use krdma_test::*;
 
