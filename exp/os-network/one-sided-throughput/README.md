@@ -29,6 +29,17 @@ Remember to remove the kernel module after the benchmark.
 python3 ../../../scripts/bootstrap_proxy.py -f dc-clean.toml -u USER -p PASSWORD
 ```
 
+#### Running with Outstanding Requests
+
+```bash
+python3 ../../../scripts/bootstrap_proxy.py -f dc-throughput-or.toml -u USER -p PASSWORD
+```
+
+Remember to remove the kernel module after the benchmark.
+```bash
+python3 ../../../scripts/bootstrap_proxy.py -f dc-clean-or.toml -u USER -p PASSWORD
+```
+
 #### Reference Results
 
 Sample Output:
@@ -42,6 +53,9 @@ Sample Output:
 ...
 ```
 
+PS: In the Outstanding Requests benchmark, the throughput in the output shows the number of batches completed.
+We should multiply it with the batch size to get the final throughput.
+
 The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.1-Ubuntu.)
 
 64B payload
@@ -52,7 +66,7 @@ The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.
 | 4               | 15763042 = 15.76M       | 7.51             |
 | 8               | 31121141 = 31.12M       | 14.84            |
 
-64B payload with **Outstanding Requests** (batch size = 12)
+64B payload with **Outstanding Requests** (batch size = **12**)
 
 | #client machine | total throughput (op/s) | bandwidth (Gb/s) |
 | --------------- | ----------------------- | ---------------- |
@@ -82,6 +96,17 @@ Remember to remove the kernel module after the benchmark.
 python3 ../../../scripts/bootstrap_proxy.py -f rc-clean.toml -u USER -p PASSWORD
 ```
 
+#### Running with Outstanding Requests
+
+```bash
+python3 ../../../scripts/bootstrap_proxy.py -f rc-throughput-or.toml -u USER -p PASSWORD
+```
+
+Remember to remove the kernel module after the benchmark.
+```bash
+python3 ../../../scripts/bootstrap_proxy.py -f rc-clean-or.toml -u USER -p PASSWORD
+```
+
 #### Reference Results
 
 Sample Output:
@@ -89,6 +114,9 @@ Sample Output:
 ```
 Omitted...
 ```
+
+PS: In the Outstanding Requests benchmark, the throughput in the output shows the number of batches completed.
+We should multiply it with the batch size to get the final throughput.
 
 The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.1-Ubuntu.)
 
@@ -100,7 +128,7 @@ The benchmark is conducted on val01 cluster. (Linux 4.15.0-46-generic #49~16.04.
 | 4               | 17247574 = 17.24M       | 8.22             |
 | 8               | 33524966 = 33.52M       | 15.99            |
 
-64B payload with **Outstanding Requests** (batch size = 12)
+64B payload with **Outstanding Requests** (batch size = **12**)
 
 | #client machine | total throughput (op/s) | bandwidth (Gb/s) |
 | --------------- | ----------------------- | ---------------- |
