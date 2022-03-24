@@ -129,6 +129,7 @@ where
         }
 
         log::debug!("Bench thread {} finished", ctx.id);
+        kthread::sleep(1); // Wait 1 second to let the resources in the kthread to be destroyed. E.g.: on-flight outstanding requests
         0
     }
 }
