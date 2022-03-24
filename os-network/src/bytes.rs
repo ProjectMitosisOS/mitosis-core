@@ -35,7 +35,7 @@ impl BytesMut {
     }    
 
     pub unsafe fn clone_and_resize(&self, sz : usize) -> core::option::Option<Self> { 
-        if self.len >= sz && sz > 0 { 
+        if self.len >= sz { 
             Some(Self { 
                 ptr : self.ptr, 
                 len : sz

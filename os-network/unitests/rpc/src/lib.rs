@@ -18,6 +18,7 @@ fn test_callback(input: &BytesMut, output: &mut BytesMut) -> usize {
     unsafe { input.memcpy_deserialize(&mut test_val).unwrap() };
     log::info!("test callback input {:?}, decoded {}", input, test_val);
     log::info!("test callback output {:?}", output);
+    write!(output, "test_callback").unwrap();
     64
 }
 
@@ -63,6 +64,9 @@ fn test_rpc_headers() {
     assert!(connect_header.get_connect_stub().is_some());
     assert!(connect_header.get_connect_stub().unwrap().get_session_id() == my_session_id);
 }
+
+use os_network::block_on;
+use os_network::timeout::Timeout;
 
 // a test RPC with RDMA
 fn test_ud_rpc() {
@@ -132,9 +136,6 @@ fn test_ud_rpc() {
         client_receiver.post_recv_buf(UDMsg::new(4096, 73)).unwrap(); // should succeed
     }
 
-    use os_network::block_on;
-    use os_network::timeout::Timeout;
-
     // test RPC connect request
     let my_session_id = 73;
 
@@ -180,8 +181,7 @@ fn test_ud_rpc() {
     match res {
         Ok(msg) => {
             let bytes = unsafe { msg.get_bytes().clone() };
-            let msg_header_bytes =
-                unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
+            let msg_header_bytes = unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
             let mut msg_header: MsgHeader = Default::default();
             unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
             log::info!("sanity check decoded reply {:?}", msg_header);
@@ -207,8 +207,7 @@ fn test_ud_rpc() {
     match res {
         Ok(msg) => {
             let bytes = unsafe { msg.get_bytes().clone() };
-            let msg_header_bytes =
-                unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
+            let msg_header_bytes = unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
             let mut msg_header: MsgHeader = Default::default();
             unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
             log::info!("sanity check decoded reply {:?}", msg_header);
@@ -224,5 +223,138 @@ fn test_ud_rpc() {
     log::debug!("final check hook status {:?}", rpc_server);
 }
 
-#[krdma_test(test_service, test_rpc_headers, test_ud_rpc)]
+use os_network::rpc::impls::ud::UDSession;
+
+fn test_ud_rpc_elegant() {
+    log::info!("Test RPC backed by RDMA's UD with elegant wrapper.");
+    let timeout_usec = 1000_000;
+
+    type UDRPCHook<'a, 'b> = hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
+    type UDCaller<'a> = Caller<UDReceiver<'a>, UDSession<'a>>;
+
+    /*********Driver part****************/
+    let driver = unsafe { KDriver::create().unwrap() };
+    let nic = driver.devices().into_iter().next().unwrap();
+    let factory = UDFactory::new(nic).unwrap();
+    let ctx = factory.get_context();
+
+    let service_id: u64 = 0;
+    let ctrl = RCtrl::create(service_id, &ctx).unwrap();
+    /*********Driver part done***********/
+
+    /*********Raw connection part****************/
+    let server_ud = factory.create(()).unwrap();
+    let client_ud = factory.create(()).unwrap();
+
+    ctrl.reg_ud(DEFAULT_QD_HINT as usize, server_ud.get_qp());
+    ctrl.reg_ud(CLIENT_QD_HINT as usize, client_ud.get_qp());
+
+    let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();
+
+    let (endpoint, key) = factory
+        .create_meta(UDHyperMeta {
+            gid: gid,
+            service_id: service_id,
+            qd_hint: DEFAULT_QD_HINT,
+        })
+        .unwrap();
+    let lkey = unsafe { ctx.get_lkey() };
+    /*********Raw connection part done***********/
+
+    /*********RPC data structure support  ****************/
+    // client
+    let client_session = client_ud.create((endpoint, key)).unwrap();
+    let client_receiver = UDReceiverFactory::new()
+        .set_qd_hint(CLIENT_QD_HINT as _)
+        .set_lkey(lkey)
+        .create(client_ud);
+    /*********RPC data structure support done***********/
+
+    /*********RPC main data structure****************/
+    // server
+    let temp_ud = server_ud.clone();
+    let mut rpc_server = UDRPCHook::new(
+        &factory,
+        server_ud,
+        UDReceiverFactory::new()
+            .set_qd_hint(DEFAULT_QD_HINT as _)
+            .set_lkey(lkey)
+            .create(temp_ud),
+    );
+    rpc_server
+        .get_mut_service()
+        .register(TEST_RPC_ID, test_callback);
+
+    // client
+    let mut caller = UDCaller::new(client_receiver);
+
+    // pre-most receive buffers
+    for _ in 0..12 {
+        // 64 is the header
+        match rpc_server.post_msg_buf(UDMsg::new(4096, 73)) {
+            Ok(_) => {}
+            Err(e) => log::error!("post recv buf err: {:?}", e),
+        }
+        caller.register_recv_buf(UDMsg::new(4096, 73)).unwrap(); // should succeed
+    }
+
+    // client
+    caller
+        .connect(
+            73,
+            client_session,
+            UDHyperMeta {
+                gid: os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
+                service_id: service_id,
+                qd_hint: CLIENT_QD_HINT,
+            },
+        )
+        .unwrap();
+    /*********RPC main data structure done***********/
+
+    /*********Main test body***********/
+
+    // server first run the event loop to receive the connect message
+    let mut rpc_server = Timeout::new(rpc_server, timeout_usec);
+    let res = block_on(&mut rpc_server);
+    log::debug!("sanity check server handle connect result: {:?}", res);
+
+    //  then, the client can check the result
+    let mut caller_timeout = Timeout::new(caller, timeout_usec);
+    let res = block_on(&mut caller_timeout);
+    match res {
+        Ok(v) => {
+            let (_, reply) = v;
+            log::debug!("sanity check client connection result: {:?}", reply);
+        }
+        Err(e) => log::error!("client connect error: {:?}", e),
+    };
+
+    let mut caller = caller_timeout.into_inner();
+
+    // client make a simple call    
+    caller.sync_call(73,TEST_RPC_ID, 128 as u64).unwrap(); 
+    
+    // receive at the server
+    rpc_server.reset_timer(timeout_usec);
+    let res = block_on(&mut rpc_server); 
+    log::debug!("sanity check server handle call result: {:?}", res);
+    
+    // receive the client reply
+    let mut caller_timeout = Timeout::new(caller, timeout_usec);
+    let res = block_on(&mut caller_timeout);
+    match res {
+        Ok(v) => {
+            let (_, reply) = v;
+            log::debug!("sanity check client call result: {:?}", reply);
+        }
+        Err(e) => log::error!("client call error: {:?}", e),
+    };    
+
+    /*********Main test body done***********/
+    let rpc_server = rpc_server.into_inner();
+    log::debug!("final check hook status {:?}", rpc_server);    
+}
+
+#[krdma_test(test_service, test_rpc_headers, test_ud_rpc, test_ud_rpc_elegant)]
 fn init() {}

@@ -4,8 +4,6 @@ use super::*;
 use crate::datagram::Receiver;
 use crate::{bytes::ToBytes, conn::*};
 
-use crate::future::*;
-
 /// The hook will receive datagram requests, and call the RPC callback correspondingly.
 /// * Factory: the connection factory that creates the session
 /// * R: Receiver
@@ -111,7 +109,10 @@ where
 
     fn poll<'r>(&'r mut self) -> Poll<Self::Output, Self::Error> {
         match self.transport.poll() {
+            // not receiving any request, just move on
             Ok(Async::NotReady) => Ok(Async::NotReady),
+
+            // msg received 
             Ok(Async::Ready(msg)) => {
                 // parse the request
                 let bytes = unsafe { msg.get_bytes().clone() };
@@ -131,6 +132,7 @@ where
                         .ok_or(Error::corrupted())?
                 };
 
+                // parse and dispatch the message 
                 match msg_header.get_marker() {
                     super::header::ReqType::Connect => {
                         let meta = msg_header.get_connect_stub().ok_or(Error::corrupted())?;
@@ -173,6 +175,7 @@ where
 
                         // handle connect message done
                     }
+
                     // handle the RPC request
                     super::header::ReqType::Request => {
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
@@ -204,6 +207,7 @@ where
                                 ReplyStubFactory::new(ReplyStatus::NotExist, 0),
                             )?,
                         }
+                        // handle RPC request done 
                     }
 
                     // handle the session dis-connect
@@ -211,13 +215,18 @@ where
                         // TODO @Yuhan: handle the dis connect part
                         todo!();
                     }
+
+                    // Error case
                     _ => {
                         // should never happen at the hooker if no error happens !
                         crate::log::error!("unknown message header {:?}", msg_header);
                     }
                 }
 
-                // FIXME: Is the post_recv on the last ok?
+                // FIXME: Is the post_recv on the last ok? No. 
+                // Currently, if some error happens during the above process,
+                // we may fail to post_recv_buf. 
+                // Will handle it later
                 self.transport
                     .post_recv_buf(msg)
                     .map_err(|e| Error::inner(e))?;

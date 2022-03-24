@@ -28,7 +28,7 @@ impl super::super::RPCConn for UDSession<'_> {
     /// * UDMsg: the message to send
     /// * bool : whether to signal the request
     type ReqPayload = crate::msg::UDMsg;
-    type HyperMeta = ();
+    type HyperMeta = UDHyperMeta;
 
     #[inline]
     fn post(

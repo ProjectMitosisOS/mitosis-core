@@ -107,6 +107,14 @@ impl MsgHeader {
     }
 
     #[inline]
+    pub fn get_reply_stub(&self) -> core::option::Option<&ReplyStatus> {
+        match &self.meta {
+            RPCMeta::Reply(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    #[inline]
     pub fn get_marker(&self) -> ReqType {
         self.marker
     }
