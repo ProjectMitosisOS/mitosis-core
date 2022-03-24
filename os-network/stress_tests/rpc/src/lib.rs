@@ -1,9 +1,6 @@
 #![no_std]
 
 extern crate alloc;
-
-use alloc::vec;
-
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 use rust_kernel_linux_util as log;
@@ -12,16 +9,15 @@ use krdma_test::*;
 use os_network::bytes::*;
 use os_network::rpc::*;
 
-fn test_callback(input: &BytesMut, output: &mut BytesMut) {
-    log::info!("test callback input {:?}", input);
-    log::info!("test callback output {:?}", output);
+fn test_callback(_input: &BytesMut, _output: &mut BytesMut) -> usize {
+    0
 }
 
 use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::rust_kernel_rdma_base::*;
-use KRdmaKit::KDriver;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
+use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::KDriver;
 
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
@@ -151,7 +147,7 @@ fn test_ud_rpc() {
     match res {
         Ok(msg) => {
             let bytes = unsafe { msg.get_bytes().clone() };
-            let mut msg_header_bytes =
+            let msg_header_bytes =
                 unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
             let mut msg_header: MsgHeader = Default::default();
             unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
@@ -167,7 +163,7 @@ fn test_ud_rpc() {
     // first, test the signaled performance
     let timer = KTimer::new();
     for i in 0..stress_count {
-        if i % 10000 == 0 { 
+        if i % 10000 == 0 {
             // prevent softlock
             kthread::yield_now();
         }
@@ -182,7 +178,7 @@ fn test_ud_rpc() {
         }
         // check the message has been sent
         let mut timeout_client = Timeout::new(client_session, timeout_usec);
-        block_on(&mut timeout_client);
+        block_on(&mut timeout_client).unwrap();
         client_session = timeout_client.into_inner();
 
         // poll the RPC completions
@@ -207,14 +203,17 @@ fn test_ud_rpc() {
             }
         }
     }
-    log::info!("[Pass #1 done] passed {} secs",timer.get_passed_usec()/1000000);
+    log::info!(
+        "[Pass #1 done] passed {} secs",
+        timer.get_passed_usec() / 1000000
+    );
 
     client_receiver.reset_timer(20_000);
 
     // then, test the un-signaled performance
     let timer = KTimer::new();
     for i in 0..stress_count {
-        if i % 10000 == 0 { 
+        if i % 10000 == 0 {
             // prevent softlock
             kthread::yield_now();
         }
@@ -222,7 +221,7 @@ fn test_ud_rpc() {
             .generate(&(0 as u64), request.get_bytes_mut()) // 0 is a dummy RPC argument
             .unwrap();
 
-        let result = if client_session.get_pending_reqs() == 0 { 
+        let result = if client_session.get_pending_reqs() == 0 {
             client_session.post(&request, req_sz, true)
         } else {
             client_session.post(&request, req_sz, false)
@@ -232,7 +231,7 @@ fn test_ud_rpc() {
             break;
         }
 
-        if client_session.get_pending_reqs() >= 16 { 
+        if client_session.get_pending_reqs() >= 16 {
             block_on(&mut client_session).unwrap();
         }
 
@@ -258,7 +257,10 @@ fn test_ud_rpc() {
             }
         }
     }
-    log::info!("[Pass #2 done] passed {} secs",timer.get_passed_usec()/1000000);
+    log::info!(
+        "[Pass #2 done] passed {} secs",
+        timer.get_passed_usec() / 1000000
+    );
 
     /****************************/
     let rpc_server = rpc_server.into_inner();

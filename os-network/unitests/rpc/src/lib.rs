@@ -13,9 +13,12 @@ use krdma_test::*;
 use os_network::bytes::*;
 use os_network::rpc::*;
 
-fn test_callback(input: &BytesMut, output: &mut BytesMut) {
-    log::info!("test callback input {:?}", input);
+fn test_callback(input: &BytesMut, output: &mut BytesMut) -> usize {
+    let mut test_val: u64 = 0;
+    unsafe { input.memcpy_deserialize(&mut test_val).unwrap() };
+    log::info!("test callback input {:?}, decoded {}", input, test_val);
     log::info!("test callback output {:?}", output);
+    64
 }
 
 // a local test
@@ -34,7 +37,7 @@ fn test_service() {
     let mut out_msg = unsafe { BytesMut::from_raw(out_buf.as_mut_ptr(), out_buf.len()) };
     write!(&mut out_msg, "This is the output").unwrap();
 
-    assert_eq!(true, service.execute(73, &mut msg, &mut out_msg));
+    assert_eq!(true, service.execute(73, &mut msg, &mut out_msg).is_some());
 }
 
 use KRdmaKit::ctrl::RCtrl;
@@ -159,7 +162,6 @@ fn test_ud_rpc() {
     // check the message has been sent
     let mut timeout_client = Timeout::new(client_session, timeout_usec);
     let result = block_on(&mut timeout_client);
-    let mut client_session = timeout_client.into_inner();
 
     if result.is_err() {
         log::error!("polling send ud qp with error: {:?}", result.err().unwrap());
@@ -178,7 +180,7 @@ fn test_ud_rpc() {
     match res {
         Ok(msg) => {
             let bytes = unsafe { msg.get_bytes().clone() };
-            let mut msg_header_bytes =
+            let msg_header_bytes =
                 unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
             let mut msg_header: MsgHeader = Default::default();
             unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
@@ -186,6 +188,36 @@ fn test_ud_rpc() {
         }
         Err(e) => log::error!("client receiver reply err {:?}", e),
     }
+
+    // send another request
+    let mut client_session = timeout_client.into_inner();
+    let req_sz = os_network::rpc::CallStubFactory::new(my_session_id, 73)
+        .generate(&(73 as u64), request.get_bytes_mut()) // 0 is a dummy RPC argument
+        .unwrap();
+    let _result = client_session.post(&request, req_sz, false);
+
+    // poll the RPC completions
+    rpc_server.reset_timer(1000_000);
+    let res = block_on(&mut rpc_server);
+    if res.is_err() {
+        log::error!("server receiver process err {:?}", res.err().unwrap());
+    }
+
+    let res = block_on(&mut client_receiver);
+    match res {
+        Ok(msg) => {
+            let bytes = unsafe { msg.get_bytes().clone() };
+            let msg_header_bytes =
+                unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
+            let mut msg_header: MsgHeader = Default::default();
+            unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
+            log::info!("sanity check decoded reply {:?}", msg_header);
+        }
+        Err(e) => {
+            log::error!("client receiver reply err {:?}", e);
+        }
+    }
+
     /****************************/
 
     let rpc_server = rpc_server.into_inner();

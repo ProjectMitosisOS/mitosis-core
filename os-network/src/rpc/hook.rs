@@ -21,8 +21,8 @@ where
     transport: R,
     connected_sessions: HashMap<usize, (F::ConnType, R::MsgBuf)>,
 
-    // counting data 
-    analysis : super::analysis::RPCAnalysis, 
+    // counting data
+    analysis: super::analysis::RPCAnalysis,
 }
 
 impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
@@ -39,7 +39,7 @@ use super::header_factory::*;
 
 impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
 where
-    F: RPCFactory+ 'a,
+    F: RPCFactory + 'a,
     // we need to ensure that the polled result can be sent back to
     R: Receiver<
         Output = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
@@ -56,7 +56,7 @@ where
             session_factory: factory,
             connected_sessions: HashMap::new(),
             transport: transport,
-            analysis : super::analysis::RPCAnalysis::new()
+            analysis: super::analysis::RPCAnalysis::new(),
         }
     }
 
@@ -64,8 +64,8 @@ where
         self.transport.post_recv_buf(msg)
     }
 
-    pub fn get_analysis(&self) -> &super::analysis::RPCAnalysis { 
-        & self.analysis
+    pub fn get_analysis(&self) -> &super::analysis::RPCAnalysis {
+        &self.analysis
     }
 
     fn send_reply(
@@ -78,13 +78,15 @@ where
             .get_mut(&session_id)
             .ok_or(Error::session_creation_error())?;
 
-        // FIXME: 32 is a magic number I used here 
+        // FIXME: 32 is a magic number I used here
         if session.get_pending_reqs() > 32 {
             crate::block_on(session).map_err(|_| Error::fatal())?;
         }
 
         let msg_sz = reply.get_payload() + reply.generate(buf.get_bytes_mut()).unwrap(); // should succeed
-        session.post(&buf, msg_sz, session.get_pending_reqs() == 0).map_err(|_| Error::fatal())
+        session
+            .post(&buf, msg_sz, session.get_pending_reqs() == 0)
+            .map_err(|_| Error::fatal())
     }
 }
 
@@ -117,12 +119,12 @@ where
 
                 // the datagram may have a extra header (e.g., GRH_HEADER in UD)
                 // so we must truncate it first
-                let mut msg_header_bytes =
+                let msg_header_bytes =
                     unsafe { bytes.truncate_header(R::HEADER).ok_or(Error::corrupted()) }?;
-                unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };                
+                unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
                 // crate::log::debug!("sanity check header {:?}",msg_header);
 
-                let mut rpc_args = unsafe {
+                let rpc_args = unsafe {
                     msg_header_bytes
                         .truncate_header(core::mem::size_of::<super::header::MsgHeader>())
                         .and_then(|msg| msg.clone_and_resize(msg_header.get_payload()))
@@ -158,7 +160,10 @@ where
                             self.connected_sessions
                                 .insert(meta.get_session_id(), (session, session_buf));
                             // send the reply
-                            self.send_reply(meta.get_session_id(), ReplyStubFactory::new(ReplyStatus::Ok, 0))?;
+                            self.send_reply(
+                                meta.get_session_id(),
+                                ReplyStubFactory::new(ReplyStatus::Ok, 0),
+                            )?;
                         } else {
                             crate::log::debug!(
                                 "duplicate connect session ID: {}",
@@ -168,14 +173,37 @@ where
 
                         // handle connect message done
                     }
-                    // handle the RPC request 
+                    // handle the RPC request
                     super::header::ReqType::Request => {
                         let meta = msg_header.get_call_stub().ok_or(Error::corrupted())?;
 
-                        // TODO @Yuhan: handle the request part
-                        self.analysis.handle_one();
-                        self.send_reply(meta.get_session_id(), ReplyStubFactory::new(ReplyStatus::Ok, 0))?;
+                        let (_, out_buf) = self
+                            .connected_sessions
+                            .get_mut(&meta.get_session_id())
+                            .ok_or(Error::not_connected())?;
 
+                        let mut out_buf = unsafe {
+                            out_buf
+                                .get_bytes_mut()
+                                .truncate_header(core::mem::size_of::<super::header::MsgHeader>())
+                                .unwrap()
+                        };
+
+                        // handle the RPC request
+                        let reply_payload =
+                            self.service
+                                .execute(meta.get_rpc_id(), &rpc_args, &mut out_buf);
+                        self.analysis.handle_one();
+                        match reply_payload {
+                            Some(size) => self.send_reply(
+                                meta.get_session_id(),
+                                ReplyStubFactory::new(ReplyStatus::Ok, size),
+                            )?,
+                            None => self.send_reply(
+                                meta.get_session_id(),
+                                ReplyStubFactory::new(ReplyStatus::NotExist, 0),
+                            )?,
+                        }
                     }
 
                     // handle the session dis-connect
@@ -189,7 +217,7 @@ where
                     }
                 }
 
-                // FIXME: Is the post_recv on the last ok? 
+                // FIXME: Is the post_recv on the last ok?
                 self.transport
                     .post_recv_buf(msg)
                     .map_err(|e| Error::inner(e))?;
@@ -206,7 +234,6 @@ impl<'a, 'b, F, R, MF> Debug for RPCHook<'a, 'b, F, R, MF>
 where
     F: 'a + RPCFactory,
     R: Receiver,
-
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(
@@ -241,6 +268,9 @@ enum Kind<T> {
     /// No ID associated with the call function
     NoID,
 
+    /// The session is not connected to the hook
+    NotConnected,
+
     /// The header is corrupted
     CorruptedHeader,
 
@@ -248,7 +278,7 @@ enum Kind<T> {
     SessionCreationError,
 
     /// The reply message exceeds the maximum msg buffers
-    InValidSz, 
+    InValidSz,
 
     Fatal,
 }
@@ -282,11 +312,15 @@ impl<T> Error<T> {
         Error(Kind::NoID)
     }
 
-    pub fn fatal() -> Error<T> { 
+    pub fn fatal() -> Error<T> {
         Error(Kind::Fatal)
     }
 
-    pub fn invalid_sz() -> Error<T> { 
+    pub fn invalid_sz() -> Error<T> {
         Error(Kind::InValidSz)
+    }
+
+    pub fn not_connected() -> Error<T> {
+        Error(Kind::NotConnected)
     }
 }

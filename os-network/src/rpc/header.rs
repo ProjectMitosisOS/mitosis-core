@@ -8,7 +8,11 @@ pub struct CallStub {
 impl CallStub { 
     pub fn get_session_id(&self) -> usize {
         self.session_id
-    }    
+    }
+
+    pub fn get_rpc_id(&self) -> usize { 
+        self.rpc_id
+    }
 }
 
 /// Data structures used to generate the RPC connect struct 

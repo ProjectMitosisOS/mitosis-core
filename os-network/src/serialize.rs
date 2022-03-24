@@ -21,7 +21,7 @@ impl BytesMut {
         }
     }
 
-    pub unsafe fn memcpy_deserialize<T: Sized>(&mut self, target: &mut T) -> core::option::Option<usize>  {
+    pub unsafe fn memcpy_deserialize<T: Sized>(&self, target: &mut T) -> core::option::Option<usize>  {
         if core::intrinsics::likely(core::mem::size_of::<T>() <= self.len()) {
             core::ptr::copy_nonoverlapping(self.ptr as _, target, 1);
             return Some(core::mem::size_of::<T>());
