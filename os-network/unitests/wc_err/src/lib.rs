@@ -12,11 +12,11 @@ use KRdmaKit::KDriver;
 
 use rust_kernel_linux_util as log;
 
-use os_network::rdma::payload;
-use os_network::{rdma, Conn};
-use os_network::conn::Factory;
 use os_network::block_on;
+use os_network::conn::Factory;
+use os_network::rdma::payload;
 use os_network::rdma::WCStatus::*;
+use os_network::{rdma, Conn};
 
 use mitosis_macros::declare_global;
 
@@ -32,13 +32,15 @@ declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 /// Pre-requisition: `ctx_init`
 fn test_rc_wc_err() {
     let driver = unsafe { KDRIVER::get_ref() };
-    let client_nic = driver
+    let client_ctx = driver
         .devices()
         .into_iter()
         .next()
-        .expect("no rdma device available");
+        .expect("no rdma device available")
+        .open()
+        .unwrap();
 
-    let client_factory = rdma::rc::RCFactory::new(client_nic).unwrap();
+    let client_factory = rdma::rc::RCFactory::new(&client_ctx);
 
     let server_ctx = driver
         .devices()
@@ -65,14 +67,14 @@ fn test_rc_wc_err() {
 
     let mut req = RCReqPayload::default()
         .set_laddr(mem.get_pa(0))
-        .set_raddr(mem.get_pa(0) + (capacity/2) as u64)
-        .set_sz(capacity/2)
+        .set_raddr(mem.get_pa(0) + (capacity / 2) as u64)
+        .set_sz(capacity / 2)
         .set_lkey(unsafe { client_factory.get_context().get_lkey() })
         .set_rkey(unsafe { server_ctx.get_rkey() + 1 }) // here we use a error rkey, resulting in IB_WC_REM_ACCESS_ERR, aka remote access error
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ);
 
-    let mut req = unsafe { Pin::new_unchecked(&mut req) }; 
+    let mut req = unsafe { Pin::new_unchecked(&mut req) };
     os_network::rdma::payload::Payload::<ib_rdma_wr>::finalize(req.as_mut());
 
     let res = rc.post(&req.as_ref());
@@ -85,7 +87,11 @@ fn test_rc_wc_err() {
     if result.is_err() {
         let wc_status = result.err().unwrap().unwrap_wc_err();
         if wc_status != IB_WC_REM_ACCESS_ERR {
-            log::error!("poll with error: {:?}, expected: {:?}", wc_status, IB_WC_REM_ACCESS_ERR);
+            log::error!(
+                "poll with error: {:?}, expected: {:?}",
+                wc_status,
+                IB_WC_REM_ACCESS_ERR
+            );
         }
     } else {
         log::error!("should poll with error");
@@ -96,14 +102,14 @@ fn test_rc_wc_err() {
 
     let mut req = RCReqPayload::default()
         .set_laddr(mem.get_pa(0))
-        .set_raddr(mem.get_pa(0) + (capacity/2) as u64)
-        .set_sz(capacity/2)
+        .set_raddr(mem.get_pa(0) + (capacity / 2) as u64)
+        .set_sz(capacity / 2)
         .set_lkey(unsafe { client_factory.get_context().get_lkey() })
-        .set_rkey(unsafe { server_ctx.get_rkey() }) 
+        .set_rkey(unsafe { server_ctx.get_rkey() })
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ);
 
-    let mut req = unsafe { Pin::new_unchecked(&mut req) }; 
+    let mut req = unsafe { Pin::new_unchecked(&mut req) };
     os_network::rdma::payload::Payload::<ib_rdma_wr>::finalize(req.as_mut());
 
     let res = rc.post(&req.as_ref());
@@ -116,7 +122,11 @@ fn test_rc_wc_err() {
     if result.is_err() {
         let wc_status = result.err().unwrap().unwrap_wc_err();
         if wc_status != IB_WC_WR_FLUSH_ERR {
-            log::error!("poll with error: {:?}, expected: {:?}", wc_status, IB_WC_WR_FLUSH_ERR);
+            log::error!(
+                "poll with error: {:?}, expected: {:?}",
+                wc_status,
+                IB_WC_WR_FLUSH_ERR
+            );
         }
     } else {
         log::error!("should poll with error");
@@ -124,9 +134,7 @@ fn test_rc_wc_err() {
     }
 }
 
-#[krdma_test(
-    test_rc_wc_err
-)]
+#[krdma_test(test_rc_wc_err)]
 fn ctx_init() {
     unsafe {
         KDRIVER::init(KDriver::create().unwrap());

@@ -15,12 +15,12 @@ use KRdmaKit::KDriver;
 
 use rust_kernel_linux_util as log;
 
-use os_network::bytes::BytesMut;
-use os_network::rdma::payload;
-use os_network::{rdma, Conn};
-use os_network::conn::Factory;
-use os_network::timeout::Timeout;
 use os_network::block_on;
+use os_network::bytes::BytesMut;
+use os_network::conn::Factory;
+use os_network::rdma::payload;
+use os_network::timeout::Timeout;
+use os_network::{rdma, Conn};
 
 use krdma_test::*;
 
@@ -39,13 +39,15 @@ unsafe fn global_kdriver() -> &'static mut Box<KDriver> {
 /// Pre-requisition: `ctx_init`
 fn test_rc_factory() {
     let driver = unsafe { global_kdriver() };
-    let client_nic = driver
+    let client_ctx = driver
         .devices()
         .into_iter()
         .next()
-        .expect("no rdma device available");
+        .expect("no rdma device available")
+        .open()
+        .expect("failed to open context");
 
-    let client_factory = rdma::rc::RCFactory::new(client_nic).unwrap();
+    let client_factory = rdma::rc::RCFactory::new(&client_ctx);
 
     let server_ctx = driver
         .devices()
@@ -78,13 +80,15 @@ fn test_rc_factory() {
 /// Pre-requisition: `ctx_init`
 fn test_rc_factory_with_meta() {
     let driver = unsafe { global_kdriver() };
-    let client_nic = driver
+    let client_ctx = driver
         .devices()
         .into_iter()
         .next()
-        .expect("no rdma device available");
+        .expect("no rdma device available")
+        .open()
+        .expect("failed to open context");
 
-    let client_factory = rdma::rc::RCFactoryWPath::new(client_nic).unwrap();
+    let client_factory = rdma::rc::RCFactoryWPath::new(&client_ctx);
 
     let server_ctx = driver
         .devices()
@@ -119,13 +123,15 @@ fn test_rc_factory_with_meta() {
 fn test_rc_post_poll() {
     let timeout_usec = 5000000;
     let driver = unsafe { global_kdriver() };
-    let client_nic = driver
+    let client_ctx = driver
         .devices()
         .into_iter()
         .next()
-        .expect("no rdma device available");
+        .expect("no rdma device available")
+        .open()
+        .expect("failed to open context");
 
-    let client_factory = rdma::rc::RCFactory::new(client_nic).unwrap();
+    let client_factory = rdma::rc::RCFactory::new(&client_ctx);
 
     let server_ctx = driver
         .devices()
@@ -167,8 +173,8 @@ fn test_rc_post_poll() {
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ);
 
-    // pin the request to set the sge_ptr properly. 
-    let mut read_req = unsafe { Pin::new_unchecked(&mut read_req) }; 
+    // pin the request to set the sge_ptr properly.
+    let mut read_req = unsafe { Pin::new_unchecked(&mut read_req) };
     os_network::rdma::payload::Payload::<ib_rdma_wr>::finalize(read_req.as_mut());
 
     let res = rc.post(&read_req.as_ref());
@@ -203,8 +209,8 @@ fn test_rc_post_poll() {
         .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
         .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE);
 
-    // pin the request to set the sge_ptr properly. 
-    let mut write_req = unsafe { Pin::new_unchecked(&mut write_req) }; 
+    // pin the request to set the sge_ptr properly.
+    let mut write_req = unsafe { Pin::new_unchecked(&mut write_req) };
     os_network::rdma::payload::Payload::<ib_rdma_wr>::finalize(write_req.as_mut());
 
     let res = rc.post(&write_req.as_ref());
@@ -227,11 +233,7 @@ fn test_rc_post_poll() {
     }
 }
 
-#[krdma_test(
-    test_rc_factory,
-    test_rc_factory_with_meta,
-    test_rc_post_poll
-)]
+#[krdma_test(test_rc_factory, test_rc_factory_with_meta, test_rc_post_poll)]
 fn ctx_init() {
     unsafe {
         KDRIVER = KDriver::create();

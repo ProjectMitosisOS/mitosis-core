@@ -5,10 +5,9 @@ use alloc::sync::Arc;
 use crate::future::{Async, Future, Poll};
 
 use core::marker::PhantomData;
-use core::option::Option;
 
 use KRdmaKit::cm::SidrCM;
-use KRdmaKit::device::{RContext, RNIC};
+use KRdmaKit::device::{RContext};
 use KRdmaKit::qp::UD;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
@@ -18,16 +17,16 @@ pub const MAX_MTU: usize = 4096;
 pub const MAX_MSG_SZ: usize = MAX_MTU - 40;
 
 pub struct UDFactory<'a> {
-    rctx: RContext<'a>,
+    rctx: &'a RContext<'a>,
 }
 
 impl<'a> UDFactory<'a> {
-    pub fn new(hca: &'a RNIC) -> Option<Self> {
-        RContext::create(hca).map(|c| Self { rctx: c })
+    pub fn new(ctx: &'a RContext<'a>) -> Self {
+        Self { rctx: ctx }
     }
 
     pub fn get_context(&self) -> &RContext<'_> {
-        &self.rctx
+        self.rctx
     }
 }
 

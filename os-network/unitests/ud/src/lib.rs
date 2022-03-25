@@ -30,19 +30,16 @@ declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 /// Pre-requisition: `ctx_init`
 fn test_ud_factory() {
     let driver = unsafe { KDRIVER::get_ref() };
-    let nic = driver
+    let ctx = driver
         .devices()
         .into_iter()
         .next()
-        .expect("no rdma device available");
+        .expect("no rdma device available")
+        .open()
+        .expect("failed to open context");
 
-    let factory = UDFactory::new(nic);
-    if factory.is_none() {
-        log::error!("fail to create ud factory");
-        return;
-    }
+    let factory = UDFactory::new(&ctx);
 
-    let factory = factory.unwrap();
     let ud = factory.create(());
     if ud.is_err() {
         log::error!("fail to create ud qp");
@@ -60,9 +57,9 @@ use os_network::datagram::ud_receiver::*;
 fn test_ud_two_sided() {
     let timeout_usec = 1000_000;
     let driver = unsafe { KDRIVER::get_ref() };
-    let nic = driver.devices().into_iter().next().unwrap();
+    let ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
 
-    let factory = UDFactory::new(nic).unwrap();
+    let factory = UDFactory::new(&ctx);
     let ctx = factory.get_context();
 
     let server_ud = factory.create(()).unwrap();
@@ -83,7 +80,7 @@ fn test_ud_two_sided() {
         .set_qd_hint(0)
         .set_lkey(unsafe { ctx.get_lkey() })
         .create(server_ud);
-        
+
     for _ in 0..12 {
         // 64 is the header
         match ud_receiver.post_recv_buf(UDMsg::new(MSG_SIZE + 64, 73)) {

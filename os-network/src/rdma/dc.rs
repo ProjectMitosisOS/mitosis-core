@@ -1,8 +1,7 @@
 use alloc::sync::Arc;
 
 use KRdmaKit::device::RContext;
-use KRdmaKit::device::RNIC;
-use KRdmaKit::qp::{DC, DCOp};
+use KRdmaKit::qp::{DCOp, DC};
 use KRdmaKit::rust_kernel_rdma_base::ib_dc_wr;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
@@ -11,16 +10,16 @@ use rust_kernel_linux_util as log;
 use core::marker::PhantomData;
 
 pub struct DCFactory<'a> {
-    rctx: RContext<'a>,
+    rctx: &'a RContext<'a>,
 }
 
 impl<'a> DCFactory<'a> {
-    pub fn new(hca: &'a RNIC) -> Option<Self> {
-        RContext::create(hca).map(|c| Self { rctx: c })
+    pub fn new(ctx: &'a RContext<'a>) -> Self {
+        Self { rctx: ctx }
     }
 
     pub fn get_context(&self) -> &RContext<'_> {
-        &self.rctx
+        self.rctx
     }
 }
 
@@ -38,18 +37,17 @@ impl crate::Conn for DCConn<'_> {
     type IOResult = super::Err;
 
     #[inline]
-    fn post(&mut self, req: &Self::ReqPayload) -> Result<(),Self::IOResult> {
-        compiler_fence(SeqCst); 
+    fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
+        compiler_fence(SeqCst);
         let mut op = DCOp::new(&self.dc);
         unsafe {
-            op.post_send_raw(req.get_wr_ptr() as *mut _).map_err(|_x| {
-                super::Err::Other
-            })
+            op.post_send_raw(req.get_wr_ptr() as *mut _)
+                .map_err(|_x| super::Err::Other)
         }
     }
 }
 
-use crate::future::{Async,Future,Poll};
+use crate::future::{Async, Future, Poll};
 
 impl Future for DCConn<'_> {
     type Output = ib_wc;
@@ -57,27 +55,25 @@ impl Future for DCConn<'_> {
 
     #[inline]
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
-        compiler_fence(SeqCst); 
+        compiler_fence(SeqCst);
         let mut wc: ib_wc = Default::default();
         let cq = self.dc.get_cq();
-        let ret = unsafe {
-            bd_ib_poll_cq(cq, 1, &mut wc)
-        };
+        let ret = unsafe { bd_ib_poll_cq(cq, 1, &mut wc) };
         match ret {
             0 => {
                 return Ok(Async::NotReady);
-            },
+            }
             1 => {
                 if wc.status != ib_wc_status::IB_WC_SUCCESS {
                     return Err(super::Err::WCErr(wc.status.into()));
                 } else {
                     return Ok(Async::Ready(wc));
                 }
-            },
+            }
             _ => {
                 log::error!("ib_poll_cq returns {}", ret);
                 return Err(super::Err::Other);
-            },
+            }
         }
     }
 }
