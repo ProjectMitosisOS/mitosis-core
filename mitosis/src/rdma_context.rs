@@ -12,7 +12,7 @@ const service_id_base: u64 = 73; // not using 0 to prevent error
 /// Return
 /// * Some(()), the start succeeds
 /// * None, fatal error happens, the result is printed
-pub fn start_rdma(config: crate::Config) -> core::option::Option<()> {
+pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
     unsafe {
         let kdriver = KRdmaKit::KDriver::create()?;
         crate::rdma_driver::init(kdriver);

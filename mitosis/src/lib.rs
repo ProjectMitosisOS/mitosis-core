@@ -16,10 +16,10 @@ pub mod syscalls;
 
 use alloc::vec::Vec;
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct Config {
     pub(crate) num_nics_used: usize,
-    pub(crate) fallback_threads_num: usize,
+    pub(crate) rpc_threads_num: usize,
     // my machine ID
     pub(crate) machine_id: usize,
     // gid is RDMA address
@@ -30,7 +30,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             num_nics_used: 1,
-            fallback_threads_num: 2,
+            rpc_threads_num: 2,
             machine_id: 0,
             peers_gid: Vec::new(),
         }
@@ -43,8 +43,8 @@ impl Config {
         self
     }
 
-    pub fn set_fallback_num(&mut self, num: usize) -> &mut Self {
-        self.fallback_threads_num = num;
+    pub fn set_rpc_num(&mut self, num: usize) -> &mut Self {
+        self.rpc_threads_num = num;
         self
     }
 
@@ -91,3 +91,6 @@ pub mod startup;
 /// Note, the `start_instance` also calls the `start_rdma`
 declare_global!(ud_factories, os_network::datagram::ud::UDFactory<'static>);
 declare_global!(dc_factories, os_network::rdma::dc::DCFactory<'static>);
+
+pub mod rpc_service;
+declare_global!(service_rpc, crate::rpc_service::Service);

@@ -117,6 +117,8 @@ E[SysCallsService]
 E --> A
 E --> F
 F --> C
+
+G[RPCService]
 ```
 
 

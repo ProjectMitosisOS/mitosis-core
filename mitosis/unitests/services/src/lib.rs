@@ -5,21 +5,25 @@ extern crate alloc;
 use mitosis::linux_kernel_module;
 use mitosis::log;
 
-use mitosis::rdma_context::*;
+use mitosis::startup::*;
 
 use krdma_test::*;
 
-#[krdma_main]
-fn kmain() {
-    log::info!("in test mitosis RDMA context!");
+fn test_rpc() { 
+    log::info!("in test rpc");
+}
+
+#[krdma_test(test_rpc)]
+fn init() {
+    log::info!("in test mitosis service startups!");
 
     let mut config : mitosis::Config = Default::default();
     config.set_num_nics_used(2);
 
-    assert!(start_rdma(&config).is_some());
+    assert!(start_instance(config).is_some());
 }
 
 #[krdma_drop]
 fn clean() {
-    end_rdma();
+    end_instance();
 }
