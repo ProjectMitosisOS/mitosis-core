@@ -16,11 +16,15 @@ impl Task {
         }
     }
 
-    pub fn get_current_registers() -> crate::bindings::Registers {
+    /// The bellow comments are taken from arch/alpha/include/uapi/asm/ptrace.h
+    /// * This struct defines the way the registers are stored on the
+    /// * kernel stack during a system call or other kernel entry
+    pub fn get_stack_registers() -> crate::bindings::StackRegisters {
         unsafe { *crate::bindings::pmem_get_current_pt_regs() }
     }
 
-    pub fn set_regs(regs: &crate::bindings::Registers) {
+    /// Set registers stored on the stack 
+    pub fn set_stack_registers(regs: &crate::bindings::StackRegisters) {
         unsafe { core::ptr::write_volatile(crate::bindings::pmem_get_current_pt_regs(), *regs) };
     }
 
