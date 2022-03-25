@@ -26,6 +26,8 @@ pub struct Config {
     pub(crate) rpc_threads_num: usize,
     // my machine ID
     pub(crate) machine_id: usize,
+    // how many CPU core is available on the machine
+    pub(crate) max_core_cnt : usize,
     // gid is RDMA address
     pub(crate) peers_gid: Vec<alloc::string::String>,
 }
@@ -36,7 +38,8 @@ impl Default for Config {
             num_nics_used: 1,
             rpc_threads_num: 2,
             machine_id: 0,
-            peers_gid: Vec::new(),
+            max_core_cnt : 24, 
+            peers_gid: Vec::new(),            
         }
     }
 }
@@ -59,6 +62,11 @@ impl Config {
 
     pub fn add_gid(&mut self, gid: alloc::string::String) -> &mut Self {
         self.peers_gid.push(gid);
+        self
+    }
+
+    pub fn set_max_core_cnt(&mut self, cnt : usize) -> &mut Self { 
+        self.max_core_cnt = cnt;
         self
     }
 }
@@ -118,4 +126,10 @@ declare_global!(
     alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
 );
 
+/// Threads for handling in-coming RPC requests
 declare_global!(service_rpc, crate::rpc_service::Service);
+
+/// A pool of connected RPC clients
+pub mod rpc_caller_pool;
+
+declare_global!(service_caller_pool, crate::rpc_caller_pool::CallerPool);

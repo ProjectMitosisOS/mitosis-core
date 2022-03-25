@@ -5,29 +5,29 @@ use alloc::vec::Vec;
 pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     start_rdma(&config).expect("fail to create RDMA context");
 
-    // high-level RDMA-related data structures 
+    // high-level RDMA-related data structures
 
     // UD factory
-    unsafe { 
+    unsafe {
         use os_network::datagram::ud::*;
 
         let mut ud_factories = Vec::new();
-        for c in crate::rdma_contexts::get_ref() { 
+        for c in crate::rdma_contexts::get_ref() {
             ud_factories.push(UDFactory::new(c));
         }
         crate::ud_factories::init(ud_factories);
     };
 
-    // DC factory 
-    unsafe { 
+    // DC factory
+    unsafe {
         use os_network::rdma::dc::*;
 
         let mut dc_factories = Vec::new();
-        for c in crate::rdma_contexts::get_ref() { 
+        for c in crate::rdma_contexts::get_ref() {
             dc_factories.push(DCFactory::new(c));
         }
         crate::dc_factories::init(dc_factories);
-    };    
+    };
 
     // RPC service
     unsafe {
@@ -36,6 +36,14 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
         );
     };
 
+    // RPC caller pool
+    unsafe {
+        crate::service_caller_pool::init(
+            crate::rpc_caller_pool::CallerPool::new(&config)
+                .expect("Failed to create the RPC caller pool"),
+        )
+    }
+
     // TODO: other services
 
     Some(())
@@ -43,6 +51,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 
 pub fn end_instance() {
     unsafe {
+        crate::service_caller_pool::drop();
         crate::service_rpc::drop();
     };
     end_rdma();
