@@ -5,17 +5,20 @@ extern crate alloc;
 use rust_kernel_linux_util as log;
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
-use mitosis::syscalls::SysCallsService;
+use mitosis::syscalls::*;
+
+mod my_syscall;
+use my_syscall::MySyscallHandler;
 
 #[allow(dead_code)]
 struct Module {
-    service : SysCallsService,
+    service : SysCallsService<MySyscallHandler>,
 }
 
 impl linux_kernel_module::KernelModule for Module {
     fn init() -> linux_kernel_module::KernelResult<Self> {
         Ok(Self { 
-            service : SysCallsService::new()?
+            service : SysCallsService::<MySyscallHandler>::new()?
         })
     }
 }

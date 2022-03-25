@@ -41,6 +41,10 @@ User-space libraries to provide lean container, similar to runC.
 
 **TODO**: @TianXia, please add these
 
+- **Container** to fork from others: we can call it `InfraContainer` (inspired by [K8S](https://jimmysong.io/kubernetes-handbook/concepts/pause-container.html))
+
+  
+
 
 
 ### 3.2 Kernel Space Data structures (Services)
