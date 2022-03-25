@@ -17,6 +17,7 @@ pub const VERSION: usize = 0;
 pub mod syscalls;
 
 pub mod bindings;
+pub mod kern_wrappers;
 
 use alloc::vec::Vec;
 
