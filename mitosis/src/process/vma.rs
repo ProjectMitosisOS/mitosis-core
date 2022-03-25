@@ -1,15 +1,15 @@
 use crate::bindings::vm_area_struct;
 
 #[derive(Debug, Clone, Copy)]
-pub struct VMAMeta {
-    vma_inner: vm_area_struct,
+pub struct VMAMeta<'a> {
+    vma_inner: &'a vm_area_struct,
 }
 
 #[allow(dead_code)]
-impl VMAMeta {
-    pub fn new(vma: &crate::bindings::vm_area_struct) -> Self {
+impl<'a> VMAMeta<'a> {
+    pub fn new(vma: &'a crate::bindings::vm_area_struct) -> Self {
         Self {
-            vma_inner: *vma,
+            vma_inner: vma,
         }
     }
 
@@ -61,11 +61,15 @@ impl VMAMeta {
         }
         ret
     }
+
+    pub fn get_all_mappings(&self) -> PageTableT {
+        self.vma_inner.get_all_mappings()
+    }
 }
 
 use crate::bindings::VMFlags;
 
-impl core::fmt::Display for VMAMeta {
+impl core::fmt::Display for VMAMeta<'_> {
     fn fmt(&self, fmt: &mut ::core::fmt::Formatter) -> core::fmt::Result {
         let vm_flags = self.get_flags();
         fmt.write_fmt(format_args!(
@@ -86,7 +90,7 @@ pub type PhyAddrType = u64;
 type PageTableT = Vec<(VirtAddrType, PhyAddrType)>;
 
 impl vm_area_struct {
-    pub fn get_all_mappings(&self) -> PageTableT {
+    fn get_all_mappings(&self) -> PageTableT {
         let mut vm_read = VMReadEngine::new();
         vm_read.execute(self as *const _);
         vm_read.mappings

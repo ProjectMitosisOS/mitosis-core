@@ -52,13 +52,14 @@ impl MySyscallHandler {
         let mut total_page_count = 0;
         let mut vma_count = 0;
 
+        // count the page and vma in the loop
         for vma in mm.get_vm_iters() {
             let vma_meta = VMAMeta::new(vma);
             if vma_meta.is_stack() {
                 stack_page_count += 1;
             }
 
-            for _ in vma.get_all_mappings() {
+            for _ in vma_meta.get_all_mappings() {
                 total_page_count += 1;
             }
             vma_count += 1;
