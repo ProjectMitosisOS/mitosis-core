@@ -1,5 +1,4 @@
 #![no_std]
-#![feature()]
 
 extern crate alloc;
 
@@ -13,6 +12,8 @@ pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 pub const VERSION: usize = 0;
 
 pub mod syscalls;
+
+pub mod bindings;
 
 use alloc::vec::Vec;
 
@@ -94,3 +95,6 @@ declare_global!(dc_factories, os_network::rdma::dc::DCFactory<'static>);
 
 pub mod rpc_service;
 declare_global!(service_rpc, crate::rpc_service::Service);
+
+// Process-related data structures used by MITOSIS
+pub mod process;
