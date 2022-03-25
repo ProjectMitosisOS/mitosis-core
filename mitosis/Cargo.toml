@@ -14,11 +14,13 @@ cc = "1.0"
 shlex = "0.1"
 
 [features]
-default = ["os-network"]
+default = ["os-network", "rust-kernel-linux-util"]
 
 [dependencies]
 mitosis-protocol = { path = "../mitosis-user-libs/mitosis-protocol"}
-os-network = { path = "../os-network", optional = true }
+os-network = { path = "../os-network", optional = true, features=["dct"]}
+rust-kernel-linux-util = {path = "../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
+mitosis-macros = {path = "../mitosis-macros"}
 bitflags = "1"
 
 [dependencies.lazy_static]
