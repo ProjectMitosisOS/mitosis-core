@@ -35,10 +35,10 @@ fn test_ud_session() {
     let timeout_usec = 1000_000;
 
     let driver = unsafe { KDRIVER::get_ref() };
-    let nic = driver.devices().into_iter().next().unwrap();
+    let ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
 
     // initialization
-    let factory = UDFactory::new(nic).unwrap();
+    let factory = UDFactory::new(&ctx);
     let ctx = factory.get_context();
 
     // server UD
@@ -53,7 +53,7 @@ fn test_ud_session() {
     // init the receiver
     let mut ud_receiver = UDReceiverFactory::new()
         .set_qd_hint(0)
-        .set_lkey(unsafe {ctx.get_lkey()})
+        .set_lkey(unsafe { ctx.get_lkey() })
         .create(server_ud);
 
     for _ in 0..12 {
@@ -65,14 +65,14 @@ fn test_ud_session() {
     }
 
     // the client part
-    let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();   
+    let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();
 
     let (endpoint, key) = factory
         .create_meta(UDHyperMeta {
             gid: gid,
             service_id: service_id,
             qd_hint: DEFAULT_QD_HINT,
-        },)
+        })
         .unwrap();
     log::info!("check endpoint, key: {:?}, {}", endpoint, key);
 

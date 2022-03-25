@@ -39,9 +39,8 @@ fn test_ud_rpc() {
 
     // init RDMA_related data structures
     let driver = unsafe { KDriver::create().unwrap() };
-    let nic = driver.devices().into_iter().next().unwrap();
-    let factory = UDFactory::new(nic).unwrap();
-    let ctx = factory.get_context();
+    let ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    let factory = UDFactory::new(&ctx);
 
     let server_ud = factory.create(()).unwrap();
     let client_ud = factory.create(()).unwrap();
@@ -147,8 +146,7 @@ fn test_ud_rpc() {
     match res {
         Ok(msg) => {
             let bytes = unsafe { msg.get_bytes().clone() };
-            let msg_header_bytes =
-                unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
+            let msg_header_bytes = unsafe { bytes.truncate_header(UDReceiver::HEADER).unwrap() };
             let mut msg_header: MsgHeader = Default::default();
             unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
             log::info!("sanity check decoded reply {:?}", msg_header);

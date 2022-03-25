@@ -77,9 +77,8 @@ fn test_ud_rpc() {
 
     // init RDMA_related data structures
     let driver = unsafe { KDriver::create().unwrap() };
-    let nic = driver.devices().into_iter().next().unwrap();
-    let factory = UDFactory::new(nic).unwrap();
-    let ctx = factory.get_context();
+    let ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    let factory = UDFactory::new(&ctx);
 
     let server_ud = factory.create(()).unwrap();
     let client_ud = factory.create(()).unwrap();
@@ -234,8 +233,8 @@ fn test_ud_rpc_elegant() {
 
     /*********Driver part****************/
     let driver = unsafe { KDriver::create().unwrap() };
-    let nic = driver.devices().into_iter().next().unwrap();
-    let factory = UDFactory::new(nic).unwrap();
+    let ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    let factory = UDFactory::new(&ctx);
     let ctx = factory.get_context();
 
     let service_id: u64 = 0;

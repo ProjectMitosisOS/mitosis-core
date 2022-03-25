@@ -6,6 +6,8 @@ use KRdmaKit::rust_kernel_rdma_base::*;
 
 use os_network::rpc::*;
 
+const service_id_base : usize = 0;
+
 /// Note: need to call `end_rdma` before destroying the kernel module
 /// Return
 /// * Some(()), the start succeeds
@@ -24,12 +26,17 @@ pub fn start_rdma(config: crate::Config) -> core::option::Option<()> {
         crate::rdma_contexts::init(contexts);
     };
 
+    unsafe { 
+
+    };
+
     Some(())
 }
 
 pub fn end_rdma() {
     // Note: the **order** of drop is very important here
     unsafe {
+        crate::rdma_cm_service::drop();
         crate::rdma_contexts::drop();
         crate::rdma_driver::drop();
     };

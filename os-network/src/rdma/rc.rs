@@ -3,9 +3,8 @@ use alloc::sync::Arc;
 use core::marker::PhantomData;
 use core::option::Option;
 
-use KRdmaKit::device::{RContext, RNIC};
-use KRdmaKit::qp::RCOp;
-use KRdmaKit::qp::RC;
+use KRdmaKit::device::RContext;
+use KRdmaKit::qp::{RC,RCOp};
 use KRdmaKit::rust_kernel_rdma_base::*;
 
 use rust_kernel_linux_util as log;
@@ -13,16 +12,16 @@ use rust_kernel_linux_util as log;
 use super::{ConnErr, ConnMetaWPath};
 
 pub struct RCFactory<'a> {
-    rctx: RContext<'a>,
+    rctx: &'a RContext<'a>,
 }
 
 impl<'a> RCFactory<'a> {
-    pub fn new(hca: &'a RNIC) -> Option<Self> {
-        RContext::create(hca).map(|c| Self { rctx: c })
+    pub fn new(ctx: &'a RContext<'a>) -> Self {
+        Self { rctx: ctx }
     }
 
     pub fn get_context(&self) -> &RContext<'_> {
-        &self.rctx
+        self.rctx
     }
 }
 
@@ -56,12 +55,12 @@ impl crate::conn::Factory for RCFactory<'_> {
 }
 
 pub struct RCFactoryWPath<'a> {
-    rctx: RContext<'a>,
+    rctx: &'a RContext<'a>,
 }
 
 impl<'a> RCFactoryWPath<'a> {
-    pub fn new(hca: &'a RNIC) -> Option<Self> {
-        RContext::create(hca).map(|c| Self { rctx: c })
+    pub fn new(hca: &'a RContext<'a>) -> Self {
+        Self { rctx: hca }
     }
 
     pub fn convert_meta(&self, meta: super::ConnMeta) -> Option<super::ConnMetaWPath> {
@@ -112,7 +111,7 @@ impl RCConn<'_> {
 
     pub fn get_qp(&self) -> Arc<RC> {
         self.rc.clone()
-    } 
+    }
 }
 
 use core::sync::atomic::compiler_fence;
@@ -123,7 +122,7 @@ impl crate::Conn for RCConn<'_> {
 
     #[inline]
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
-        compiler_fence(SeqCst); 
+        compiler_fence(SeqCst);
         let mut op = RCOp::new(&self.rc);
         unsafe {
             op.post_send_raw(req.get_wr_ptr() as *mut _).map_err(|_x| {
@@ -134,17 +133,17 @@ impl crate::Conn for RCConn<'_> {
     }
 }
 
-use crate::future::{Async,Future,Poll}; 
+use crate::future::{Async, Future, Poll};
 
-impl Future for RCConn<'_> { 
+impl Future for RCConn<'_> {
     type Output = ib_wc;
     type Error = super::Err;
 
-    // XD: should refine. Why using RCOp here? 
+    // XD: should refine. Why using RCOp here?
     // Maybe we call just call the low-level ib_poll_cq
     #[inline]
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
-        compiler_fence(SeqCst); 
+        compiler_fence(SeqCst);
         let mut op = RCOp::new(&self.rc);
         let mut wc: ib_wc = Default::default();
         let result = op.pop_with_wc(&mut wc as *mut ib_wc);
@@ -158,6 +157,6 @@ impl Future for RCConn<'_> {
             return Err(super::Err::WCErr(result.into()));
         } else {
             return Ok(Async::Ready(wc));
-        }        
+        }
     }
 }

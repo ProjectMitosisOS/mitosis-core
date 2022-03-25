@@ -76,9 +76,9 @@ fn test_dc_remote() {
     let _ctrl = RCtrl::create(service_id, &server_ctx);
 
     // Create the dc qp
-    let client_nic = driver.devices().into_iter().next().unwrap();
-    let client_factory = DCFactory::new(client_nic).unwrap();
-    let client_ctx = client_factory.get_context();
+    let client_ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    let client_factory = DCFactory::new(&client_ctx);
+
     let lkey = unsafe { client_ctx.get_lkey() };
     let dc = client_factory.create(()).unwrap();
     let dc = Arc::new(dc);
@@ -88,7 +88,7 @@ fn test_dc_remote() {
         .get_context()
         .explore_path(gid, service_id)
         .unwrap();
-    let mut sidr_cm = SidrCM::new(client_ctx, core::ptr::null_mut()).unwrap();
+    let mut sidr_cm = SidrCM::new(&client_ctx, core::ptr::null_mut()).unwrap();
     let endpoint = sidr_cm
         .sidr_connect(path_res, service_id, DEFAULT_QD_HINT)
         .unwrap();
@@ -153,9 +153,9 @@ fn test_rc_remote() {
     };
 
     // Create the rc qp
-    let client_nic = driver.devices().into_iter().next().unwrap();
-    let client_factory = RCFactory::new(client_nic).unwrap();
-    let client_ctx = client_factory.get_context();
+    let client_ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    let client_factory = RCFactory::new(&client_ctx);
+
     let lkey = unsafe { client_ctx.get_lkey() };
     let rc = client_factory.create(conn_meta).unwrap();
     let rc = Arc::new(rc);
