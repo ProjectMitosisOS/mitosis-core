@@ -9,7 +9,7 @@ use mitosis::startup::*;
 
 use krdma_test::*;
 
-fn test_rpc() { 
+fn test_rpc() {
     log::info!("in test rpc");
 }
 
@@ -17,8 +17,8 @@ fn test_rpc() {
 fn init() {
     log::info!("in test mitosis service startups!");
 
-    let mut config : mitosis::Config = Default::default();
-    config.set_num_nics_used(2);
+    let mut config: mitosis::Config = Default::default();
+    config.set_num_nics_used(1).set_rpc_threads(2);
 
     assert!(start_instance(config).is_some());
 }

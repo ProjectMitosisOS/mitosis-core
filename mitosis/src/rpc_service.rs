@@ -52,14 +52,23 @@ struct ThreadCTX {
     pub(crate) nic_to_use: usize,
 }
 
+use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
-use os_network::rpc::header::*;
+use os_network::future::*;
+use os_network::Factory;
+
+use rust_kernel_linux_util::timer::KTimer;
+
+pub const QD_HINT_BASE: usize = 12;
+
+use super::rpc_handlers::*;
 
 impl Service {
     const YIELD_THRESHOLD: usize = 10000;
     const YIELD_TIME_USEC: i64 = 2000; // 1ms
 
+    #[allow(non_snake_case)]
     extern "C" fn worker(ctx: *mut c_void) -> c_int {
         let arg = unsafe { Box::from_raw(ctx as *mut ThreadCTX) };
         crate::log::debug!("MITOSIS RPC thread {} started. ", arg.id);
@@ -68,12 +77,76 @@ impl Service {
         type UDRPCHook<'a, 'b> =
             os_network::rpc::hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
 
+        let local_context = unsafe { crate::rdma_contexts::get_ref().get(arg.nic_to_use).unwrap() };
+        let lkey = unsafe { local_context.get_lkey() };
 
-        while !kthread::should_stop() {
-            kthread::yield_now();
+        let server_ud = unsafe {
+            crate::ud_factories::get_ref()
+                .get(arg.nic_to_use)
+                .expect("failed to query the factory")
+                .create(())
+                .expect("failed to create server UD")
+        };
+        let temp_ud = server_ud.clone();
+
+        unsafe {
+            crate::rdma_cm_service::get_mut()
+                .get(arg.nic_to_use)
+                .unwrap()
+                .reg_ud(QD_HINT_BASE + arg.id, server_ud.get_qp())
+        };
+
+        let mut rpc_server = UDRPCHook::new(
+            unsafe { crate::ud_factories::get_ref().get(arg.nic_to_use).unwrap() },
+            server_ud,
+            UDReceiverFactory::new()
+                .set_qd_hint((QD_HINT_BASE + arg.id) as _)
+                .set_lkey(lkey)
+                .create(temp_ud),
+        );
+
+        // register the callbacks
+        rpc_server
+            .get_mut_service()
+            .register(RPCId::Nil as _, handle_nil);
+        rpc_server
+            .get_mut_service()
+            .register(RPCId::Echo as _, handle_echo);
+
+        // register msg buffers
+        // pre-most receive buffers
+        for _ in 0..1024 {
+            // 64 is the header
+            match rpc_server.post_msg_buf(UDMsg::new(4096, 73)) {
+                Ok(_) => {}
+                Err(e) => crate::log::error!("post recv buf err: {:?}", e),
+            }
         }
 
-        crate::log::debug!("MITOSIS RPC thread {} ended. ", arg.id);
+        let mut counter = 0;
+        let mut timer = KTimer::new();
+
+        while !kthread::should_stop() {
+            match rpc_server.poll() {
+                Ok(Async::Ready(_)) => {}
+                Ok(_NotReady) => {}
+                Err(e) => crate::log::error!("RPC handler {} meets an error {:?}", arg.id, e),
+            };
+            counter += 1;
+            if core::intrinsics::unlikely(counter > Self::YIELD_THRESHOLD) {
+                if core::intrinsics::unlikely(timer.get_passed_usec() > Self::YIELD_TIME_USEC) {
+                    kthread::yield_now();
+                    timer.reset();
+                }
+                counter = 0;
+            }
+        }
+
+        crate::log::debug!(
+            "MITOSIS RPC thread {} ended. rpc status: {:?} ",
+            arg.id,
+            rpc_server
+        );
         0
     }
 }

@@ -1,5 +1,5 @@
 #![no_std]
-#![feature()]
+#![feature(core_intrinsics)]
 
 extern crate alloc;
 
@@ -16,7 +16,7 @@ pub mod syscalls;
 
 use alloc::vec::Vec;
 
-//! TODO: doc how to use mitosis
+// TODO: doc how to use mitosis
 
 #[derive(Debug,Clone)]
 pub struct Config {
@@ -45,7 +45,7 @@ impl Config {
         self
     }
 
-    pub fn set_rpc_num(&mut self, num: usize) -> &mut Self {
+    pub fn set_rpc_threads(&mut self, num: usize) -> &mut Self {
         self.rpc_threads_num = num;
         self
     }
