@@ -17,7 +17,7 @@ pub mod syscalls;
 pub mod rdma_context;
 
 #[derive(Debug)]
-pub(crate) struct Config {
+pub struct Config {
     pub(crate) num_nics_used: usize,
     pub(crate) fallback_threads_num: usize,
 }
@@ -28,5 +28,17 @@ impl Default for Config {
             num_nics_used: 1,
             fallback_threads_num: 2,
         }
+    }
+}
+
+impl Config { 
+    pub fn set_num_nics_used(&mut self, num : usize) -> &mut self { 
+        self.num_nics_used = num;
+        self
+    }
+
+    pub fn set_fallback_num(&mut self, num : usize) -> &mut self { 
+        self.fallback_threads_num = num;
+        self
     }
 }
