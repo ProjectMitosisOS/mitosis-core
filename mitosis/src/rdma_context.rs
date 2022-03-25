@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use os_network::KRdmaKit;
 use KRdmaKit::ctrl::RCtrl;
 
-const SERVICE_ID_BASE: u64 = 73; // not using 0 to prevent error
+pub const SERVICE_ID_BASE: u64 = 73; // not using 0 to prevent error
 
 /// Note: need to call `end_rdma` before destroying the kernel module
 /// Return

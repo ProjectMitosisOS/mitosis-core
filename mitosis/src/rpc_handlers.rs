@@ -16,6 +16,6 @@ use core::fmt::Write;
 
 pub(crate) fn handle_echo(input: &BytesMut, output: &mut BytesMut) -> usize {
     crate::log::info!("echo callback {:?}", input);
-    write!(output, "test_callback").unwrap();
+    write!(output, "Hello from MITOSIS").unwrap();
     64
 }

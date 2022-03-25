@@ -5,8 +5,10 @@ extern crate alloc;
 
 use mitosis_macros::declare_global;
 
-pub(crate) use os_network::KRdmaKit;
+pub use os_network;
+pub use os_network::KRdmaKit;
 
+pub use rust_kernel_linux_util;
 pub use rust_kernel_linux_util as log;
 pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
@@ -18,7 +20,7 @@ use alloc::vec::Vec;
 
 // TODO: doc how to use mitosis
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub(crate) num_nics_used: usize,
     pub(crate) rpc_threads_num: usize,
@@ -76,6 +78,13 @@ pub mod rdma_context;
 
 declare_global!(rdma_driver, alloc::boxed::Box<crate::KRdmaKit::KDriver>);
 declare_global!(rdma_contexts, alloc::vec::Vec<crate::RContext<'static>>);
+
+pub unsafe fn get_rdma_context_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static crate::RContext<'static>> {
+    crate::rdma_contexts::get_ref().get(nic_idx)
+}
+
 declare_global!(
     rdma_cm_service,
     alloc::vec::Vec<core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>>
@@ -87,13 +96,26 @@ declare_global!(
 
 pub mod startup;
 
+pub mod rpc_handlers;
 /// high-level services are also exposed by global variables.
 /// These variables uses the `start_instance` and `end_instance` in startup.rs for initialize.
 /// Note, the `start_instance` also calls the `start_rdma`
 pub mod rpc_service;
-pub mod rpc_handlers;
 
-declare_global!(ud_factories, alloc::vec::Vec<os_network::datagram::ud::UDFactory<'static>>);
-declare_global!(dc_factories, alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>);
+declare_global!(
+    ud_factories,
+    alloc::vec::Vec<os_network::datagram::ud::UDFactory<'static>>
+);
+
+pub unsafe fn get_ud_factory_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static os_network::datagram::ud::UDFactory<'static>> {
+    crate::ud_factories::get_ref().get(nic_idx)
+}
+
+declare_global!(
+    dc_factories,
+    alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
+);
 
 declare_global!(service_rpc, crate::rpc_service::Service);
