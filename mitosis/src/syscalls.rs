@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use crate::linux_kernel_module::bindings::*;
 use crate::linux_kernel_module::c_types::*;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
+use crate::linux_kernel_module;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module::println;

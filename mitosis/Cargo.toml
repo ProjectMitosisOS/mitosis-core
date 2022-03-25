@@ -14,11 +14,11 @@ cc = "1.0"
 shlex = "0.1"
 
 [features]
-default = ["KRdmaKit"]
+default = ["os-network"]
 
 [dependencies]
-KRdmaKit = { path = "../deps/rust-kernel-rdma/KRdmaKit", optional = true, features = ["dct"] }
 mitosis-protocol = { path = "../mitosis-user-libs/mitosis-protocol"}
+os-network = { path = "../os-network", optional = true }
 bitflags = "1"
 
 [dependencies.lazy_static]

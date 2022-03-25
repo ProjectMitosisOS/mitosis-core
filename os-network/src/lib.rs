@@ -36,6 +36,9 @@ pub mod rdma;
 #[allow(unused_imports)]
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util as log;
 
+#[allow(unused_imports)]
+pub use KRdmaKit; // expose to others
+
 /// Block on the future until it is ready or error
 #[allow(non_snake_case)]
 pub fn block_on<F: Future>(f: &mut F) -> Result<F::Output, F::Error> {
