@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-mod bindings;
+use mitosis_macros::declare_global;
 
 pub(crate) use os_network::KRdmaKit;
 
@@ -13,9 +13,6 @@ pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 pub const VERSION: usize = 0;
 
 pub mod syscalls;
-
-// The RDMA context used by MITOSIS
-pub mod rdma_context;
 
 use alloc::vec::Vec;
 
@@ -62,8 +59,6 @@ impl Config {
     }
 }
 
-use mitosis_macros::declare_global;
-
 // kernel-space global variables
 
 /***** RDMA-related global data structures */
@@ -72,7 +67,12 @@ use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::device::RContext;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
-// low-level contexts are directly exposed as global variables
+// The RDMA context used by MITOSIS
+pub mod rdma_context;
+
+/// low-level contexts are directly exposed as global variables
+/// These variables can use `start_rdma` and `end_rdma` in rdma_context to
+/// create and destroy.
 declare_global!(rdma_driver, alloc::boxed::Box<crate::KRdmaKit::KDriver>);
 declare_global!(rdma_contexts, alloc::vec::Vec<crate::RContext<'static>>);
 declare_global!(
@@ -80,6 +80,14 @@ declare_global!(
     alloc::vec::Vec<core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>>
 );
 
-// high-level contexts are abstracted in rdma_context.rs
-
 /***** RDMA-related global data structures ends*/
+
+/************ MITOSIS global services ************/
+
+pub mod startup;
+
+/// high-level services are also exposed by global variables.
+/// These variables uses the `start_instance` and `end_instance` in startup.rs for initialize.
+/// Note, the `start_instance` also calls the `start_rdma`
+declare_global!(ud_factories, os_network::datagram::ud::UDFactory<'static>);
+declare_global!(dc_factories, os_network::rdma::dc::DCFactory<'static>);

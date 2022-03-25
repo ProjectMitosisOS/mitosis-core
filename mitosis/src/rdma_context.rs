@@ -21,7 +21,14 @@ pub fn start_rdma(config: crate::Config) -> core::option::Option<()> {
     unsafe {
         let mut contexts = Vec::new();
         for i in 0..config.num_nics_used {
-            contexts.push(crate::rdma_driver::get_mut().devices().get(i)?.open()?);
+            contexts.push(
+                crate::rdma_driver::get_mut()
+                    .devices()
+                    .get(i)
+                    .expect("no available RDMA NIC")
+                    .open()
+                    .expect("failed to create RDMA context"),
+            );
         }
         crate::rdma_contexts::init(contexts);
     };
@@ -29,10 +36,15 @@ pub fn start_rdma(config: crate::Config) -> core::option::Option<()> {
     unsafe {
         let mut servers = Vec::new();
         for i in 0..config.num_nics_used {
-            servers.push(RCtrl::create(
-                service_id_base + i as u64,
-                crate::rdma_contexts::get_ref().get(i)?,
-            )?)
+            servers.push(
+                RCtrl::create(
+                    service_id_base + i as u64,
+                    crate::rdma_contexts::get_ref()
+                        .get(i)
+                        .expect("fatal: cannot get the created context"),
+                )
+                .expect("failed to create cm server on NIC"),
+            )
         }
     };
 
