@@ -16,26 +16,35 @@ impl Task {
         }
     }
 
+    /// Get the current register information of the current running task
+    /// `PTRegs` is an architecture-specific structure storing registers
     pub fn get_current_pt_regs() -> crate::bindings::PTRegs {
         unsafe { *crate::bindings::pmem_get_current_pt_regs() }
     }
 
+    /// Set the current register information of the current running task
+    /// with the architecture-specific structure `PTRegs`
     pub fn set_regs(regs: &crate::bindings::PTRegs) {
         unsafe { core::ptr::write_volatile(crate::bindings::pmem_get_current_pt_regs(), *regs) };
     }
 
+    // https://stackoverflow.com/questions/6611346/how-are-the-fs-gs-registers-used-in-linux-amd64
+    /// Get the fs register of the current running task
     pub fn get_fs() -> crate::linux_kernel_module::c_types::c_ulong {
         unsafe { crate::bindings::pmem_arch_get_my_fs() }
     }
 
+    /// Get the gs register of the current running task
     pub fn get_gs() -> crate::linux_kernel_module::c_types::c_ulong {
         unsafe { crate::bindings::pmem_arch_get_my_gs() }
     }
 
+    /// Set the fs register of the current running task
     pub fn set_fs(fsbase: crate::linux_kernel_module::c_types::c_ulong) -> crate::linux_kernel_module::c_types::c_long {
         unsafe { crate::bindings::pmem_arch_set_my_fs(fsbase) }
     }
 
+    /// Set the gs register of the current running task
     pub fn set_gs(gsbase: crate::linux_kernel_module::c_types::c_ulong) -> crate::linux_kernel_module::c_types::c_long {
         unsafe { crate::bindings::pmem_arch_set_my_gs(gsbase) }
     }
