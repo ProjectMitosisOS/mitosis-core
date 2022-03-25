@@ -2,7 +2,6 @@ use alloc::vec::Vec;
 
 use os_network::KRdmaKit;
 use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::rust_kernel_rdma_base::*;
 
 use os_network::rpc::*;
 

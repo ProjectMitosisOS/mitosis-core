@@ -16,6 +16,8 @@ pub mod syscalls;
 
 use alloc::vec::Vec;
 
+//! TODO: doc how to use mitosis
+
 #[derive(Debug,Clone)]
 pub struct Config {
     pub(crate) num_nics_used: usize,
@@ -67,12 +69,11 @@ use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::device::RContext;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
-// The RDMA context used by MITOSIS
-pub mod rdma_context;
-
 /// low-level contexts are directly exposed as global variables
 /// These variables can use `start_rdma` and `end_rdma` in rdma_context to
 /// create and destroy.
+pub mod rdma_context;
+
 declare_global!(rdma_driver, alloc::boxed::Box<crate::KRdmaKit::KDriver>);
 declare_global!(rdma_contexts, alloc::vec::Vec<crate::RContext<'static>>);
 declare_global!(
@@ -89,8 +90,10 @@ pub mod startup;
 /// high-level services are also exposed by global variables.
 /// These variables uses the `start_instance` and `end_instance` in startup.rs for initialize.
 /// Note, the `start_instance` also calls the `start_rdma`
-declare_global!(ud_factories, os_network::datagram::ud::UDFactory<'static>);
-declare_global!(dc_factories, os_network::rdma::dc::DCFactory<'static>);
-
 pub mod rpc_service;
+pub mod rpc_handlers;
+
+declare_global!(ud_factories, alloc::vec::Vec<os_network::datagram::ud::UDFactory<'static>>);
+declare_global!(dc_factories, alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>);
+
 declare_global!(service_rpc, crate::rpc_service::Service);

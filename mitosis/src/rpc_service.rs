@@ -9,6 +9,7 @@ use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
 use crate::linux_kernel_module;
 
 /// RPC service implements a UDRpcHook defined in os-network
+/// Note: It must be created after all the RDMA context has been initialized.
 pub struct Service {
     threads: Vec<JoinHandler>,
 }
@@ -20,7 +21,10 @@ impl Service {
         };
 
         for i in 0..config.rpc_threads_num {
-            let arg = Box::new(ThreadCTX { id: i });
+            let arg = Box::new(ThreadCTX {
+                id: i,
+                nic_to_use: i % config.num_nics_used,
+            });
             let arg_ptr = Box::into_raw(arg);
 
             let builder = kthread::Builder::new()
@@ -45,7 +49,12 @@ impl Drop for Service {
 
 struct ThreadCTX {
     pub(crate) id: usize,
+    pub(crate) nic_to_use: usize,
 }
+
+use os_network::datagram::ud::*;
+use os_network::datagram::ud_receiver::*;
+use os_network::rpc::header::*;
 
 impl Service {
     const YIELD_THRESHOLD: usize = 10000;
@@ -54,6 +63,11 @@ impl Service {
     extern "C" fn worker(ctx: *mut c_void) -> c_int {
         let arg = unsafe { Box::from_raw(ctx as *mut ThreadCTX) };
         crate::log::debug!("MITOSIS RPC thread {} started. ", arg.id);
+
+        // init the UD RPC hook
+        type UDRPCHook<'a, 'b> =
+            os_network::rpc::hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
+
 
         while !kthread::should_stop() {
             kthread::yield_now();
