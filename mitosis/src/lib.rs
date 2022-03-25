@@ -68,14 +68,17 @@ use mitosis_macros::declare_global;
 
 /***** RDMA-related global data structures */
 
-use KRdmaKit::device::RContext;
 use KRdmaKit::ctrl::RCtrl;
+use KRdmaKit::device::RContext;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
-// low-level contexts are directly exposed as global variables 
+// low-level contexts are directly exposed as global variables
 declare_global!(rdma_driver, alloc::boxed::Box<crate::KRdmaKit::KDriver>);
 declare_global!(rdma_contexts, alloc::vec::Vec<crate::RContext<'static>>);
-declare_global!(rdma_cm_service, alloc::vec::Vec<crate::RCtrl<'static>>); 
+declare_global!(
+    rdma_cm_service,
+    alloc::vec::Vec<core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>>
+);
 
 // high-level contexts are abstracted in rdma_context.rs
 
