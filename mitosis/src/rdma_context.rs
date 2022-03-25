@@ -2,11 +2,8 @@ use alloc::vec::Vec;
 
 use os_network::KRdmaKit;
 use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::rust_kernel_rdma_base::*;
 
-use os_network::rpc::*;
-
-const service_id_base: u64 = 73; // not using 0 to prevent error
+pub const SERVICE_ID_BASE: u64 = 73; // not using 0 to prevent error
 
 /// Note: need to call `end_rdma` before destroying the kernel module
 /// Return
@@ -38,7 +35,7 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
         for i in 0..config.num_nics_used {
             servers.push(
                 RCtrl::create(
-                    service_id_base + i as u64,
+                    SERVICE_ID_BASE + i as u64,
                     crate::rdma_contexts::get_ref()
                         .get(i)
                         .expect("fatal: cannot get the created context"),
@@ -46,6 +43,7 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
                 .expect("failed to create cm server on NIC"),
             )
         }
+        crate::rdma_cm_service::init(servers);
     };
 
     Some(())
