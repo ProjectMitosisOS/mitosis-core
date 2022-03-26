@@ -16,6 +16,7 @@ mod bindings {
 }
 
 // #[derive(Clone, Copy)]
+pub(crate) type StackRegisters = pt_regs;
 pub(crate) type PTRegs = pt_regs;
 
 unsafe impl Send for vm_operations_struct {}

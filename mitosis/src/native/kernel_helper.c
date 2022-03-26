@@ -150,6 +150,9 @@ pmem_get_current_pt_regs(void)
   return current_pt_regs();
 }
 
+// https://stackoverflow.com/questions/6611346/how-are-the-fs-gs-registers-used-in-linux-amd64
+// fs register is used to store the address of some user-space
+// thread-local structures including the stack canary
 unsigned long
 pmem_arch_get_my_fs()
 {
@@ -158,6 +161,8 @@ pmem_arch_get_my_fs()
   return fsbase;
 }
 
+// gs is used to store the address of some kernel-space
+// thread-local structures
 unsigned long
 pmem_arch_get_my_gs()
 {
@@ -166,12 +171,14 @@ pmem_arch_get_my_gs()
   return gsbase;
 }
 
+// set the fs register
 long
 pmem_arch_set_my_fs(unsigned long fsbase)
 {
   return pmem_do_arch_prctl_64(current, ARCH_SET_FS, fsbase);
 }
 
+// set the gs register
 long
 pmem_arch_set_my_gs(unsigned long gsbase)
 {

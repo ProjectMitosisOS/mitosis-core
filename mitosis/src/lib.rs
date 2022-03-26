@@ -16,6 +16,9 @@ pub const VERSION: usize = 0;
 
 pub mod syscalls;
 
+pub mod bindings;
+pub mod kern_wrappers;
+
 use alloc::vec::Vec;
 
 // TODO: doc how to use mitosis
@@ -126,10 +129,10 @@ declare_global!(
     alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
 );
 
-/// Threads for handling in-coming RPC requests
 declare_global!(service_rpc, crate::rpc_service::Service);
 
 /// A pool of connected RPC clients
 pub mod rpc_caller_pool;
 
 declare_global!(service_caller_pool, crate::rpc_caller_pool::CallerPool);
+
