@@ -18,11 +18,8 @@ pub struct Descriptor {
     machine: RemoteRDMADescriptor,
 }
 
-pub struct RegDescriptor {
-    others: crate::bindings::StackRegisters,
-    fs: u64,
-    gs: u64,
-}
+mod reg;
+use reg::RegDescriptor;
 
 pub struct RemoteRDMADescriptor {
     gid: RawGID,
