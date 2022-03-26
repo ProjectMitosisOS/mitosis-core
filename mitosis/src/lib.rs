@@ -129,7 +129,6 @@ declare_global!(
     alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
 );
 
-/// Threads for handling in-coming RPC requests
 declare_global!(service_rpc, crate::rpc_service::Service);
 
 /// A pool of connected RPC clients

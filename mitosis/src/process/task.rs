@@ -1,7 +1,8 @@
 use crate::bindings::{pmem_get_current_task, task_struct};
 
-/// Simpler wrapper of the kernel's `mm_struct`
-/// It provides some handy utilities written in rust
+/// Simpler wrapper of the kernel's `task_struct`
+/// The task_struct structure contains all the information about a process. 
+/// It transfers some low-level primitives to high-level rust abstractions 
 pub struct Task {
     task_inner: &'static mut task_struct,
 }
