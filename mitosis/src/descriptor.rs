@@ -7,6 +7,9 @@ use hashbrown::HashMap;
 
 type AddrType = u64;
 
+/// Record the mapping between the va and remote pa of a process
+type PageMap = HashMap::<AddrType, RemotePage>;
+
 pub struct RemoteMachine {
     gid: RawGID,
     service_id: u64,
@@ -27,7 +30,7 @@ pub struct VMAMeta {
 #[allow(dead_code)]
 pub struct Descriptor {
     regs: crate::bindings::PTRegs,
-    page_table: HashMap::<u64, RemotePage>,
+    page_table: PageMap,
     vma: Vec<VMAMeta>,
     machine: RemoteMachine,
     fs: u64,
