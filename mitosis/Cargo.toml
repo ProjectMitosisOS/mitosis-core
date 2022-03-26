@@ -22,6 +22,7 @@ os-network = { path = "../os-network", optional = true, features=["dct"]}
 rust-kernel-linux-util = {path = "../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
 mitosis-macros = {path = "../mitosis-macros"}
 bitflags = "1"
+hashbrown = "0.12.0"
 
 [dependencies.lazy_static]
 version = "1.0"
