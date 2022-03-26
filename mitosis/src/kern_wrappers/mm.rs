@@ -1,35 +1,34 @@
-use crate::bindings::mm_struct;
-use crate::process::vma::VirtAddrType;
+use crate::bindings::{mm_struct, pmem_flush_tlb_all, vm_area_struct};
 
-#[allow(unused_imports)]
-use crate::linux_kernel_module::println;
+use super::vma::VMA;
 
-/// taken from /include/uapi/linux/mman.h in the linux kernel
-#[allow(dead_code)]
-pub mod flags {
-    pub const MAP_SHARED: crate::linux_kernel_module::c_types::c_ulong = 0x01;
-    pub const MAP_PRIVATE: crate::linux_kernel_module::c_types::c_ulong = 0x02;
-}
+pub type VirtAddrType = u64;
+pub type PhyAddrType = u64;
 
 /// Simpler wrapper of the kernel's `mm_struct`
 /// It provides some handy utilities written in rust
 #[derive(Debug)]
-pub struct MemoryManage {
+pub struct MemoryDescriptor {
     mm_inner: &'static mut mm_struct,
 }
 
-use crate::bindings::{pmem_flush_tlb_all, vm_area_struct};
+/// taken from /include/uapi/linux/mman.h in the linux kernel
+#[allow(dead_code)]
+pub mod mmap_flags {
+    pub const MAP_SHARED: crate::linux_kernel_module::c_types::c_ulong = 0x01;
+    pub const MAP_PRIVATE: crate::linux_kernel_module::c_types::c_ulong = 0x02;
+}
 
 #[allow(dead_code)]
-impl MemoryManage {
+impl MemoryDescriptor {
     pub unsafe fn new(mm_ptr: *mut mm_struct) -> Self {
         Self {
             mm_inner: &mut (*mm_ptr),
         }
     }
 
-    pub fn get_vm_iters(&self) -> MemoryManageIter {
-        MemoryManageIter::new(self)
+    pub fn get_vma_iter(&self) -> VMAIter {
+        VMAIter::new(self)
     }
 
     pub fn find_vma(
@@ -61,11 +60,10 @@ impl MemoryManage {
     }
 }
 
-impl MemoryManage {
-    /// find a specific memory range descriptor
+impl MemoryDescriptor {
+    /// find a specific virtual memory area (VMA) based on the index
     ///
     /// # Arguments
-    ///
     /// * `idx` - index to the `mm_struct`'s mmap list
     #[allow(dead_code)]
     pub fn get_vma_area(&self, idx: usize) -> core::option::Option<*mut vm_area_struct> {
@@ -88,13 +86,24 @@ impl MemoryManage {
     }
 }
 
-pub struct MemoryManageIter {
+/// Init an iterator to iterate all the vm_area_struct of a process
+///
+/// Usage:
+/// ```
+/// let mm = MemoryDescriptor::new(...);
+/// let vma_iter = mm.get_vma_iter();
+/// for vma in vma_iter {
+///     ... s
+/// }
+/// ```
+pub struct VMAIter<'a> {
+    _outer: &'a MemoryDescriptor,
     cur: *mut vm_area_struct,
 }
 
 // uses an iterator to simplfiy memory range traversal
-impl Iterator for MemoryManageIter {
-    type Item = &'static mut vm_area_struct;
+impl<'a> Iterator for VMAIter<'a> {
+    type Item = VMA<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.cur == core::ptr::null_mut() {
@@ -102,14 +111,15 @@ impl Iterator for MemoryManageIter {
         } else {
             let res = self.cur;
             self.cur = unsafe { (*res).vm_next };
-            unsafe { Some(&mut (*res)) }
+            unsafe { Some(VMA::new(&(*res))) }
         }
     }
 }
 
-impl MemoryManageIter {
-    pub fn new(m: &MemoryManage) -> Self {
+impl<'a> VMAIter<'a> {
+    pub fn new(m: &'a MemoryDescriptor) -> Self {
         Self {
+            _outer: m,
             cur: m.mm_inner.mmap,
         }
     }

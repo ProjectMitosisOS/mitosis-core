@@ -18,10 +18,12 @@ impl FileOperations for MySyscallHandler {
 
     #[allow(non_snake_case)]
     #[inline]
-    fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
+    fn ioctrl(&mut self, cmd: c_uint, _arg: c_ulong) -> c_long {
         match cmd {
             0 => self.test_task(),
             1 => self.test_mm(),
+            // it seems that 2 is omitted by ioctrl
+            3 => self.test_vma(),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -35,6 +37,7 @@ impl FileOperations for MySyscallHandler {
     }
 }
 
+use mitosis::kern_wrappers::vma_iters::*;
 use mitosis::kern_wrappers::*;
 
 // real system call implementations
@@ -50,17 +53,39 @@ impl MySyscallHandler {
         0
     }
 
-    fn test_mm(&self) -> c_long { 
+    fn test_mm(&self) -> c_long {
         crate::log::debug!("test mm");
         let task = task::Task::new();
         let mm = task.get_memory_descriptor();
         let vma_iters = mm.get_vma_iter();
-        
+
         let mut count = 0;
-        for _ in vma_iters { 
+        for _ in vma_iters {
             count += 1;
         }
         crate::log::info!("mm get {} vmas", count);
+        0
+    }
+
+    fn test_vma(&self) -> c_long {
+        crate::log::debug!("test vma");
+
+        let task = task::Task::new();
+        let mm = task.get_memory_descriptor();
+        let vma_iters = mm.get_vma_iter();
+
+        let mut stack_page_count = 0;
+        let mut total_page_count = 0;
+
+        for vma in vma_iters {
+            if vma.is_stack() {
+                stack_page_count += 1;
+            }
+
+            total_page_count += VMATraverseIter::new().execute(&vma).len();
+        }
+        crate::log::info!("stack page count: {}", stack_page_count);
+        crate::log::info!("total page count: {}", total_page_count);
         0
     }
 

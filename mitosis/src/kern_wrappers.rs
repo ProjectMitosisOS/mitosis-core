@@ -1,6 +1,14 @@
+/// The kern_wrappers module containers handful wrappers over kernel_structures used by MITOSIS.
+/// These includes:
+/// * mm_struct - abstracted in mm::MemoryDescriptor 
+/// * task_struct - abstracted in task::Task
+/// * vma_struct - abstracted in vma::VMA
+/// 
+/// vma_iters module also includes useful code for iterating pages belonging to a VMA
 pub mod mm;
 pub mod task;
 pub mod vma;
+pub mod vma_iters;
 
 /// TODO: still don't know how this struct is used for
 pub struct Process {
@@ -27,5 +35,15 @@ impl Process {
             task: task,
             memory: mm,
         }
+    }
+}
+
+impl Process { 
+    pub fn get_memory_descriptor(&self) -> &mm::MemoryDescriptor { 
+        &self.memory
+    }
+
+    pub fn get_task(&self) -> &task::Task { 
+        &self.task
     }
 }

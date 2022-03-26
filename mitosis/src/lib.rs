@@ -136,5 +136,3 @@ pub mod rpc_caller_pool;
 
 declare_global!(service_caller_pool, crate::rpc_caller_pool::CallerPool);
 
-// Process-related data structures used by MITOSIS
-pub mod process;
