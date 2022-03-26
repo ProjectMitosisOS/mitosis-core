@@ -5,8 +5,6 @@ use crate::linux_kernel_module::bindings::vm_area_struct;
 
 pub(crate) struct MySyscallHandler;
 
-const CALL_NIL: u32 = 0;
-
 // FIXME: we need to place these with auto-generated code, e.g., proc_macros
 // But currently, we don't have time to do so
 #[allow(non_upper_case_globals)]
@@ -22,9 +20,8 @@ impl FileOperations for MySyscallHandler
     #[allow(non_snake_case)]
     #[inline]
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
-        crate::log::debug!("in ioctrl");
         match cmd {
-            CALL_NIL => self.test_process(arg),
+            0 => { self.test_task() }
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -38,11 +35,16 @@ impl FileOperations for MySyscallHandler
     }
 }
 
-use mitosis::process::Process;
-use mitosis::process::vma::VMAMeta;
+use mitosis::kern_wrappers::*;
 
 // real system call implementations
 impl MySyscallHandler {
+    fn test_task(&self) -> c_long { 
+        crate::log::info!("test task");    
+        0
+    }
+
+    /* 
     #[inline(always)]
     fn test_process(&self, _arg: c_ulong) -> c_long {
         let process = Process::new();
@@ -68,5 +70,5 @@ impl MySyscallHandler {
         crate::log::info!("total page count: {}", total_page_count);
         crate::log::info!("vma count: {}", vma_count);
         0
-    }
+    } */
 }

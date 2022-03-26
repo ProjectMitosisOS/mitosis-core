@@ -9,7 +9,7 @@ fn test_call_nil() {
             .set_device_name(DEFAULT_SYSCALL_PATH.to_string())
             .open()
             .unwrap();
-        client.nil().unwrap();
+        client.test(0).unwrap();
         assert_eq!(dmesg_contains(&String::from("ERROR")), false);
     });
 }

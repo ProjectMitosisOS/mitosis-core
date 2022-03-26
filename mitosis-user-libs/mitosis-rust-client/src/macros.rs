@@ -39,6 +39,19 @@ macro_rules! ioctl_read {
     )
 }
 
+#[macro_export]
+macro_rules! ioctl_test {
+    ($(#[$attr:meta])* $name:ident, $ty:ty) => (
+        $(#[$attr])*
+        pub unsafe fn $name(fd: $crate::libc::c_int,
+                            nr : u64,
+                            data: *const $ty)
+                            -> $crate::nix::Result<$crate::libc::c_int> {
+            $crate::nix::errno::Errno::result($crate::libc::ioctl(fd,  nr, data))
+        }
+    )
+}
+
 #[cfg(test)]
 mod tests {
 
