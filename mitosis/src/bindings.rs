@@ -17,7 +17,6 @@ mod bindings {
 
 // #[derive(Clone, Copy)]
 pub(crate) type StackRegisters = pt_regs;
-pub(crate) type PTRegs = pt_regs;
 
 unsafe impl Send for vm_operations_struct {}
 unsafe impl Sync for vm_operations_struct {}
@@ -32,10 +31,10 @@ impl core::fmt::Debug for task_struct {
     }
 }
 
-impl core::fmt::Display for PTRegs {
+impl core::fmt::Display for StackRegisters {
     fn fmt(&self, fmt: &mut ::core::fmt::Formatter) -> core::fmt::Result {
         fmt.write_fmt(format_args!(
-            "PTRegs:  \n \
+            "StackRegisters:  \n \
             ip 0x{:x}\n  \
             sp 0x{:x}",
             self.ip, self.sp

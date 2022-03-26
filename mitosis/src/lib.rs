@@ -19,7 +19,7 @@ pub mod syscalls;
 pub mod bindings;
 pub mod kern_wrappers;
 
-//pub mod descriptor;
+pub mod descriptor;
 
 use alloc::vec::Vec;
 
