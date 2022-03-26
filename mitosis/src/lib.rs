@@ -137,6 +137,13 @@ declare_global!(
     alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
 );
 
+pub unsafe fn get_dc_factory_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
+    crate::dc_factories::get_ref().get(nic_idx)
+}
+
+
 declare_global!(service_rpc, crate::rpc_service::Service);
 
 /// A pool of connected RPC clients
@@ -153,4 +160,16 @@ pub unsafe fn get_rpc_caller_pool_ref() -> &'static crate::rpc_caller_pool::Call
 pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::CallerPool<'static>
 {
     crate::service_caller_pool::get_mut()
+}
+
+/// A pool of DCQPs 
+pub mod dc_pool;
+
+declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>); 
+pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> { 
+    crate::dc_pool_service::get_ref()
+}
+
+pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> { 
+    crate::dc_pool_service::get_mut()
 }

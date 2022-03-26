@@ -1,8 +1,13 @@
 use crate::rdma_context::*;
 
+#[allow(unused_imports)]
+use crate::linux_kernel_module;
+
 use alloc::vec::Vec;
 
 pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
+    crate::log::info!("Start MITOSIS instance, init global services");
+
     start_rdma(&config).expect("fail to create RDMA context");
 
     // high-level RDMA-related data structures
@@ -42,7 +47,14 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
             crate::rpc_caller_pool::CallerPool::new(&config)
                 .expect("Failed to create the RPC caller pool"),
         )
-    }
+    };
+
+    // DCQP Pool
+    unsafe {
+        crate::dc_pool_service::init(
+            crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool"),
+        )
+    };
 
     // TODO: other services
 
@@ -50,7 +62,9 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 }
 
 pub fn end_instance() {
+    crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
+        crate::dc_pool_service::drop();
         crate::service_caller_pool::drop();
         crate::service_rpc::drop();
     };
