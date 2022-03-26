@@ -10,7 +10,7 @@ type AddrType = u64;
 /// Record the mapping between the va and remote pa of a process
 type PageMap = HashMap::<AddrType, RemotePage>;
 
-pub struct RemoteMachine {
+pub struct RemoteRDMADescriptor {
     gid: RawGID,
     service_id: u64,
     rkey: u32,
@@ -21,7 +21,7 @@ pub struct RemotePage {
     dct_key: u32,
 }
 
-pub struct VMAMeta {
+pub struct VMADescriptor {
     range: (AddrType, AddrType), // [start,end] of a vma range
     flags: crate::bindings::vm_flags_t,
     prot: crate::bindings::pgprot_t,
@@ -31,8 +31,8 @@ pub struct VMAMeta {
 pub struct Descriptor {
     regs: crate::bindings::PTRegs,
     page_table: PageMap,
-    vma: Vec<VMAMeta>,
-    machine: RemoteMachine,
+    vma: Vec<VMADescriptor>,
+    machine: RemoteRDMADescriptor,
     fs: u64,
     gs: u64,
 }
