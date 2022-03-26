@@ -135,4 +135,14 @@ impl Future for UDReceiver<'_> {
     }
 }
 
+
+impl<'a> crate::rpc::GetTransport for UDReceiver<'a> { 
+    type Transport = UDDatagram<'a>;
+
+    fn get_transport_mut(&mut self) -> &mut Self::Transport { 
+        &mut self.inner
+    }   
+
+}
+
 pub use super::Receiver;

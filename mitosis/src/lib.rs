@@ -19,7 +19,7 @@ pub mod syscalls;
 pub mod bindings;
 pub mod kern_wrappers;
 
-pub mod descriptor; 
+//pub mod descriptor;
 
 use alloc::vec::Vec;
 
@@ -32,7 +32,7 @@ pub struct Config {
     // my machine ID
     pub(crate) machine_id: usize,
     // how many CPU core is available on the machine
-    pub(crate) max_core_cnt : usize,
+    pub(crate) max_core_cnt: usize,
     // gid is RDMA address
     pub(crate) peers_gid: Vec<alloc::string::String>,
 }
@@ -43,8 +43,8 @@ impl Default for Config {
             num_nics_used: 1,
             rpc_threads_num: 2,
             machine_id: 0,
-            max_core_cnt : 24, 
-            peers_gid: Vec::new(),            
+            max_core_cnt: 24,
+            peers_gid: Vec::new(),
         }
     }
 }
@@ -70,7 +70,7 @@ impl Config {
         self
     }
 
-    pub fn set_max_core_cnt(&mut self, cnt : usize) -> &mut Self { 
+    pub fn set_max_core_cnt(&mut self, cnt: usize) -> &mut Self {
         self.max_core_cnt = cnt;
         self
     }
@@ -102,6 +102,12 @@ declare_global!(
     rdma_cm_service,
     alloc::vec::Vec<core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>>
 );
+
+pub unsafe fn get_rdma_cm_server_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>> {
+    crate::rdma_cm_service::get_ref().get(nic_idx)
+}
 
 /***** RDMA-related global data structures ends*/
 
@@ -136,5 +142,15 @@ declare_global!(service_rpc, crate::rpc_service::Service);
 /// A pool of connected RPC clients
 pub mod rpc_caller_pool;
 
-declare_global!(service_caller_pool, crate::rpc_caller_pool::CallerPool);
+declare_global!(
+    service_caller_pool,
+    crate::rpc_caller_pool::CallerPool<'static>
+);
+pub unsafe fn get_rpc_caller_pool_ref() -> &'static crate::rpc_caller_pool::CallerPool<'static> {
+    crate::service_caller_pool::get_ref()
+}
 
+pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::CallerPool<'static>
+{
+    crate::service_caller_pool::get_mut()
+}

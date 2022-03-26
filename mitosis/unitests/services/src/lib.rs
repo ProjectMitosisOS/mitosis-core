@@ -25,6 +25,57 @@ use os_network::timeout::Timeout;
 
 use krdma_test::*;
 
+// Note, test_rpc_two should be called after `test_rpc`
+fn test_rpc_two() {
+    log::info!("Test RPC Two using the refined API.");
+
+    let pool_idx = 0;
+
+    // it is ok, because in the unittest, all sender & receiver share the same context
+    let context = unsafe {
+        mitosis::get_rpc_caller_pool_ref()
+            .get_caller_context(pool_idx)
+            .unwrap()
+    };
+
+    let _ = unsafe { mitosis::get_rpc_caller_pool_mut() }
+        .connect_session_at(
+            pool_idx,
+            64, // Notice: it is very important to ensure that session ID is unique! 
+            UDHyperMeta {
+                gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
+                service_id: mitosis::rdma_context::SERVICE_ID_BASE,
+                qd_hint: (mitosis::rpc_service::QD_HINT_BASE) as _,
+            },
+        )
+        .expect("failed to connect the endpoint");
+
+    // now we can call!
+    let caller = unsafe {
+        mitosis::rpc_caller_pool::CallerPool::get_global_caller(pool_idx)
+            .expect("the caller should be properly inited")
+    };    
+
+    crate::log::info!("now start to test RPC caller");
+
+    caller
+        .sync_call(
+            64,
+            mitosis::rpc_handlers::RPCId::Echo as _,
+            0xffffffff as u64,
+        )
+        .unwrap();    
+
+    let res = block_on(caller);
+    match res {
+        Ok(v) => {
+            let (_, reply) = v;
+            log::debug!("sanity check rpc two call result: {:?}", reply);
+        }
+        Err(e) => log::error!("client call error: {:?}", e),
+    };        
+}
+
 fn test_rpc() {
     type UDCaller<'a> = Caller<UDReceiver<'a>, UDSession<'a>>;
 
@@ -53,13 +104,13 @@ fn test_rpc() {
         })
         .unwrap();
 
-   let (endpoint1, key1) = factory
+    let (endpoint1, key1) = factory
         .create_meta(UDHyperMeta {
             gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
             service_id: mitosis::rdma_context::SERVICE_ID_BASE,
             qd_hint: (mitosis::rpc_service::QD_HINT_BASE + 1) as _,
         })
-        .unwrap();        
+        .unwrap();
 
     let lkey = unsafe { context.get_lkey() };
     let client_session = client_ud.create((endpoint, key)).unwrap();
@@ -112,11 +163,15 @@ fn test_rpc() {
             log::debug!("sanity check client call result: {:?}", reply);
         }
         Err(e) => log::error!("client call error: {:?}", e),
-    };     
-    
+    };
+
     let mut caller = caller_timeout.into_inner();
     caller
-        .sync_call(73, mitosis::rpc_handlers::RPCId::Echo as _, 0xdeadbeaf as u64)
+        .sync_call(
+            73,
+            mitosis::rpc_handlers::RPCId::Echo as _,
+            0xdeadbeaf as u64,
+        )
         .unwrap();
     let mut caller_timeout = Timeout::new(caller, timeout_usec);
     let res = block_on(&mut caller_timeout);
@@ -126,10 +181,9 @@ fn test_rpc() {
             log::debug!("sanity check client call result: {:?}", reply);
         }
         Err(e) => log::error!("client call error: {:?}", e),
-    };      
+    };
 
-
-    // now we connect to the second thread, and then test 
+    // now we connect to the second thread, and then test
     let mut caller = caller_timeout.into_inner();
     caller
         .connect(
@@ -141,19 +195,22 @@ fn test_rpc() {
                 qd_hint: 0,
             },
         )
-        .unwrap();    
+        .unwrap();
     let mut caller_timeout = Timeout::new(caller, timeout_usec);
     let res = block_on(&mut caller_timeout);
     match res {
-        Ok(_) => {
-        }
+        Ok(_) => {}
         Err(e) => log::error!("client call error: {:?}", e),
-    };      
+    };
 
     // now call the second session with echo
     let mut caller = caller_timeout.into_inner();
     caller
-        .sync_call(73 + 1, mitosis::rpc_handlers::RPCId::Echo as _, 0xdeadbeaf as u64)
+        .sync_call(
+            73 + 1,
+            mitosis::rpc_handlers::RPCId::Echo as _,
+            0xdeadbeaf as u64,
+        )
         .unwrap();
     let mut caller_timeout = Timeout::new(caller, timeout_usec);
     let res = block_on(&mut caller_timeout);
@@ -163,10 +220,10 @@ fn test_rpc() {
             log::debug!("sanity check client call result: {:?}", reply);
         }
         Err(e) => log::error!("client call error: {:?}", e),
-    };        
+    };
 }
 
-#[krdma_test(test_rpc)]
+#[krdma_test(test_rpc, test_rpc_two)]
 fn init() {
     log::info!("in test mitosis service startups!");
 

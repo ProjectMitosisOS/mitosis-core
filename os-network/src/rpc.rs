@@ -12,9 +12,24 @@ pub enum Err {
     NoID = 1,
 }
 
+pub trait GetTransport {
+    type Transport;
+
+    fn get_transport_mut(&mut self) -> &mut Self::Transport;
+}
+
 pub struct Caller<R: Receiver, S: RPCConn> {
     inner_receiver: R,
     connected_sessions: HashMap<usize, (S, S::ReqPayload)>,
+}
+
+impl<R, S: RPCConn> GetTransport for Caller<R,S> 
+where R : Receiver + GetTransport
+{
+    type Transport = R::Transport;
+    fn get_transport_mut(&mut self) -> &mut Self::Transport { 
+        self.inner_receiver.get_transport_mut()
+    }
 }
 
 impl<R, SS> Caller<R, SS>

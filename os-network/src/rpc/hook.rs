@@ -136,6 +136,7 @@ where
                 match msg_header.get_marker() {
                     super::header::ReqType::Connect => {
                         let meta = msg_header.get_connect_stub().ok_or(Error::corrupted())?;
+                        //crate::log::debug!("handle in-coming connect req {:?}",meta);
 
                         // insert the session if necessary
                         if !self.connected_sessions.contains_key(&meta.get_session_id()) {
@@ -164,13 +165,15 @@ where
                             // send the reply
                             self.send_reply(
                                 meta.get_session_id(),
-                                ReplyStubFactory::new(ReplyStatus::Ok, 0),
+                                ReplyStubFactory::new(ReplyStatus::Ok, 0),                                
                             )?;
+                            // crate::log::info!("send reply done");
                         } else {
                             crate::log::debug!(
                                 "duplicate connect session ID: {}",
                                 meta.get_session_id()
                             );
+                            return Err(Error::session_creation_error());
                         }
 
                         // handle connect message done
