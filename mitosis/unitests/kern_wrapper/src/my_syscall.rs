@@ -88,32 +88,4 @@ impl MySyscallHandler {
         crate::log::info!("total page count: {}", total_page_count);
         0
     }
-
-    /*
-    #[inline(always)]
-    fn test_process(&self, _arg: c_ulong) -> c_long {
-        let process = Process::new();
-        let mm = process.get_task().get_mm();
-
-        let mut stack_page_count = 0;
-        let mut total_page_count = 0;
-        let mut vma_count = 0;
-
-        // count the page and vma in the loop
-        for vma in mm.get_vm_iters() {
-            let vma_meta = VMAMeta::new(vma);
-            if vma_meta.is_stack() {
-                stack_page_count += 1;
-            }
-
-            for _ in vma_meta.get_all_mappings() {
-                total_page_count += 1;
-            }
-            vma_count += 1;
-        }
-        crate::log::info!("stack page count: {}", stack_page_count);
-        crate::log::info!("total page count: {}", total_page_count);
-        crate::log::info!("vma count: {}", vma_count);
-        0
-    } */
 }
