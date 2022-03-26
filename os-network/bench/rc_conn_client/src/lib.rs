@@ -4,6 +4,7 @@
 extern crate alloc;
 
 use alloc::string::String;
+use alloc::vec::Vec;
 
 use krdma_test::{krdma_drop, krdma_main};
 
@@ -20,10 +21,10 @@ use mitosis_util::reporter::*;
 
 use os_network::rdma::rc::RCFactoryWPath;
 use os_network::rdma::{ConnMeta, ConnMetaWPath};
-use os_network::ConnFactory;
+use os_network::Factory;
 
-use KRdmaKit::device::RNIC;
 use KRdmaKit::KDriver;
+use KRdmaKit::device::RNIC;
 
 use mitosis_macros::{declare_global, declare_module_param};
 
@@ -35,6 +36,7 @@ declare_module_param!(thread_count, c_uint);
 declare_module_param!(gids, *mut u8);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
+declare_global!(RCONTEXTS, alloc::vec::Vec<KRdmaKit::device::RContext<'static>>);
 declare_global!(REMOTE_GIDS, alloc::vec::Vec<alloc::string::String>);
 
 pub struct RCConnBenchWorker<'a> {
@@ -65,7 +67,7 @@ impl<'a> BenchRoutine for RCConnBenchWorker<'a> {
 
     fn thread_local_init(args: &Self::Args) -> Self {
         let thread_id = *args;
-        let factory = RCFactoryWPath::new(Self::get_local_nic(thread_id)).unwrap();
+        let factory = RCFactoryWPath::new(unsafe { &RCONTEXTS::get_ref()[thread_id] });
         let conn_meta = factory
             .convert_meta(Self::get_conn_meta(thread_id))
             .unwrap();
@@ -97,6 +99,10 @@ fn ctx_init() {
                 .collect(),
         );
         KDRIVER::init(KDriver::create().unwrap());
+        RCONTEXTS::init(Vec::new());
+        for i in 0..thread_count::read() {
+            RCONTEXTS::get_mut().push(RCConnBenchWorker::get_local_nic(i as usize).open().unwrap());
+        }
     }
 }
 
@@ -143,6 +149,7 @@ fn module_main() {
 fn module_drop() {
     unsafe {
         REMOTE_GIDS::drop();
+        RCONTEXTS::drop();
         KDRIVER::drop();
     }
 }

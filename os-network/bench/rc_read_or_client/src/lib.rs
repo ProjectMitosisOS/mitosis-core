@@ -48,7 +48,10 @@ declare_module_param!(or_factor, c_ulong);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(REMOTE_GIDS, alloc::vec::Vec<alloc::string::String>);
-declare_global!(RCFACTORIES, alloc::vec::Vec<os_network::rdma::rc::RCFactory<'static>>);
+declare_global!(RCONTEXTS, alloc::vec::Vec<KRdmaKit::device::RContext<'static>>);
+declare_global!(RCFACTORIES,
+    alloc::vec::Vec<os_network::rdma::rc::RCFactory<'static>>
+);
 
 type RCReqPayload = payload::Payload<ib_rdma_wr>;
 
@@ -175,8 +178,12 @@ fn ctx_init() {
         );
         KDRIVER::init(KDriver::create().unwrap());
         RCFACTORIES::init(Vec::new());
+        RCONTEXTS::init(Vec::new());
         for i in 0..thread_count::read() {
-            RCFACTORIES::get_mut().push(RCFactory::new(RCBenchWorker::get_local_nic(i as usize)).unwrap());
+            RCONTEXTS::get_mut().push(RCBenchWorker::get_local_nic(i as usize).open().unwrap());
+        }
+        for i in 0..thread_count::read() {
+            RCFACTORIES::get_mut().push(RCFactory::new(&RCONTEXTS::get_ref()[i as usize]));
         }
     }
 }
@@ -223,6 +230,7 @@ fn module_drop() {
     unsafe {
         REMOTE_GIDS::drop();
         RCFACTORIES::drop();
+        RCONTEXTS::drop();
         KDRIVER::drop();
     }
 }

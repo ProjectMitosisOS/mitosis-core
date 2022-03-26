@@ -46,7 +46,11 @@ declare_module_param!(memory_size, c_ulong);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(REMOTE_GIDS, alloc::vec::Vec<alloc::string::String>);
-declare_global!(DCFACTORIES, alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>);
+declare_global!(RCONTEXTS, alloc::vec::Vec<KRdmaKit::device::RContext<'static>>);
+declare_global!(
+    DCFACTORIES,
+    alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
+);
 
 static DEFAULT_QD_HINT: u64 = 73;
 
@@ -127,8 +131,12 @@ fn ctx_init() {
         );
         KDRIVER::init(KDriver::create().unwrap());
         DCFACTORIES::init(Vec::new());
+        RCONTEXTS::init(Vec::new());
         for i in 0..thread_count::read() {
-            DCFACTORIES::get_mut().push(DCFactory::new(DCBenchWorker::get_local_nic(i as usize)).unwrap());
+            RCONTEXTS::get_mut().push(DCBenchWorker::get_local_nic(i as usize).open().unwrap());
+        }
+        for i in 0..thread_count::read() {
+            DCFACTORIES::get_mut().push(DCFactory::new(&RCONTEXTS::get_ref()[i as usize]));
         }
     }
 }
@@ -177,6 +185,7 @@ fn module_drop() {
     unsafe {
         REMOTE_GIDS::drop();
         DCFACTORIES::drop();
+        RCONTEXTS::drop();
         KDRIVER::drop();
     }
 }
