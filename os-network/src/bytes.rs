@@ -24,7 +24,7 @@ impl BytesMut {
     }
 
     pub unsafe fn truncate_header(&self, off: usize) -> core::option::Option<Self> {
-        if self.len > off {
+        if self.len >= off {
             Some(Self {
                 ptr: self.ptr.offset(off as isize),
                 len: self.len - off,

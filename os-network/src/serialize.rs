@@ -34,6 +34,33 @@ pub trait Serialize
 where
     Self: Sized,
 {
-    fn serialize(&self, bytes: &mut BytesMut) -> bool;
-    fn deserialize(bytes: &BytesMut) -> core::option::Option<Self>;
+    /// Default implementation for stack data which only require copying
+    fn serialize(&self, bytes: &mut BytesMut) -> bool {
+        let src = unsafe {
+            BytesMut::from_raw(self as *const _ as *mut u8, core::mem::size_of::<Self>())
+        };
+        bytes.copy(&src, 0)
+    }
+
+    /// Default implementation for stack data which only require copying
+    fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
+        let size = core::mem::size_of::<Self>();
+        if bytes.len() != size {
+            return None;
+        }
+        let result: Self = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
+        let mut dst = unsafe {
+            BytesMut::from_raw(&result as *const _ as *mut u8, core::mem::size_of::<Self>())
+        };
+        if dst.copy(bytes, 0) {
+            Some(result)
+        } else {
+            None
+        }
+    }
+
+    /// Default implementation for stack data which only require the size on the stack
+    fn serialization_len(&self) -> usize {
+        core::mem::size_of::<Self>()
+    }
 }
