@@ -29,7 +29,7 @@ impl os_network::serialize::Serialize for FlatPageTable {
 
         for (vaddr, paddr) in self.0.iter() {
             let sz0 = unsafe { cur.memcpy_serialize_at(0, &vaddr).unwrap() };
-            let sz1 = unsafe { cur.memcpy_serialize_at(1, &paddr).unwrap() };
+            let sz1 = unsafe { cur.memcpy_serialize_at(sz0, &paddr).unwrap() };
             cur = unsafe { bytes.truncate_header(sz0 + sz1).unwrap() };
         }
         return true;
