@@ -1,25 +1,22 @@
 use alloc::vec;
 
-use crate::*;
-use crate::linux_kernel_module::c_types::*;
 use crate::linux_kernel_module::bindings::vm_area_struct;
+use crate::linux_kernel_module::c_types::*;
+use crate::*;
 
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
 
-use mitosis::descriptor::Descriptor;
-use mitosis::descriptor::VMADescriptor;
 use mitosis::descriptor::page_table::FlatPageTable;
 use mitosis::descriptor::reg::RegDescriptor;
-use mitosis::descriptor::RemoteRDMADescriptor;
+use mitosis::descriptor::{Descriptor, RemoteRDMADescriptor, VMADescriptor};
 
 pub(crate) struct MySyscallHandler;
 
 // FIXME: we need to place these with auto-generated code, e.g., proc_macros
 // But currently, we don't have time to do so
 #[allow(non_upper_case_globals)]
-impl FileOperations for MySyscallHandler
-{
+impl FileOperations for MySyscallHandler {
     #[inline]
     fn open(
         _file: *mut crate::linux_kernel_module::bindings::file,
@@ -33,7 +30,7 @@ impl FileOperations for MySyscallHandler
         crate::log::debug!("in ioctrl");
         match cmd {
             0 => self.test_reg_descriptor(arg),
-            1 => self.test_page_map(arg),
+            1 => self.test_page_table(arg),
             3 => self.test_remote_rdma_descriptor(arg),
             4 => self.test_mitosis_descriptor(arg),
             _ => {
@@ -65,7 +62,11 @@ impl MySyscallHandler {
         }
         let result = RegDescriptor::deserialize(&bytes).unwrap();
         if result.others.r15 != reg.others.r15 {
-            crate::log::error!("r15: expected: 0x{:x}, got: 0x{:x}", reg.others.r15, result.others.r15);
+            crate::log::error!(
+                "r15: expected: 0x{:x}, got: 0x{:x}",
+                reg.others.r15,
+                result.others.r15
+            );
             return 0;
         }
         if result.fs != reg.fs {
@@ -78,44 +79,43 @@ impl MySyscallHandler {
 
     /// Test the (de)serialization of PageMap
     #[inline(always)]
-    fn test_page_map(&self, _arg: c_ulong) -> c_long {
-        /* 
-        let mut page_map: PageMap = Default::default();
-        let mut remote_page = RemotePage::default();
-        remote_page.addr = 0xdeadbeaf;
-        remote_page.dct_key = 0xdeaddead;
-        page_map.0.insert(0x1, remote_page);
-        remote_page.dct_key = 0xbeafbeaf;
-        page_map.0.insert(0x2, remote_page);
-        let size = 2 * (core::mem::size_of::<u64>() + core::mem::size_of::<RemotePage>());
-        let mut memory = vec![0 as u8; size];
+    fn test_page_table(&self, _arg: c_ulong) -> c_long {
+        let mut page_table = FlatPageTable::new();
+        page_table.add_one(0xdeadbeaf, 73).add_one(0xffff, 64);
+
+        let mut memory = vec![0 as u8; page_table.serialization_buf_len()];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
-        let result = page_map.serialize(&mut bytes);
+
+        let result = page_table.serialize(&mut bytes);
         if !result {
-            crate::log::error!("fail to serialize page_map");
-            return 0;
+            log::error!("fail to serialize flat page table");
+            return -1;
         }
-        let result = PageMap::deserialize(&mut bytes);
-        if result.is_none() {
-            crate::log::error!("fail to deserialize");
-            return 0;
+
+        crate::log::debug!("{:?}", bytes);
+
+        // now deserialize
+        let de_page_table: core::option::Option<FlatPageTable> = FlatPageTable::deserialize(&bytes);
+        if de_page_table.is_none() {
+            log::error!("failed to deserialize page table");
+            return -1;
         }
-        
-        let result = result.unwrap();
-        if result.0.get(&0x1).is_none() {
-            crate::log::error!("fail to find key 0x12345678");
-            return 0;
-        }
-        if result.0.get(&0x2).is_none() {
-            crate::log::error!("fail to find key 0x87654321");
-            return 0;
-        }
-        if result.0.get(&0x2).unwrap().dct_key != 0xbeafbeaf {
-            crate::log::error!("expected: 0x{:x}, got: 0x{:x}", 0xbeafbeaf as u32, result.0.get(&0x2).unwrap().dct_key);
-            return 0;
-        }
-        crate::log::info!("pass PageMap (de)serialization test"); */
-        0
+        let de_page_table = de_page_table.unwrap();
+        log::debug!("de page table {:?}", de_page_table);
+
+        assert_eq!(de_page_table.len(), page_table.len());
+        assert_eq!(
+            de_page_table.get(0xdeadbeaf).unwrap(),
+            page_table.get(0xdeadbeaf).unwrap()
+        );
+        assert_eq!(
+            de_page_table.get(0xffff).unwrap(),
+            page_table.get(0xffff).unwrap()
+        );
+
+        log::info!("test page_table done");
+
+        return 0;
     }
 
     /// Test the (de)serialization of RemoteRDMADescriptor
@@ -125,7 +125,7 @@ impl MySyscallHandler {
         descriptor.rkey = 0xdeadbeaf;
         let mut memory = vec![0; core::mem::size_of::<RemoteRDMADescriptor>()];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
-        
+
         let result = descriptor.serialize(&mut bytes);
         if !result {
             crate::log::error!("fail to serialize RemoteRDMADescriptor");
@@ -139,7 +139,11 @@ impl MySyscallHandler {
 
         let result = result.unwrap();
         if result.rkey != descriptor.rkey {
-            crate::log::error!("expected: 0x{:x}, got: 0x{:x}", descriptor.rkey, result.rkey);
+            crate::log::error!(
+                "expected: 0x{:x}, got: 0x{:x}",
+                descriptor.rkey,
+                result.rkey
+            );
             return 0;
         }
         crate::log::info!("pass RemoteRDMADescriptor (de)serialization test");
@@ -149,7 +153,7 @@ impl MySyscallHandler {
     /// Test the (de)serialization of mitosis Descriptor
     #[inline(always)]
     fn test_mitosis_descriptor(&self, _arg: c_ulong) -> c_long {
-        /* 
+        /*
         let mut descriptor: Descriptor = Default::default();
         descriptor.page_table.0.insert(0x1, RemotePage::default());
         descriptor.page_table.0.insert(0x2, RemotePage::default());
