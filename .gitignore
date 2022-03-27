@@ -9,3 +9,6 @@ Module.symvers
 *.ko
 *.mod.c
 modules.order
+.idea
+scripts/*.sh
+scripts/*.py
