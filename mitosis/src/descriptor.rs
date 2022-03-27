@@ -5,86 +5,7 @@ use os_network::rdma::RawGID;
 
 use crate::linux_kernel_module;
 
-use hashbrown::HashMap;
-
 type AddrType = u64;
-
-/// Record the mapping between the va and remote pa of a process
-#[derive(Default)]
-pub struct PageMap(pub HashMap<AddrType, RemotePage>);
-
-impl os_network::serialize::Serialize for PageMap {
-    /// Serialization format:
-    /// ```
-    /// | AddrType <-8 bytes-> | Remote Page <-16 bytes-> | AddrType <-8 bytes-> | Remote Page <-16 bytes-> |
-    /// ```
-    fn serialize(&self, bytes: &mut BytesMut) -> bool {
-        if bytes.len() < self.serialization_len() {
-            crate::log::error!("failed to serialize: buffer space not enough");
-            return false;
-        }
-        let addr_size = core::mem::size_of::<AddrType>();
-        let remote_page_size = core::mem::size_of::<RemotePage>();
-        let mut serializer = unsafe { bytes.clone() };
-        for (addr, remote_page) in self.0.iter() {
-            // serialize addr
-            serializer.copy(unsafe { &BytesMut::from_raw(addr as *const _ as *mut u8, addr_size) }, 0);
-            let next = unsafe {
-                serializer.truncate_header(addr_size)
-            };
-            if next.is_none() {
-                crate::log::error!("failed to serialize");
-                return false;
-            }
-            serializer = next.unwrap();
-
-            // serialize remote_page
-            serializer.copy(unsafe { &BytesMut::from_raw(remote_page as *const _ as *mut u8, remote_page_size) }, 0);
-            let next = unsafe {
-                serializer.truncate_header(remote_page_size)
-            };
-            if next.is_none() {
-                crate::log::error!("failed to serialize");
-                return false;
-            }
-            serializer = next.unwrap();
-        }
-        true
-    }
-
-    fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
-        let addr_size = core::mem::size_of::<AddrType>();
-        let remote_page_size = core::mem::size_of::<RemotePage>();
-        let entry_size = addr_size + remote_page_size;
-        let count = bytes.len() / entry_size;
-        let mut deserializer = unsafe { bytes.clone() };
-        let mut page_map = HashMap::new();
-        for _ in 0..count {
-            let mut addr: AddrType = Default::default();
-            let mut remote_page: RemotePage = Default::default();
-
-            // deserialize addr
-            unsafe {
-                BytesMut::from_raw(&mut addr as *mut _ as *mut u8, addr_size)
-            }.copy(unsafe { &deserializer.clone_and_resize(addr_size).unwrap() }, 0);
-            deserializer = unsafe { deserializer.truncate_header(addr_size) }?;
-
-            // deserialize remote_page
-            unsafe {
-                BytesMut::from_raw(&mut remote_page as *mut _ as *mut u8, remote_page_size)
-            }.copy(unsafe { &deserializer.clone_and_resize(remote_page_size).unwrap() }, 0);
-            deserializer = unsafe { deserializer.truncate_header(remote_page_size) }?;
-            page_map.insert(addr, remote_page);
-        }
-        Some(PageMap(page_map))
-    }
-
-    fn serialization_len(&self) -> usize {
-        let count = self.0.len();
-        let entry_size = core::mem::size_of::<AddrType>() + core::mem::size_of::<RemotePage>();
-        entry_size * count
-    }
-}
 
 #[allow(dead_code)]
 #[derive(Default)]
@@ -97,6 +18,9 @@ pub struct Descriptor {
 
 pub mod reg;
 use reg::RegDescriptor;
+
+pub mod page_map;
+use page_map::PageMap;
 
 #[derive(Default)]
 pub struct RemoteRDMADescriptor {
@@ -152,7 +76,7 @@ impl os_network::serialize::Serialize for Descriptor {
             serializer.truncate_header(reg_len).unwrap()
         };
 
-        // serialize PageMap length (usize)
+        // serialize PageMap length in bytes (usize)
         unsafe {
             *(serializer.get_ptr() as *mut usize) = pagemap_len;
         }
@@ -169,7 +93,7 @@ impl os_network::serialize::Serialize for Descriptor {
             serializer.truncate_header(pagemap_len).unwrap()
         };
 
-        // serialize VMADescriptors' length (usize)
+        // serialize VMADescriptors' length in bytes (usize)
         unsafe {
             *(serializer.get_ptr() as *mut usize) = vma_len;
         }
@@ -205,12 +129,12 @@ impl os_network::serialize::Serialize for Descriptor {
         // Deserialize regs
         let reg_len = core::mem::size_of::<RegDescriptor>();
         let reg_bytes = unsafe {
-            deserializer.clone_and_resize(reg_len).unwrap()
-        };
+            deserializer.clone_and_resize(reg_len)
+        }?;
         let regs = RegDescriptor::deserialize(&reg_bytes)?;
         deserializer = unsafe {
-            deserializer.truncate_header(reg_len).unwrap()
-        };
+            deserializer.truncate_header(reg_len)
+        }?;
 
         // Deserialize PageMap
         // 1. read the page table length as usize
@@ -218,16 +142,16 @@ impl os_network::serialize::Serialize for Descriptor {
             *(deserializer.get_ptr() as *const usize)
         };
         deserializer = unsafe {
-            deserializer.truncate_header(core::mem::size_of::<usize>()).unwrap()
-        };
+            deserializer.truncate_header(core::mem::size_of::<usize>())
+        }?;
         // 2. deserialize the page table
         let page_map_bytes = unsafe {
-            deserializer.clone_and_resize(pagemap_len).unwrap()
-        };
+            deserializer.clone_and_resize(pagemap_len)
+        }?;
         let page_map = PageMap::deserialize(&page_map_bytes)?;
         deserializer = unsafe {
-            deserializer.truncate_header(pagemap_len).unwrap()
-        };
+            deserializer.truncate_header(pagemap_len)
+        }?;
 
         // Deserialize VMAs
         // 1. read the vma list length as usize
@@ -235,21 +159,21 @@ impl os_network::serialize::Serialize for Descriptor {
             *(deserializer.get_ptr() as *const usize)
         };
         deserializer = unsafe {
-            deserializer.truncate_header(core::mem::size_of::<usize>()).unwrap()
-        };
+            deserializer.truncate_header(core::mem::size_of::<usize>())
+        }?;
         // 2. deserialize the vma list
         let vma = unsafe {
             core::slice::from_raw_parts(deserializer.get_ptr() as *const _ as *const VMADescriptor, vma_len/core::mem::size_of::<VMADescriptor>()).to_vec()
         };
         deserializer = unsafe {
-            deserializer.truncate_header(vma_len).unwrap()
-        };
+            deserializer.truncate_header(vma_len)
+        }?;
 
         // Deserialize RemoteRDMADescriptor
         let machine_len = core::mem::size_of::<RemoteRDMADescriptor>();
         let machine_bytes = unsafe {
-            deserializer.clone_and_resize(machine_len).unwrap()
-        };
+            deserializer.clone_and_resize(machine_len)
+        }?;
         let machine = RemoteRDMADescriptor::deserialize(&machine_bytes)?;
         Some(Self {
             regs: regs,

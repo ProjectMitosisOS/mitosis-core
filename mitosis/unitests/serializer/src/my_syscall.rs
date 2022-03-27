@@ -7,10 +7,10 @@ use crate::linux_kernel_module::bindings::vm_area_struct;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
 
-use mitosis::descriptor::PageMap;
 use mitosis::descriptor::Descriptor;
 use mitosis::descriptor::RemotePage;
 use mitosis::descriptor::VMADescriptor;
+use mitosis::descriptor::page_map::PageMap;
 use mitosis::descriptor::reg::RegDescriptor;
 use mitosis::descriptor::RemoteRDMADescriptor;
 
