@@ -43,8 +43,15 @@ fn test_rpc_two() {
             pool_idx,
             64, // Notice: it is very important to ensure that session ID is unique! 
             UDHyperMeta {
+                // the remote machine's RDMA gid. Since we are unit test, we use the local gid
                 gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
+
+                // CM server on RNIC 0 listens on mitosis::rdma_context::SERVICE_ID_BASE, 
+                // CM server on RNIC 1 listens on mitosis::rdma_context::SERVICE_ID_BASE + 1, etc 
                 service_id: mitosis::rdma_context::SERVICE_ID_BASE,
+
+                // Thread 0's UD registers on mitosis::rpc_service::QD_HINT_BASE, 
+                // Thread 1's UD registers on mitosis::rpc_service::QD_HINT_BASE + 1, etcc 
                 qd_hint: (mitosis::rpc_service::QD_HINT_BASE) as _,
             },
         )
@@ -60,17 +67,18 @@ fn test_rpc_two() {
 
     caller
         .sync_call(
-            64,
-            mitosis::rpc_handlers::RPCId::Echo as _,
-            0xffffffff as u64,
+            64, // remote session ID
+            mitosis::rpc_handlers::RPCId::Echo as _, // RPC ID
+            0xffffffff as u64,  // send an arg of u64
         )
         .unwrap();    
 
     let res = block_on(caller);
     match res {
         Ok(v) => {
-            let (_, reply) = v;
+            let (_, reply) = v; // msg, reply
             log::debug!("sanity check rpc two call result: {:?}", reply);
+            // Note that in real benchmark, we need to register the _ to the caller
         }
         Err(e) => log::error!("client call error: {:?}", e),
     };        
