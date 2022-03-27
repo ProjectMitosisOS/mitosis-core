@@ -16,7 +16,7 @@ impl os_network::serialize::Serialize for PageMap {
     /// | AddrType <-8 bytes-> | Remote Page <-16 bytes-> | AddrType <-8 bytes-> | Remote Page <-16 bytes-> |
     /// ```
     fn serialize(&self, bytes: &mut BytesMut) -> bool {
-        if bytes.len() < self.serialization_len() {
+        if bytes.len() < self.serialization_buf_len() {
             crate::log::error!("failed to serialize: buffer space not enough");
             return false;
         }
@@ -76,7 +76,7 @@ impl os_network::serialize::Serialize for PageMap {
         Some(PageMap(page_map))
     }
 
-    fn serialization_len(&self) -> usize {
+    fn serialization_buf_len(&self) -> usize {
         let count = self.0.len();
         let entry_size = core::mem::size_of::<AddrType>() + core::mem::size_of::<RemotePage>();
         entry_size * count

@@ -54,7 +54,7 @@ impl os_network::serialize::Serialize for Descriptor {
     /// | RegDescriptor <-sizeof(RegDescriptor)-> | PageMap length in bytes <-8 bytes-> | PageMap | VMA descriptor length in bytes <-8 bytes-> | VMA descriptor | RemoteRDMADescriptor |
     /// ```
     fn serialize(&self, bytes: &mut BytesMut) -> bool {
-        if bytes.len() < self.serialization_len() {
+        if bytes.len() < self.serialization_buf_len() {
             crate::log::error!("failed to serialize: buffer space not enough");
             return false;
         }
@@ -62,10 +62,10 @@ impl os_network::serialize::Serialize for Descriptor {
         let mut serializer = unsafe {
             bytes.clone()
         };
-        let reg_len = self.regs.serialization_len();
-        let pagemap_len = self.page_table.serialization_len();
+        let reg_len = self.regs.serialization_buf_len();
+        let pagemap_len = self.page_table.serialization_buf_len();
         let vma_len = self.vma.len() * core::mem::size_of::<VMADescriptor>();
-        let machine_len = self.machine.serialization_len();
+        let machine_len = self.machine.serialization_buf_len();
 
         // serialize regs
         let mut reg_bytes = unsafe {
@@ -183,12 +183,12 @@ impl os_network::serialize::Serialize for Descriptor {
         })
     }
 
-    fn serialization_len(&self) -> usize {
-        self.regs.serialization_len()
+    fn serialization_buf_len(&self) -> usize {
+        self.regs.serialization_buf_len()
         + core::mem::size_of::<usize>()
-        + self.page_table.serialization_len()
+        + self.page_table.serialization_buf_len()
         + core::mem::size_of::<usize>()
         + self.vma.len() * core::mem::size_of::<VMADescriptor>()
-        + self.machine.serialization_len()
+        + self.machine.serialization_buf_len()
     }
 }

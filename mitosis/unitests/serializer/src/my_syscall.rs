@@ -154,7 +154,7 @@ impl MySyscallHandler {
         descriptor.page_table.0.insert(0x2, RemotePage::default());
         descriptor.vma.push(VMADescriptor::default());
 
-        let size = descriptor.serialization_len();
+        let size = descriptor.serialization_buf_len();
         let mut memory = vec![0; size];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
 
