@@ -21,6 +21,17 @@ impl BytesMut {
         }
     }
 
+    pub unsafe fn memcpy_deserialize_at<T: Sized>(
+        &self,
+        off: usize,
+        target: &mut T,
+    ) -> core::option::Option<usize> {
+        match self.truncate_header(off) {
+            Some(bytes) => bytes.memcpy_deserialize(target),
+            _ => None,
+        }
+    }
+
     pub unsafe fn memcpy_deserialize<T: Sized>(
         &self,
         target: &mut T,
@@ -52,7 +63,7 @@ pub trait Serialize {
         Some(result)
     }
 
-    /// The size of buffer that is required for serialization 
+    /// The size of buffer that is required for serialization
     fn serialization_buf_len(&self) -> usize
     where
         Self: Sized,
