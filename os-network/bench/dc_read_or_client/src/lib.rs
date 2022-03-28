@@ -11,8 +11,7 @@ use core::pin::Pin;
 use krdma_test::{krdma_drop, krdma_main};
 
 use rust_kernel_linux_util as log;
-use rust_kernel_linux_util::kthread;
-use rust_kernel_linux_util::linux_kernel_module;
+use rust_kernel_linux_util::{linux_kernel_module, kthread};
 use rust_kernel_linux_util::string::ptr2string;
 use rust_kernel_linux_util::timer::KTimer;
 
@@ -21,18 +20,15 @@ use linux_kernel_module::c_types::*;
 use mitosis_util::bench::*;
 use mitosis_util::reporter::*;
 
-use os_network::block_on;
 use os_network::msg::UDMsg as RMemory;
 use os_network::rdma::dc::DCConn;
 use os_network::rdma::dc::DCFactory;
 use os_network::rdma::payload;
 use os_network::remote_memory::ToPhys;
-use os_network::Conn;
-use os_network::Factory;
+use os_network::{Conn, Factory, block_on};
 
 use KRdmaKit::cm::{EndPoint, SidrCM};
-use KRdmaKit::device::RContext;
-use KRdmaKit::device::RNIC;
+use KRdmaKit::device::{RContext, RNIC};
 use KRdmaKit::random::FastRandom;
 use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
@@ -191,7 +187,7 @@ fn ctx_init() {
         for i in 0..thread_count::read() {
             RCONTEXTS::get_mut().push(DCBenchWorker::get_local_nic(i as usize).open().unwrap());
         }
-        
+
         for i in 0..thread_count::read() {
             DCFACTORIES::get_mut().push(DCFactory::new(&RCONTEXTS::get_ref()[i as usize]));
         }
