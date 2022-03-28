@@ -30,14 +30,16 @@ pub(crate) fn handle_echo(input: &BytesMut, output: &mut BytesMut) -> usize {
 /// `handler_id` and `auth_key` for query.
 ///
 /// The reply of the `Descriptor` would send back the specific start physical address and length (for one-sided read)
-pub(crate) fn handle_swap_descriptor(input: &BytesMut, output: &mut BytesMut) -> usize {
+pub(crate) fn handle_swap_descriptor(_input: &BytesMut, output: &mut BytesMut) -> usize {
     let (handler_id, auth_key): (usize, usize) = (0x0, 0x1);
+    crate::log::debug!("[handle_swap_descriptor] start. handler id:{}, auth_key:{}", handler_id, auth_key);
     // 1. Read from descriptor pool
     let dfs: DescriptorFactoryService = DescriptorFactoryService::create(); // TODO: get from global var
     if let Some(meta) = dfs.get_descriptor(0) {
         // 2. Write back
         return match meta.serialize(output) {
             true => {
+                crate::log::debug!("find one meta: {:?}", output);
                 meta.serialization_buf_len() as _
             }
             false => {
