@@ -92,6 +92,7 @@ impl DCBenchWorker<'_> {
         let range = self.endpoint.mr.get_capacity() as u64 / memory_size::read();
         let offset = (self.random.get_next() % range) * memory_size::read();
         let remote_addr = remote_addr + offset;
+
         DCReqPayload::default()
             .set_laddr(unsafe { self.local_mem.to_phys().0 })
             .set_raddr(remote_addr)
@@ -119,6 +120,7 @@ impl<'a> BenchRoutine for DCBenchWorker<'a> {
         let ctx = factory.get_context();
         let endpoint = Self::get_my_endpoint(ctx, thread_id);
         let rkey = endpoint.mr.get_rkey();
+
         Self {
             endpoint: endpoint,
             local_mem: RMemory::new(memory_size::read() as usize, 0),
@@ -179,12 +181,17 @@ fn ctx_init() {
                 .map(|x| String::from(x.trim()))
                 .collect(),
         );
+
         KDRIVER::init(KDriver::create().unwrap());
+
         DCFACTORIES::init(Vec::new());
+
         RCONTEXTS::init(Vec::new());
+
         for i in 0..thread_count::read() {
             RCONTEXTS::get_mut().push(DCBenchWorker::get_local_nic(i as usize).open().unwrap());
         }
+        
         for i in 0..thread_count::read() {
             DCFACTORIES::get_mut().push(DCFactory::new(&RCONTEXTS::get_ref()[i as usize]));
         }
