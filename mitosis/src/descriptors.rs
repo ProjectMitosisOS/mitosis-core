@@ -4,7 +4,7 @@ use os_network::bytes::BytesMut;
 
 use crate::linux_kernel_module;
 
-// sub descriptors 
+// sub descriptors
 pub mod reg;
 pub use reg::RegDescriptor;
 
@@ -14,7 +14,7 @@ pub use page_table::FlatPageTable;
 pub mod rdma;
 pub use rdma::RDMADescriptor;
 
-pub mod vma; 
+pub mod vma;
 pub use vma::VMADescriptor;
 
 /// The kernel-space descriptor of MITOSIS
@@ -39,105 +39,76 @@ impl os_network::serialize::Serialize for Descriptor {
             return false;
         }
 
-        let mut serializer = unsafe { bytes.clone() };
+        // registers
+        let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
+        self.regs.serialize(&mut cur);
 
-        let reg_len = self.regs.serialization_buf_len();
-        let pagemap_len = self.page_table.serialization_buf_len();
-        let vma_len = self.vma.len() * core::mem::size_of::<VMADescriptor>();
-        let machine_len = self.machine_info.serialization_buf_len();
-
-        // serialize regs
-        let mut reg_bytes = unsafe { serializer.clone_and_resize(reg_len).unwrap() };
-        self.regs.serialize(&mut reg_bytes);
-        serializer = unsafe { serializer.truncate_header(reg_len).unwrap() };
-
-        // serialize PageMap length in bytes (usize)
-        unsafe {
-            *(serializer.get_ptr() as *mut usize) = pagemap_len;
-        }
-        serializer = unsafe {
-            serializer
-                .truncate_header(core::mem::size_of::<usize>())
+        let mut cur = unsafe {
+            cur.truncate_header(self.regs.serialization_buf_len())
                 .unwrap()
         };
 
-        // serialize PageMap
-        let mut page_map_bytes = unsafe { serializer.clone_and_resize(pagemap_len).unwrap() };
-        self.page_table.serialize(&mut page_map_bytes);
-        serializer = unsafe { serializer.truncate_header(pagemap_len).unwrap() };
-
-        // serialize VMADescriptors' length in bytes (usize)
-        unsafe {
-            *(serializer.get_ptr() as *mut usize) = vma_len;
-        }
-        serializer = unsafe {
-            serializer
-                .truncate_header(core::mem::size_of::<usize>())
+        // page table
+        self.page_table.serialize(&mut cur);
+        let mut cur = unsafe {
+            cur.truncate_header(self.page_table.serialization_buf_len())
                 .unwrap()
         };
 
-        // serialize VMADescriptors
-        let mut vma_descriptor_bytes = unsafe { serializer.clone_and_resize(vma_len).unwrap() };
-        let raw_vm_descriptors =
-            unsafe { BytesMut::from_raw(self.vma.as_ptr() as *mut u8, vma_len) };
-        vma_descriptor_bytes.copy(&raw_vm_descriptors, 0);
-        serializer = unsafe { serializer.truncate_header(vma_len).unwrap() };
+        // vmas
+        let sz = unsafe { cur.memcpy_serialize_at(0, &self.vma.len()).unwrap() };
+        let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
 
-        // serialize RemoteRDMADescriptor
-        let mut machine_bytes = unsafe { serializer.clone_and_resize(machine_len).unwrap() };
-        self.machine_info.serialize(&mut machine_bytes);
+        for &vma in &self.vma {
+            vma.serialize(&mut cur);
+            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };
+        }
+
+        // finally, machine info
+        self.machine_info.serialize(&mut cur);
+
+        // done
         true
     }
 
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
-        let mut deserializer = unsafe { bytes.clone() };
+        let cur = unsafe { bytes.truncate_header(0).unwrap() };
 
-        // Deserialize regs
-        let reg_len = core::mem::size_of::<RegDescriptor>();
-        let reg_bytes = unsafe { deserializer.clone_and_resize(reg_len) }?;
-        let regs = RegDescriptor::deserialize(&reg_bytes)?;
-        deserializer = unsafe { deserializer.truncate_header(reg_len) }?;
+        // regs
+        let regs = RegDescriptor::deserialize(&cur)?;
+        let cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
 
-        // Deserialize PageMap
-        // 1. read the page table length as usize
-        let pagemap_len = unsafe { *(deserializer.get_ptr() as *const usize) };
-        deserializer = unsafe { deserializer.truncate_header(core::mem::size_of::<usize>()) }?;
-        // 2. deserialize the page table
-        let page_map_bytes = unsafe { deserializer.clone_and_resize(pagemap_len) }?;
-        let page_map = FlatPageTable::deserialize(&page_map_bytes)?;
-        deserializer = unsafe { deserializer.truncate_header(pagemap_len) }?;
+        // page table
+        let pt = FlatPageTable::deserialize(&cur)?;
+        let cur = unsafe { cur.truncate_header(pt.serialization_buf_len())? };
 
-        // Deserialize VMAs
-        // 1. read the vma list length as usize
-        let vma_len = unsafe { *(deserializer.get_ptr() as *const usize) };
-        deserializer = unsafe { deserializer.truncate_header(core::mem::size_of::<usize>()) }?;
-        // 2. deserialize the vma list
-        let vma = unsafe {
-            core::slice::from_raw_parts(
-                deserializer.get_ptr() as *const _ as *const VMADescriptor,
-                vma_len / core::mem::size_of::<VMADescriptor>(),
-            )
-            .to_vec()
-        };
-        deserializer = unsafe { deserializer.truncate_header(vma_len) }?;
+        // vmas
+        let mut vmas = Vec::new();
+        let mut count: usize = 0;
+        let off = unsafe { cur.memcpy_deserialize(&mut count)? };
+        let mut cur = unsafe { cur.truncate_header(off)? };
 
-        // Deserialize RemoteRDMADescriptor
-        let machine_len = core::mem::size_of::<RDMADescriptor>();
-        let machine_bytes = unsafe { deserializer.clone_and_resize(machine_len) }?;
-        let machine = RDMADescriptor::deserialize(&machine_bytes)?;
+        for _ in 0..count {
+            let vma = VMADescriptor::deserialize(&cur)?;
+            cur = unsafe { cur.truncate_header(vma.serialization_buf_len())? };
+            vmas.push(vma);
+        }
+
+        // machine info
+        let machine_info = RDMADescriptor::deserialize(&cur)?;
 
         Some(Self {
             regs: regs,
-            page_table: page_map,
-            vma: vma,
-            machine_info: machine,
+            page_table: pt,
+            vma: vmas,
+            machine_info: machine_info,
         })
     }
 
     fn serialization_buf_len(&self) -> usize {
         self.regs.serialization_buf_len()
             + self.page_table.serialization_buf_len()
-            + core::mem::size_of::<usize>() // #VMA descriptors 
+            + core::mem::size_of::<usize>() // the number of VMA descriptors 
             + self.vma.len() * core::mem::size_of::<VMADescriptor>()
             + self.machine_info.serialization_buf_len()
     }

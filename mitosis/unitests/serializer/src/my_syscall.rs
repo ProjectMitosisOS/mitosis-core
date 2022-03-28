@@ -118,7 +118,6 @@ impl MySyscallHandler {
     /// Test the (de)serialization of RemoteRDMADescriptor
     #[inline(always)]
     fn test_rdma_descriptor(&self, _arg: c_ulong) -> c_long {
-
         let mut descriptor: RDMADescriptor = Default::default();        
         descriptor.set_rkey(0xdeadbeaf).set_service_id(73); 
 
@@ -154,39 +153,8 @@ impl MySyscallHandler {
     /// Test the (de)serialization of mitosis Descriptor
     #[inline(always)]
     fn test_mitosis_descriptor(&self, _arg: c_ulong) -> c_long {
-        /*
-        let mut descriptor: Descriptor = Default::default();
-        descriptor.page_table.0.insert(0x1, RemotePage::default());
-        descriptor.page_table.0.insert(0x2, RemotePage::default());
-        descriptor.vma.push(VMADescriptor::default());
-
-        let size = descriptor.serialization_buf_len();
-        let mut memory = vec![0; size];
-        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
-
-        let result = descriptor.serialize(&mut bytes);
-        if !result {
-            crate::log::error!("fail to serialize mitosis descriptor");
-            return 0;
-        }
-
-        let result = Descriptor::deserialize(&bytes);
-        if result.is_none() {
-            crate::log::error!("fail to deserialize mitosis descriptor");
-            return 0;
-        }
-
-        let result = result.unwrap();
-        if result.page_table.0.len() != 2 {
-            crate::log::error!("expected: {}, got: {}", 2, result.page_table.0.len());
-            return 0;
-        }
-        if result.vma.len() != 1 {
-            crate::log::error!("expected: {}, got: {}", 1, result.vma.len());
-            return 0;
-        }
-        crate::log::info!("pass mitosis descriptor (de)serialization test");
-        */
+        crate::log::info!("test mitosis descriptor"); 
+        todo!();
         0
     }
 }
