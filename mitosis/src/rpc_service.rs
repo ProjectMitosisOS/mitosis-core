@@ -114,7 +114,7 @@ impl Service {
             .register(RPCId::Echo as _, handle_echo);
         rpc_server
             .get_mut_service()
-            .register(RPCId::SwapDescriptor as _, handle_swap_descriptor);
+            .register(RPCId::ForkResume as _, handle_fork_resume);
 
         // register msg buffers
         // pre-most receive buffers

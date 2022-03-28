@@ -10,6 +10,14 @@ pub struct UDSession<'a> {
     key: u32,
 }
 
+impl UDSession<'_> {
+    #[inline]
+    pub fn get_ss_meta(&self) -> &EndPoint {
+        &self.meta
+    }
+
+}
+
 impl<'a> crate::future::Future for UDSession<'a> {
     type Output = <UDDatagram<'a> as Future>::Output;
     type Error = <UDDatagram<'a> as Future>::Error;

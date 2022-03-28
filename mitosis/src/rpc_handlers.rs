@@ -12,8 +12,8 @@ pub enum RPCId {
     Nil = 1,
     // for test only
     Echo = 2,
-    // Fetch parent's container descriptor
-    SwapDescriptor = 3,
+    // Resume fork by fetching remote descriptor
+    ForkResume = 3,
 }
 
 pub(crate) fn handle_nil(_input: &BytesMut, _output: &mut BytesMut) -> usize {
@@ -31,7 +31,7 @@ pub(crate) fn handle_echo(input: &BytesMut, output: &mut BytesMut) -> usize {
 /// `handler_id` and `auth_key` for query.
 ///
 /// The reply of the `Descriptor` would send back the specific start physical address and length (for one-sided read)
-pub(crate) fn handle_swap_descriptor(_input: &BytesMut, output: &mut BytesMut) -> usize {
+pub(crate) fn handle_fork_resume(_input: &BytesMut, output: &mut BytesMut) -> usize {
     let (handler_id, auth_key): (usize, usize) = (0x0, 0x1);
     crate::log::debug!("[handle_swap_descriptor] start. handler id:{}, auth_key:{}", handler_id, auth_key);
     // 1. Read from descriptor pool

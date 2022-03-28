@@ -23,20 +23,20 @@ pub struct Caller<R: Receiver, S: RPCConn> {
     connected_sessions: HashMap<usize, (S, S::ReqPayload)>,
 }
 
-impl<R, S: RPCConn> GetTransport for Caller<R,S> 
-where R : Receiver + GetTransport
+impl<R, S: RPCConn> GetTransport for Caller<R, S>
+    where R: Receiver + GetTransport
 {
     type Transport = R::Transport;
-    fn get_transport_mut(&mut self) -> &mut Self::Transport { 
+    fn get_transport_mut(&mut self) -> &mut Self::Transport {
         self.inner_receiver.get_transport_mut()
     }
 }
 
 impl<R, SS> Caller<R, SS>
-where
-    R: Receiver,
-    SS: RPCConn,
-    SS::ReqPayload: ToBytes,
+    where
+        R: Receiver,
+        SS: RPCConn,
+        SS::ReqPayload: ToBytes,
 {
     /// Note, this call should use Future to wait
     pub fn sync_call<Args>(
@@ -67,8 +67,8 @@ where
         mut s: SS,
         meta: SS::HyperMeta,
     ) -> Result<(), SS::IOResult>
-    where
-        SS::ReqPayload: ToBytes,
+        where
+            SS::ReqPayload: ToBytes,
     {
         let mut msg_buf = SS::ReqPayload::create(R::MTU, 0);
         let req_sz = ConnectStubFactory::new(session_id)
@@ -87,12 +87,19 @@ where
         self.connected_sessions.insert(session_id, (s, msg_buf));
         Ok(())
     }
+
+    pub fn get_ss(
+        &self,
+        session_id: usize,
+    ) -> Option<&(SS, <SS as RPCConn<SS>>::ReqPayload)> {
+        self.connected_sessions.get(&session_id)
+    }
 }
 
 impl<R, SS> Caller<R, SS>
-where
-    R: Receiver,
-    SS: RPCConn,
+    where
+        R: Receiver,
+        SS: RPCConn,
 {
     pub fn new(inner: R) -> Self {
         Self {
@@ -109,12 +116,13 @@ where
 use crate::future::*;
 
 impl<R, SS> crate::future::Future for Caller<R, SS>
-where
-    R: Receiver,
-    SS: RPCConn,
-    R::Output: ToBytes,
+    where
+        R: Receiver,
+        SS: RPCConn,
+        R::Output: ToBytes,
 {
-    type Output = (R::Output, BytesMut); // registered message, the reply
+    type Output = (R::Output, BytesMut);
+    // registered message, the reply
     type Error = CallError<R::Error>;
 
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
@@ -162,16 +170,19 @@ pub mod hook;
 
 pub mod header;
 pub mod header_factory;
+
 pub use header_factory::*;
 
 // modules for registering RPC callbacks
 pub mod service;
+
 pub use service::Service;
 
 /// This is a simple wrapper over crate::conn::Conn
 /// The reason for doing so is to simplify customization for RPC
 pub trait RPCConn<T: Future = Self>: Future {
-    type ReqPayload: AllocMsgBuf; // the request format
+    type ReqPayload: AllocMsgBuf;
+    // the request format
     type CompPayload = Self::Output;
     type IOResult = Self::Error;
     type HyperMeta;

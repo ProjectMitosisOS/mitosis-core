@@ -32,16 +32,19 @@ pub struct CallerPool<'a> {
 use os_network::MetaFactory;
 
 impl<'a> CallerPool<'a> {
+    #[inline(always)]
     pub unsafe fn get_global_caller(
         idx: usize,
     ) -> core::option::Option<&'static mut UDCaller<'static>> {
         crate::service_caller_pool::get_mut().get_caller(idx)
     }
 
+    #[inline(always)]
     pub fn get_caller(&'a mut self, idx: usize) -> core::option::Option<&'a mut UDCaller<'a>> {
         self.pool.get_mut(idx)
     }
 
+    #[inline(always)]
     pub fn get_caller_context(&'a self, idx: usize) -> core::option::Option<&'a RContext<'a>> {
         self.contexts.get(idx).map(|r| *r)
     }

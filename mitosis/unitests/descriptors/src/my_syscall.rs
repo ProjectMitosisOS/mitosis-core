@@ -1,10 +1,7 @@
-use alloc::string::ToString;
 use core::pin::Pin;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering::SeqCst;
-use KRdmaKit::cm::SidrCM;
-use KRdmaKit::mem::{Memory, pa_to_va, RMemPhy};
-use KRdmaKit::Profile;
+use KRdmaKit::mem::{Memory, RMemPhy};
 use KRdmaKit::rust_kernel_rdma_base::*;
 use mitosis::descriptors::{Descriptor, RDMADescriptor, ReadMeta};
 use mitosis::get_descriptor_pool_mut;
@@ -15,7 +12,6 @@ use os_network::rdma::payload;
 
 
 use os_network::{block_on, Conn, Factory, rdma};
-use os_network::bytes::BytesMut;
 use os_network::msg::UDMsg;
 use os_network::rdma::RawGID;
 use os_network::serialize::Serialize;
@@ -107,14 +103,13 @@ impl MySyscallHandler {
             mitosis::rpc_caller_pool::CallerPool::get_global_caller(pool_idx)
                 .expect("the caller should be properly inited")
         };
-        caller.register_recv_buf(UDMsg::new(4096, 73)).unwrap(); // should succeed
-
         // 1. Two-sided RDMA to fetch the address and length information
         caller.sync_call::<u64>(
             SESSION_IDX, // remote session ID
-            mitosis::rpc_handlers::RPCId::SwapDescriptor as _, // RPC ID
+            mitosis::rpc_handlers::RPCId::ForkResume as _, // RPC ID
             0xffffffff as u64,  // send an arg of u64
         ).unwrap();
+        caller.register_recv_buf(UDMsg::new(4096, 73)).unwrap(); // should succeed
         let dst = match block_on(caller) {
             Ok((_, reply)) => {
                 ReadMeta::deserialize(&reply)
@@ -130,18 +125,10 @@ impl MySyscallHandler {
         let dst = dst.as_ref().unwrap();
         log::debug!("addr:0x{:x}, len:{}", dst.addr, dst.length);
         // 2. One sided RDMA read to fetch remote descriptor
-        let rkey = unsafe { ctx.get_rkey() };
+        let point = caller.get_ss(SESSION_IDX).unwrap().0.get_ss_meta();
         let lkey = unsafe { ctx.get_lkey() };
         let client_factory = rdma::dc::DCFactory::new(&ctx);
         let mut dc = client_factory.create(()).unwrap();
-        let path_res = client_factory
-            .get_context()
-            .explore_path(ctx.get_gid_as_string(), RNIC0)
-            .unwrap();
-        let mut sidr_cm = SidrCM::new(ctx, core::ptr::null_mut()).unwrap();
-        let endpoint = sidr_cm
-            .sidr_connect(path_res, RNIC0, T0)
-            .unwrap();
         const MEM_SZ: usize = 1024 * 1024;
         type DCReqPayload = payload::Payload<ib_dc_wr>;
         let mut local = RMemPhy::new(MEM_SZ);
@@ -150,27 +137,24 @@ impl MySyscallHandler {
             .set_raddr(dst.addr)
             .set_sz(dst.length as _)
             .set_lkey(lkey)
-            .set_rkey(rkey)
+            .set_rkey(point.mr.get_rkey())
             .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
             .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
-            .set_ah(&endpoint);
+            .set_ah(point);
         let timeout_usec = 5000;
         let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
         os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
-        let res = dc.post(&payload.as_ref());
-        if res.is_err() {
+        if dc.post(&payload.as_ref()).is_err() {
             log::error!("unable to post read qp");
             return -1;
         }
-
         let mut timeout = Timeout::new(dc, timeout_usec);
-        let result = block_on(&mut timeout);
-        if result.is_err() {
+        if block_on(&mut timeout).is_err() {
             log::error!("polling dc qp with error");
             return -1;
         }
         compiler_fence(SeqCst);
-        let content = unsafe { &*(local.get_ptr() as *mut Descriptor) };
+        let _content = unsafe { &*(local.get_ptr() as *mut Descriptor) };
 
         // 3. Apply this descriptor into child process
         return 0;
