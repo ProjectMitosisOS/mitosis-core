@@ -123,7 +123,7 @@ impl MySyscallHandler {
         let task = Task::new();
         log::info!("check my task {:?}", task);
 
-        let (_,pt) = task.generate_mm();
+        let (_, pt) = task.generate_mm();
         log::debug!("Generated page table sz {}", pt.len());
 
         let mut memory = vec![0 as u8; pt.serialization_buf_len()];
@@ -186,7 +186,7 @@ impl MySyscallHandler {
             crate::log::error!("de-serialize fail on {:?}", result);
         }
 
-        crate::log::info!("pass RemoteRDMADescriptor (de)serialization test\n");
+        crate::log::info!("pass RDMADescriptor (de)serialization test\n");
         0
     }
 
@@ -194,7 +194,49 @@ impl MySyscallHandler {
     #[inline(always)]
     fn test_mitosis_descriptor(&self, _arg: c_ulong) -> c_long {
         crate::log::info!("test mitosis descriptor");
-        todo!();
+
+        let mut mac_info: RDMADescriptor = Default::default();
+        mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
+
+        let descriptor = Descriptor::new(&Task::new(), mac_info);
+
+        log::debug!(
+            "sanity check descriptor serialization sz: {}",
+            descriptor.serialization_buf_len()
+        );
+
+        let mut memory = vec![0; descriptor.serialization_buf_len()];
+        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
+
+        let result = descriptor.serialize(&mut bytes);
+        if !result {
+            crate::log::error!("fail to serialize process descriptor");
+            return 0;
+        }
+
+        let result = Descriptor::deserialize(&bytes);
+        if result.is_none() {
+            crate::log::error!("fail to deserialize process descriptor");
+            return 0;
+        }
+
+        let result = result.unwrap();
+        if result.page_table != descriptor.page_table {
+            log::error!(
+                "failed to deserialize page table, {}, {}",
+                result.page_table.len(),
+                descriptor.page_table.len(),
+            );
+        }
+
+        crate::log::debug!(
+            "check mac_info {:?}\n {:?}",
+            result.machine_info,
+            descriptor.machine_info
+        );
+
+        crate::log::info!("pass process Descriptor (de)serialization test\n");
+
         0
     }
 }

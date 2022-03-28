@@ -20,7 +20,7 @@ pub use vma::VMADescriptor;
 pub mod factory;
 
 /// The kernel-space process descriptor of MITOSIS
-/// The descriptors should be generate by the task 
+/// The descriptors should be generate by the task
 #[allow(dead_code)]
 #[derive(Default)]
 pub struct Descriptor {
@@ -28,6 +28,18 @@ pub struct Descriptor {
     pub page_table: FlatPageTable,
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
+}
+
+impl Descriptor {
+    pub fn new(task: &crate::kern_wrappers::task::Task, mac_info: RDMADescriptor) -> Self {
+        let (vma, pt) = task.generate_mm();
+        Self {
+            regs: task.generate_reg_descriptor(),
+            page_table: pt,
+            vma: vma,
+            machine_info: mac_info,
+        }
+    }
 }
 
 impl os_network::serialize::Serialize for Descriptor {
