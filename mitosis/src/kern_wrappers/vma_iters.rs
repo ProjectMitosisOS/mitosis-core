@@ -47,11 +47,12 @@ impl<'a> VMADumpIter<'a> {
         _next: crate::linux_kernel_module::c_types::c_ulong,
         walk: *mut mm_walk,
     ) -> crate::linux_kernel_module::c_types::c_int {
-        /*
+
         let engine: &mut Self = &mut (*((*walk).private as *mut Self));
+        
         if engine.flat_page_table.0.get(&addr).is_some() {
             crate::log::warn!("Duplicated page table entry for addr {:x}", addr);
-        }        */
+        }
 
         // TODO: if the physical address is 0, do we need to serialize it?
         engine

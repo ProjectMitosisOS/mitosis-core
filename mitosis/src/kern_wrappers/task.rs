@@ -28,20 +28,23 @@ impl Task {
         }
     }
 
-    pub fn generate_page_table(&self) -> FlatPageTable { 
+    pub fn generate_mm(&self) -> (alloc::vec::Vec<VMADescriptor>, FlatPageTable) { 
         use crate::kern_wrappers::vma_iters::VMADumpIter; 
-        let mut res : FlatPageTable = Default::default();
+
+        let mut pt : FlatPageTable = Default::default();
+        let mut vmas = alloc::vec::Vec::new();
         
         let mm = self.get_memory_descriptor();
         let vma_iters = mm.get_vma_iter();
 
         let mut total_counts = 0;
         for vma in vma_iters {
-            total_counts += VMADumpIter::new(&mut res).execute(&vma);
+            vmas.push(vma.generate_descriptor());
+            total_counts += VMADumpIter::new(&mut pt).execute(&vma);
         }
         crate::log::debug!("Total {} pages touched", total_counts);
         
-        res
+        (vmas, pt)
     }
 }
 

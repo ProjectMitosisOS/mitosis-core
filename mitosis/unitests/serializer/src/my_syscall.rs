@@ -123,7 +123,7 @@ impl MySyscallHandler {
         let task = Task::new();
         log::info!("check my task {:?}", task);
 
-        let pt = task.generate_page_table();
+        let (_,pt) = task.generate_mm();
         log::debug!("Generated page table sz {}", pt.len());
 
         let mut memory = vec![0 as u8; pt.serialization_buf_len()];

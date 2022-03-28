@@ -8,8 +8,12 @@ pub struct VMA<'a> {
 }
 
 impl<'a> VMA<'a> {
-    pub fn generate_descriptor(&self) -> crate::descriptors::VMADescriptor { 
-        unimplemented!();
+    pub fn generate_descriptor(&self) -> crate::descriptors::VMADescriptor {
+        crate::descriptors::VMADescriptor {
+            range: self.get_range(),
+            flags: self.get_raw_flags(),
+            prot: self.get_prot(),
+        }
     }
 }
 
