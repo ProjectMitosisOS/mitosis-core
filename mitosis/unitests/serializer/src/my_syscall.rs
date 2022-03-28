@@ -7,7 +7,7 @@ use crate::*;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
 
-use mitosis::descriptor::*;
+use mitosis::descriptors::*;
 use mitosis::kern_wrappers::task::Task;
 
 pub(crate) struct MySyscallHandler;
@@ -30,7 +30,7 @@ impl FileOperations for MySyscallHandler {
         match cmd {
             0 => self.test_reg_descriptor(arg),
             1 => self.test_page_table(arg),
-            3 => self.test_remote_rdma_descriptor(arg),
+            3 => self.test_rdma_descriptor(arg),
             4 => self.test_mitosis_descriptor(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
@@ -117,32 +117,36 @@ impl MySyscallHandler {
 
     /// Test the (de)serialization of RemoteRDMADescriptor
     #[inline(always)]
-    fn test_remote_rdma_descriptor(&self, _arg: c_ulong) -> c_long {
-        let mut descriptor: RemoteRDMADescriptor = Default::default();
-        descriptor.rkey = 0xdeadbeaf;
-        let mut memory = vec![0; core::mem::size_of::<RemoteRDMADescriptor>()];
+    fn test_rdma_descriptor(&self, _arg: c_ulong) -> c_long {
+
+        let mut descriptor: RDMADescriptor = Default::default();        
+        descriptor.set_rkey(0xdeadbeaf).set_service_id(73); 
+
+        let mut memory = vec![0; core::mem::size_of::<RDMADescriptor>()];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
 
+        crate::log::debug!("pre-check rdma descriptor {:?}", descriptor);
         let result = descriptor.serialize(&mut bytes);
         if !result {
-            crate::log::error!("fail to serialize RemoteRDMADescriptor");
+            crate::log::error!("fail to serialize RDMADescriptor");
             return 0;
         }
-        let result = RemoteRDMADescriptor::deserialize(&bytes);
+
+        let result = RDMADescriptor::deserialize(&bytes);
         if result.is_none() {
             crate::log::error!("fail to deserialize RemoteRDMADescriptor");
             return 0;
         }
 
+        crate::log::debug!("post-check rdma descriptor {:?}", descriptor);
+
         let result = result.unwrap();
-        if result.rkey != descriptor.rkey {
-            crate::log::error!(
-                "expected: 0x{:x}, got: 0x{:x}",
-                descriptor.rkey,
-                result.rkey
-            );
-            return 0;
+
+        // check equality
+        if result != descriptor { 
+            crate::log::error!("de-serialize fail on {:?}", result);
         }
+
         crate::log::info!("pass RemoteRDMADescriptor (de)serialization test");
         0
     }

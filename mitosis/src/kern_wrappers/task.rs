@@ -14,7 +14,7 @@ impl Task {
     }
 }
 
-use crate::descriptor::reg::RegDescriptor;
+use crate::descriptors::reg::RegDescriptor;
 
 impl Task {
     pub fn generate_reg_descriptor(&self) -> RegDescriptor {

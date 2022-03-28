@@ -1,9 +1,21 @@
 use alloc::vec::Vec;
 
 use os_network::bytes::BytesMut;
-use os_network::rdma::RawGID;
 
 use crate::linux_kernel_module;
+
+// sub descriptors 
+pub mod reg;
+pub use reg::RegDescriptor;
+
+pub mod page_table;
+pub use page_table::FlatPageTable;
+
+pub mod rdma;
+pub use rdma::RDMADescriptor;
+
+pub mod vma; 
+pub use vma::VMADescriptor;
 
 /// The kernel-space descriptor of MITOSIS
 #[allow(dead_code)]
@@ -12,41 +24,14 @@ pub struct Descriptor {
     pub regs: RegDescriptor,
     pub page_table: FlatPageTable,
     pub vma: Vec<VMADescriptor>,
-    pub machine: RemoteRDMADescriptor,
+    pub machine_info: RDMADescriptor,
 }
-
-pub mod reg;
-pub use reg::RegDescriptor;
-
-pub mod page_table;
-pub use page_table::FlatPageTable;
-
-#[derive(Default)]
-pub struct RemoteRDMADescriptor {
-    pub gid: RawGID,
-    pub service_id: u64,
-    pub rkey: u32,
-}
-
-impl os_network::serialize::Serialize for RemoteRDMADescriptor {}
-
-#[derive(Copy, Clone, Default)]
-pub struct VMADescriptor {
-    pub range: (
-        crate::kern_wrappers::mm::VirtAddrType,
-        crate::kern_wrappers::mm::VirtAddrType,
-    ), // [start,end] of a vma range (virtual address)
-    pub flags: crate::bindings::vm_flags_t,
-    pub prot: crate::bindings::pgprot_t,
-}
-
-impl os_network::serialize::Serialize for VMADescriptor {}
 
 impl os_network::serialize::Serialize for Descriptor {
     /// Serialization format:
     /// ```
-    /// | RegDescriptor <-sizeof(RegDescriptor)-> | PageMap length in bytes <-8 bytes-> | PageMap
-    /// | VMA descriptor length in bytes <-8 bytes-> | VMA descriptor | RemoteRDMADescriptor |
+    /// | RegDescriptor <-sizeof(RegDescriptor)-> | PageMap
+    /// | VMA descriptor length in bytes <-8 bytes-> | VMA descriptor | RDMADescriptor |
     /// ```
     fn serialize(&self, bytes: &mut BytesMut) -> bool {
         if bytes.len() < self.serialization_buf_len() {
@@ -59,7 +44,7 @@ impl os_network::serialize::Serialize for Descriptor {
         let reg_len = self.regs.serialization_buf_len();
         let pagemap_len = self.page_table.serialization_buf_len();
         let vma_len = self.vma.len() * core::mem::size_of::<VMADescriptor>();
-        let machine_len = self.machine.serialization_buf_len();
+        let machine_len = self.machine_info.serialization_buf_len();
 
         // serialize regs
         let mut reg_bytes = unsafe { serializer.clone_and_resize(reg_len).unwrap() };
@@ -100,7 +85,7 @@ impl os_network::serialize::Serialize for Descriptor {
 
         // serialize RemoteRDMADescriptor
         let mut machine_bytes = unsafe { serializer.clone_and_resize(machine_len).unwrap() };
-        self.machine.serialize(&mut machine_bytes);
+        self.machine_info.serialize(&mut machine_bytes);
         true
     }
 
@@ -137,23 +122,23 @@ impl os_network::serialize::Serialize for Descriptor {
         deserializer = unsafe { deserializer.truncate_header(vma_len) }?;
 
         // Deserialize RemoteRDMADescriptor
-        let machine_len = core::mem::size_of::<RemoteRDMADescriptor>();
+        let machine_len = core::mem::size_of::<RDMADescriptor>();
         let machine_bytes = unsafe { deserializer.clone_and_resize(machine_len) }?;
-        let machine = RemoteRDMADescriptor::deserialize(&machine_bytes)?;
+        let machine = RDMADescriptor::deserialize(&machine_bytes)?;
+
         Some(Self {
             regs: regs,
             page_table: page_map,
             vma: vma,
-            machine: machine,
+            machine_info: machine,
         })
     }
 
     fn serialization_buf_len(&self) -> usize {
         self.regs.serialization_buf_len()
-            + core::mem::size_of::<usize>()
             + self.page_table.serialization_buf_len()
-            + core::mem::size_of::<usize>()
+            + core::mem::size_of::<usize>() // #VMA descriptors 
             + self.vma.len() * core::mem::size_of::<VMADescriptor>()
-            + self.machine.serialization_buf_len()
+            + self.machine_info.serialization_buf_len()
     }
 }
