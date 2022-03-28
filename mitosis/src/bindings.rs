@@ -17,6 +17,30 @@ mod bindings {
 
 pub(crate) type StackRegisters = pt_regs;
 
+impl PartialEq for StackRegisters {
+    fn eq(&self, other: &StackRegisters) -> bool {
+        self.r15 == other.r15
+            && self.r14 == other.r14
+            && self.r13 == other.r13
+            && self.r12 == other.r12
+            && self.r11 == other.r11
+            && self.r10 == other.r10
+            && self.r9 == other.r9
+            && self.r8 == other.r8
+            && self.ax == other.ax
+            && self.cx == other.cx
+            && self.dx == other.dx
+            && self.di == other.di            
+            && self.si == other.si
+            && self.sp == other.sp
+            && self.ss == other.ss
+            && self.flags == other.flags
+            && self.ip == other.ip
+    }
+}
+
+impl Eq for StackRegisters {}
+
 unsafe impl Send for vm_operations_struct {}
 unsafe impl Sync for vm_operations_struct {}
 

@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-#[derive(Default,Debug)]
+#[derive(Default,Debug, PartialEq, Eq)]
 pub struct RegDescriptor {
     pub(crate) others: crate::bindings::StackRegisters,
     pub(crate) fs: u64,

@@ -75,6 +75,7 @@ impl MySyscallHandler {
 
         assert_eq!(res.get_fs(), reg.get_fs());
         assert_eq!(res.get_gs(), reg.get_gs());
+        assert_eq!(res, reg);
 
         crate::log::info!("pass RegDescriptor (de)serialization test\n");
         0
@@ -234,6 +235,8 @@ impl MySyscallHandler {
             result.machine_info,
             descriptor.machine_info
         );
+
+        assert_eq!(result.regs, descriptor.regs);
 
         crate::log::info!("pass process Descriptor (de)serialization test\n");
 
