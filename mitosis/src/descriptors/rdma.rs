@@ -1,4 +1,5 @@
 use os_network::rdma::RawGID;
+use crate::kern_wrappers::mm::PhyAddrType;
 
 #[allow(dead_code)]
 #[derive(Default, Debug, PartialEq, Eq)]
@@ -6,9 +7,9 @@ pub struct RDMADescriptor {
     // TODO: these fields are not correct.
     // The design of MITOSIS requires client using no-roundtrip to fork from the parent.
     // However, CM still uses one RTT
-    pub(crate) gid: RawGID,
-    pub(crate) service_id: u64,
-    pub(crate) rkey: u32,
+    pub gid: RawGID,
+    pub service_id: u64,
+    pub rkey: u32,
 }
 
 impl RDMADescriptor {
@@ -33,3 +34,11 @@ impl RDMADescriptor {
 
 impl os_network::serialize::Serialize for RDMADescriptor {}
 
+#[allow(dead_code)]
+#[derive(Default)]
+pub struct ReadMeta {
+    pub addr: PhyAddrType,
+    pub length: u64,
+}
+
+impl os_network::serialize::Serialize for ReadMeta {}

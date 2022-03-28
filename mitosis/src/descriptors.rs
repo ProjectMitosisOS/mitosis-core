@@ -6,19 +6,25 @@ use crate::linux_kernel_module;
 
 // sub descriptors
 pub mod reg;
-pub use reg::RegDescriptor;
+
+pub use reg::*;
 
 pub mod page_table;
-pub use page_table::FlatPageTable;
+
+pub use page_table::*;
 
 pub mod rdma;
-pub use rdma::RDMADescriptor;
+
+pub use rdma::*;
 
 pub mod vma;
-pub use vma::VMADescriptor;
+
+pub use vma::*;
 
 pub mod factory;
+
 pub use factory::DescriptorFactoryService;
+
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
 #[allow(dead_code)]
@@ -50,7 +56,8 @@ impl os_network::serialize::Serialize for Descriptor {
     /// ```
     fn serialize(&self, bytes: &mut BytesMut) -> bool {
         if bytes.len() < self.serialization_buf_len() {
-            crate::log::error!("failed to serialize: buffer space not enough");
+            crate::log::error!("failed to serialize: buffer space not enough. Need {}, actual {}",
+                self.serialization_buf_len(), bytes.len());
             return false;
         }
 

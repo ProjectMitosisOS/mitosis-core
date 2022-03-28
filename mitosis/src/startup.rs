@@ -56,6 +56,13 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
         )
     };
 
+    // Global parent descriptor pool
+    unsafe {
+        crate::descriptor_pool::init(
+            crate::descriptors::DescriptorFactoryService::create(),
+        )
+    };
+
     // TODO: other services
 
     Some(())
@@ -67,6 +74,7 @@ pub fn end_instance() {
         crate::dc_pool_service::drop();
         crate::service_caller_pool::drop();
         crate::service_rpc::drop();
+        crate::descriptor_pool::drop();
     };
     end_rdma();
 }

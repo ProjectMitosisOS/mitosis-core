@@ -173,3 +173,16 @@ pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'stat
 pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_mut()
 }
+
+// Descriptor pool, used for container preparation
+declare_global!(descriptor_pool, crate::descriptors::DescriptorFactoryService);
+
+#[inline]
+pub unsafe fn get_descriptor_pool_ref() -> &'static crate::descriptors::DescriptorFactoryService {
+    crate::descriptor_pool::get_ref()
+}
+
+#[inline]
+pub unsafe fn get_descriptor_pool_mut() -> &'static mut crate::descriptors::DescriptorFactoryService {
+    crate::descriptor_pool::get_mut()
+}

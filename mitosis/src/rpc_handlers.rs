@@ -1,8 +1,9 @@
-use crate::linux_kernel_module;
+use crate::{get_descriptor_pool_ref, linux_kernel_module};
 use os_network::bytes::BytesMut;
 use core::fmt::Write;
+use os_network::KRdmaKit::mem::va_to_pa;
 use os_network::serialize::Serialize;
-use crate::descriptors::{DescriptorFactoryService};
+use crate::descriptors::{Descriptor, DescriptorFactoryService, ReadMeta};
 
 #[derive(Debug)]
 #[repr(usize)]
@@ -34,14 +35,17 @@ pub(crate) fn handle_swap_descriptor(_input: &BytesMut, output: &mut BytesMut) -
     let (handler_id, auth_key): (usize, usize) = (0x0, 0x1);
     crate::log::debug!("[handle_swap_descriptor] start. handler id:{}, auth_key:{}", handler_id, auth_key);
     // 1. Read from descriptor pool
-    let dfs: DescriptorFactoryService = DescriptorFactoryService::create(); // TODO: get from global var
-    if let Some(meta) = dfs.get_descriptor(0) {
+    let dfs: &DescriptorFactoryService = unsafe { get_descriptor_pool_ref() };
+    if let Some(meta) = dfs.get_descriptor_ref(73) {
         // 2. Write back
-        return match meta.serialize(output) {
-            true => {
-                crate::log::debug!("find one meta: {:?}", output);
-                meta.serialization_buf_len() as _
-            }
+        let dst = ReadMeta {
+            addr: unsafe { va_to_pa(meta as *const Descriptor as _) },
+            length: meta.serialization_buf_len() as _,
+        };
+        crate::log::debug!("find one meta, addr:0x{:x}, len:{}", dst.addr, dst.length);
+        output.resize(dst.serialization_buf_len());
+        return match dst.serialize(output) {
+            true => output.len(),
             false => {
                 crate::log::error!("fail to serialize descriptor. handler id:{}, auth key:{}",
                 handler_id, auth_key);
