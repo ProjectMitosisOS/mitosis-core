@@ -17,7 +17,10 @@ pub use rdma::RDMADescriptor;
 pub mod vma;
 pub use vma::VMADescriptor;
 
-/// The kernel-space descriptor of MITOSIS
+pub mod factory;
+
+/// The kernel-space process descriptor of MITOSIS
+/// The descriptors should be generate by the task 
 #[allow(dead_code)]
 #[derive(Default)]
 pub struct Descriptor {
