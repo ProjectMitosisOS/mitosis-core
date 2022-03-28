@@ -75,7 +75,7 @@ impl Service {
 
         // init the UD RPC hook
         type UDRPCHook<'a, 'b> =
-            os_network::rpc::hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
+        os_network::rpc::hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
 
         let local_context = unsafe { crate::rdma_contexts::get_ref().get(arg.nic_to_use).unwrap() };
         let lkey = unsafe { local_context.get_lkey() };
@@ -112,6 +112,9 @@ impl Service {
         rpc_server
             .get_mut_service()
             .register(RPCId::Echo as _, handle_echo);
+        rpc_server
+            .get_mut_service()
+            .register(RPCId::SwapDescriptor as _, handle_swap_descriptor);
 
         // register msg buffers
         // pre-most receive buffers

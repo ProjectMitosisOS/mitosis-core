@@ -18,7 +18,7 @@ pub mod vma;
 pub use vma::VMADescriptor;
 
 pub mod factory;
-
+pub use factory::DescriptorFactoryService;
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
 #[allow(dead_code)]

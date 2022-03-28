@@ -165,11 +165,11 @@ pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::
 /// A pool of DCQPs 
 pub mod dc_pool;
 
-declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>); 
-pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> { 
+declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
+pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_ref()
 }
 
-pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> { 
+pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_mut()
 }
