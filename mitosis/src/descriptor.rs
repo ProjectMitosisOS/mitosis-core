@@ -16,10 +16,10 @@ pub struct Descriptor {
 }
 
 pub mod reg;
-use reg::RegDescriptor;
+pub use reg::RegDescriptor;
 
 pub mod page_table;
-use page_table::FlatPageTable;
+pub use page_table::FlatPageTable;
 
 #[derive(Default)]
 pub struct RemoteRDMADescriptor {

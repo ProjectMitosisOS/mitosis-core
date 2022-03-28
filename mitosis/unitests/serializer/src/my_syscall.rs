@@ -7,9 +7,8 @@ use crate::*;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
 
-use mitosis::descriptor::page_table::FlatPageTable;
-use mitosis::descriptor::reg::RegDescriptor;
-use mitosis::descriptor::{Descriptor, RemoteRDMADescriptor, VMADescriptor};
+use mitosis::descriptor::*;
+use mitosis::kern_wrappers::task::Task;
 
 pub(crate) struct MySyscallHandler;
 
@@ -50,9 +49,9 @@ impl MySyscallHandler {
     /// Test the (de)serialization of RegDescriptor
     #[inline(always)]
     fn test_reg_descriptor(&self, _arg: c_ulong) -> c_long {
-        let mut reg: RegDescriptor = Default::default();
-        reg.others.r15 = 0x12345678;
-        reg.fs = 0x87654321;
+
+        let reg: RegDescriptor = Task::new().generate_reg_descriptor(); 
+
         let mut memory = vec![0 as u8; core::mem::size_of::<RegDescriptor>()];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
         let result = reg.serialize(&mut bytes);
@@ -60,19 +59,17 @@ impl MySyscallHandler {
             crate::log::error!("fail to serialize reg");
             return 0;
         }
-        let result = RegDescriptor::deserialize(&bytes).unwrap();
-        if result.others.r15 != reg.others.r15 {
-            crate::log::error!(
-                "r15: expected: 0x{:x}, got: 0x{:x}",
-                reg.others.r15,
-                result.others.r15
-            );
-            return 0;
-        }
-        if result.fs != reg.fs {
-            crate::log::error!("fs: expected: 0x{:x}, got 0x{:x}", reg.fs, result.fs);
-            return 0;
-        }
+
+        let mut res : RegDescriptor = Default::default(); 
+        crate::log::debug!("sanity check regs fs {}, gs {}",reg.get_fs(), reg.get_gs());
+        crate::log::debug!("sanity check init regs fs {}, gs {}",res.get_fs(), res.get_gs());
+
+        res = RegDescriptor::deserialize(&bytes).unwrap();
+        crate::log::debug!("sanity check de-serialize regs fs {}, gs {}",res.get_fs(), res.get_gs());
+
+        assert_eq!(res.get_fs(), reg.get_fs());
+        assert_eq!(res.get_gs(), reg.get_gs());
+        
         crate::log::info!("pass RegDescriptor (de)serialization test");
         0
     }

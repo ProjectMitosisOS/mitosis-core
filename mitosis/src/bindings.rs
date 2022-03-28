@@ -15,7 +15,6 @@ mod bindings {
     unsafe impl Sync for page {}
 }
 
-// #[derive(Clone, Copy)]
 pub(crate) type StackRegisters = pt_regs;
 
 unsafe impl Send for vm_operations_struct {}
