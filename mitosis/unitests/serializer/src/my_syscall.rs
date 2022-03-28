@@ -26,7 +26,6 @@ impl FileOperations for MySyscallHandler {
     #[allow(non_snake_case)]
     #[inline]
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
-        crate::log::debug!("in ioctrl");
         match cmd {
             0 => self.test_reg_descriptor(arg),
             1 => self.test_page_table(arg),
@@ -49,7 +48,7 @@ impl MySyscallHandler {
     /// Test the (de)serialization of RegDescriptor
     #[inline(always)]
     fn test_reg_descriptor(&self, _arg: c_ulong) -> c_long {
-        let reg: RegDescriptor = Task::new().generate_reg_descriptor(); 
+        let reg: RegDescriptor = Task::new().generate_reg_descriptor();
 
         let mut memory = vec![0 as u8; core::mem::size_of::<RegDescriptor>()];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
@@ -59,17 +58,25 @@ impl MySyscallHandler {
             return 0;
         }
 
-        let mut res : RegDescriptor = Default::default(); 
-        crate::log::debug!("sanity check regs fs {}, gs {}",reg.get_fs(), reg.get_gs());
-        crate::log::debug!("sanity check init regs fs {}, gs {}",res.get_fs(), res.get_gs());
+        let mut res: RegDescriptor = Default::default();
+        crate::log::debug!("sanity check regs fs {}, gs {}", reg.get_fs(), reg.get_gs());
+        crate::log::debug!(
+            "sanity check init regs fs {}, gs {}",
+            res.get_fs(),
+            res.get_gs()
+        );
 
         res = RegDescriptor::deserialize(&bytes).unwrap();
-        crate::log::debug!("sanity check de-serialize regs fs {}, gs {}",res.get_fs(), res.get_gs());
+        crate::log::debug!(
+            "sanity check de-serialize regs fs {}, gs {}",
+            res.get_fs(),
+            res.get_gs()
+        );
 
         assert_eq!(res.get_fs(), reg.get_fs());
         assert_eq!(res.get_gs(), reg.get_gs());
-        
-        crate::log::info!("pass RegDescriptor (de)serialization test");
+
+        crate::log::info!("pass RegDescriptor (de)serialization test\n");
         0
     }
 
@@ -88,44 +95,71 @@ impl MySyscallHandler {
             return -1;
         }
 
-        crate::log::debug!("{:?}", bytes);
+        {
+            // now deserialize
+            let de_page_table: core::option::Option<FlatPageTable> =
+                FlatPageTable::deserialize(&bytes);
+            if de_page_table.is_none() {
+                log::error!("failed to deserialize page table");
+                return -1;
+            }
+            let de_page_table = de_page_table.unwrap();
+            log::debug!("de page table {:?}", de_page_table);
 
-        // now deserialize
-        let de_page_table: core::option::Option<FlatPageTable> = FlatPageTable::deserialize(&bytes);
-        if de_page_table.is_none() {
-            log::error!("failed to deserialize page table");
+            assert_eq!(de_page_table.len(), page_table.len());
+            assert_eq!(
+                de_page_table.get(0xdeadbeaf).unwrap(),
+                page_table.get(0xdeadbeaf).unwrap()
+            );
+            assert_eq!(
+                de_page_table.get(0xffff).unwrap(),
+                page_table.get(0xffff).unwrap()
+            );
+        }
+
+        log::info!("test page_table simple done");
+
+        // make a complex test
+        let task = Task::new();
+        log::info!("check my task {:?}", task);
+
+        let pt = task.generate_page_table();
+        log::debug!("Generated page table sz {}", pt.len());
+
+        let mut memory = vec![0 as u8; pt.serialization_buf_len()];
+        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
+
+        let result = pt.serialize(&mut bytes);
+        if !result {
+            log::error!("fail to serialize flat page table");
             return -1;
         }
-        let de_page_table = de_page_table.unwrap();
-        log::debug!("de page table {:?}", de_page_table);
 
-        assert_eq!(de_page_table.len(), page_table.len());
-        assert_eq!(
-            de_page_table.get(0xdeadbeaf).unwrap(),
-            page_table.get(0xdeadbeaf).unwrap()
-        );
-        assert_eq!(
-            de_page_table.get(0xffff).unwrap(),
-            page_table.get(0xffff).unwrap()
-        );
+        {
+            // now deserialize
+            let de_page_table: core::option::Option<FlatPageTable> =
+                FlatPageTable::deserialize(&bytes);
+            if de_page_table.is_none() {
+                log::error!("failed to deserialize page table");
+                return -1;
+            }
+            let de_page_table = de_page_table.unwrap();
+            log::info!("Task de-serialize page table sz: {}", de_page_table.len());
 
-        log::info!("test page_table done");
+            assert_eq!(de_page_table.len(), pt.len());
+            assert_eq!(de_page_table, pt);
+        }
 
-        // make a complex test 
-        let task = Task::new();        
-        log::info!("check my task {:?}", task);
-        
-        let pt = task.generate_page_table(); 
-        log::debug!("Generated page table sz {}", pt.len());
-        
+        log::info!("test page_table task done\n");
+
         return 0;
     }
 
     /// Test the (de)serialization of RemoteRDMADescriptor
     #[inline(always)]
     fn test_rdma_descriptor(&self, _arg: c_ulong) -> c_long {
-        let mut descriptor: RDMADescriptor = Default::default();        
-        descriptor.set_rkey(0xdeadbeaf).set_service_id(73); 
+        let mut descriptor: RDMADescriptor = Default::default();
+        descriptor.set_rkey(0xdeadbeaf).set_service_id(73);
 
         let mut memory = vec![0; core::mem::size_of::<RDMADescriptor>()];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
@@ -148,18 +182,18 @@ impl MySyscallHandler {
         let result = result.unwrap();
 
         // check equality
-        if result != descriptor { 
+        if result != descriptor {
             crate::log::error!("de-serialize fail on {:?}", result);
         }
 
-        crate::log::info!("pass RemoteRDMADescriptor (de)serialization test");
+        crate::log::info!("pass RemoteRDMADescriptor (de)serialization test\n");
         0
     }
 
     /// Test the (de)serialization of mitosis Descriptor
     #[inline(always)]
     fn test_mitosis_descriptor(&self, _arg: c_ulong) -> c_long {
-        crate::log::info!("test mitosis descriptor"); 
+        crate::log::info!("test mitosis descriptor");
         todo!();
         0
     }

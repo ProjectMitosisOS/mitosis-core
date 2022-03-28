@@ -11,7 +11,7 @@ use crate::linux_kernel_module;
 
 pub struct VMADumpIter<'a> {
     flat_page_table: &'a mut FlatPageTable,
-    count : usize, 
+    count: usize,
     engine: VMWalkEngine,
 }
 
@@ -25,7 +25,7 @@ impl<'a> VMADumpIter<'a> {
 
         Self {
             flat_page_table: pt,
-            count : 0,
+            count: 0,
             engine: VMWalkEngine::new(walk),
         }
     }
@@ -47,13 +47,15 @@ impl<'a> VMADumpIter<'a> {
         _next: crate::linux_kernel_module::c_types::c_ulong,
         walk: *mut mm_walk,
     ) -> crate::linux_kernel_module::c_types::c_int {
-        
+        /*
         let engine: &mut Self = &mut (*((*walk).private as *mut Self));
-        if engine.flat_page_table.0.get(&addr).is_some() { 
+        if engine.flat_page_table.0.get(&addr).is_some() {
             crate::log::warn!("Duplicated page table entry for addr {:x}", addr);
-        }
+        }        */
 
-        engine.flat_page_table
+        // TODO: if the physical address is 0, do we need to serialize it?
+        engine
+            .flat_page_table
             .add_one(addr, pmem_get_phy_from_pte(pte));
         engine.count += 1;
         0

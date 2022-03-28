@@ -8,6 +8,12 @@ pub struct VMA<'a> {
 }
 
 impl<'a> VMA<'a> {
+    pub fn generate_descriptor(&self) -> crate::descriptors::VMADescriptor { 
+        unimplemented!();
+    }
+}
+
+impl<'a> VMA<'a> {
     pub fn new(vma: &'a crate::bindings::vm_area_struct) -> Self {
         Self { vma_inner: vma }
     }
