@@ -9,7 +9,7 @@ use os_network::bytes::BytesMut;
 
 /// Record the mapping between the va and remote pa of a process
 #[derive(Default, Debug)]
-pub struct FlatPageTable(HashMap<VirtAddrType, PhyAddrType>);
+pub struct FlatPageTable(pub(crate) HashMap<VirtAddrType, PhyAddrType>);
 
 impl FlatPageTable {
     pub fn new() -> Self {

@@ -49,7 +49,6 @@ impl MySyscallHandler {
     /// Test the (de)serialization of RegDescriptor
     #[inline(always)]
     fn test_reg_descriptor(&self, _arg: c_ulong) -> c_long {
-
         let reg: RegDescriptor = Task::new().generate_reg_descriptor(); 
 
         let mut memory = vec![0 as u8; core::mem::size_of::<RegDescriptor>()];
@@ -112,6 +111,13 @@ impl MySyscallHandler {
 
         log::info!("test page_table done");
 
+        // make a complex test 
+        let task = Task::new();        
+        log::info!("check my task {:?}", task);
+        
+        let pt = task.generate_page_table(); 
+        log::debug!("Generated page table sz {}", pt.len());
+        
         return 0;
     }
 

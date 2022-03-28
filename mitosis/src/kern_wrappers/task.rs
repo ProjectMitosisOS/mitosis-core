@@ -1,6 +1,9 @@
 use super::mm::MemoryDescriptor;
 pub(crate) use crate::bindings::{pmem_get_current_task, task_struct};
 
+#[allow(unused_imports)]
+use crate::linux_kernel_module;
+
 /// Simpler wrapper of the kernel's `task_struct`
 /// The task_struct structure contains all the information about a process.
 /// It transfers some low-level primitives to high-level rust abstractions
@@ -14,7 +17,7 @@ impl Task {
     }
 }
 
-use crate::descriptors::reg::RegDescriptor;
+use crate::descriptors::*;
 
 impl Task {
     pub fn generate_reg_descriptor(&self) -> RegDescriptor {
@@ -23,6 +26,22 @@ impl Task {
             fs: self.get_tls_fs(),
             gs: self.get_tls_gs(),
         }
+    }
+
+    pub fn generate_page_table(&self) -> FlatPageTable { 
+        use crate::kern_wrappers::vma_iters::VMADumpIter; 
+        let mut res : FlatPageTable = Default::default();
+        
+        let mm = self.get_memory_descriptor();
+        let vma_iters = mm.get_vma_iter();
+
+        let mut total_counts = 0;
+        for vma in vma_iters {
+            total_counts += VMADumpIter::new(&mut res).execute(&vma);
+        }
+        crate::log::debug!("Total {} pages touched", total_counts);
+        
+        res
     }
 }
 

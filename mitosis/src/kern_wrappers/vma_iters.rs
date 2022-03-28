@@ -1,11 +1,63 @@
 use alloc::vec::Vec;
 
+use super::mm::{PhyAddrType, VirtAddrType};
 use super::vma::*;
-use super::mm::{PhyAddrType,VirtAddrType};
 use crate::bindings::*;
 
-pub struct VMADumpIter {
-    // not implemented, should dump to an os_network::bytes::BytesMut;
+use crate::descriptors::FlatPageTable;
+
+#[allow(unused_imports)]
+use crate::linux_kernel_module;
+
+pub struct VMADumpIter<'a> {
+    flat_page_table: &'a mut FlatPageTable,
+    count : usize, 
+    engine: VMWalkEngine,
+}
+
+impl<'a> VMADumpIter<'a> {
+    pub fn new(pt: &'a mut FlatPageTable) -> Self {
+        let mut walk: mm_walk = Default::default();
+        walk.test_walk = None;
+        walk.hugetlb_entry = None;
+
+        walk.pte_entry = Some(Self::handle_pte_entry);
+
+        Self {
+            flat_page_table: pt,
+            count : 0,
+            engine: VMWalkEngine::new(walk),
+        }
+    }
+
+    pub fn execute(&mut self, vma: &VMA) -> usize {
+        // it's safe to pass self-reference here, the private is abandoned after the `self.engine.walk` call
+        self.engine.walk_callbacks.private =
+            self as *const _ as *mut crate::linux_kernel_module::c_types::c_void;
+
+        unsafe { self.engine.walk(vma.get_raw_ptr()) };
+        self.count
+    }
+
+    #[allow(non_upper_case_globals)]
+    #[allow(unused_variables)]
+    pub unsafe extern "C" fn handle_pte_entry(
+        pte: *mut pte_t,
+        addr: crate::linux_kernel_module::c_types::c_ulong,
+        _next: crate::linux_kernel_module::c_types::c_ulong,
+        walk: *mut mm_walk,
+    ) -> crate::linux_kernel_module::c_types::c_int {
+        
+        let engine: &mut Self = &mut (*((*walk).private as *mut Self));
+        if engine.flat_page_table.0.get(&addr).is_some() { 
+            crate::log::warn!("Duplicated page table entry for addr {:x}", addr);
+        }
+
+        engine.flat_page_table
+            .add_one(addr, pmem_get_phy_from_pte(pte));
+        engine.count += 1;
+        0
+    }
 }
 
 pub struct VMATraverseIter {
