@@ -25,6 +25,7 @@ pub mod factory;
 
 pub use factory::DescriptorFactoryService;
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
+use crate::kern_wrappers::task::Task;
 
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
@@ -51,6 +52,20 @@ impl Descriptor {
     #[inline]
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
         self.page_table.get(virt)
+    }
+
+    /// Apply the descriptor into current process
+    #[inline]
+    pub fn apply_to(&self, file: *mut crate::bindings::file) {
+        let mut task = Task::new();
+        // 1. Unmap origin vma regions
+        task.unmap_self();
+        // 2. Map new vma regions
+        (&self.vma).into_iter().for_each(|m| {
+            unsafe {task.map_one_region(file, m)}
+        });
+        // 3. Flush state
+        task.flush_vma_state(&self.regs);
     }
 }
 

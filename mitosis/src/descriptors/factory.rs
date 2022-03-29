@@ -1,22 +1,36 @@
-use alloc::sync::Arc;
 use hashbrown::HashMap;
-use crate::descriptors::{Descriptor, RDMADescriptor, VMADescriptor};
+use os_network::bytes::BytesMut;
+use os_network::KRdmaKit::mem::Memory;
+use os_network::serialize::Serialize;
+use crate::descriptors::{Descriptor, RDMADescriptor};
+use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
+use crate::kern_wrappers::page::{KPageTable, Page};
 use crate::kern_wrappers::Process;
-use crate::kern_wrappers::task::Task;
+use crate::KRdmaKit::consts::MAX_KMALLOC_SZ;
+use crate::KRdmaKit::mem::RMemPhy;
 
-/// A data structure for RPC to lookup the descriptor 
+
+/// A data structure for RPC to lookup the descriptor
 /// It should be initialized in startup.rs
 pub struct DescriptorFactoryService {
     // TODO: shall we wrap it into a lock? since there may be multiple RPC threads
     // TODO: shall we record the serialized buffer to avoid on-the-fly serialization? 
     registered_descriptors: HashMap<usize, super::Descriptor>,
+    copy_pages: HashMap<usize, KPageTable>,
+    // Map from `descriptor key` to `buffer physical address`
+    registered_buf_table: HashMap<usize, PhyAddrType>,
+    // Buffer of descriptors after serialization
+    buf: Option<RMemPhy>,
 }
 
 impl DescriptorFactoryService {
     pub fn create() -> Self {
         Self {
             // TODO: Lock maybe time consuming ? => do not lock on read
-            registered_descriptors: Default::default()
+            registered_descriptors: Default::default(),
+            copy_pages: Default::default(),
+            registered_buf_table: Default::default(),
+            buf: None,
         }
     }
 
@@ -30,6 +44,11 @@ impl DescriptorFactoryService {
         self.registered_descriptors.get_mut(&key)
     }
 
+    #[inline(always)]
+    pub fn get_descriptor_dma_buf(&self, key: usize) -> Option<&PhyAddrType> {
+        self.registered_buf_table.get(&key)
+    }
+
 
     #[inline(always)]
     pub fn put_current_descriptor(
@@ -39,9 +58,9 @@ impl DescriptorFactoryService {
         let process = Process::new_from_current();
         let task = process.get_task();
         let (vma, pg_table) = task.generate_mm();
-        let res = Descriptor {
+        let mut res = Descriptor {
             regs: task.generate_reg_descriptor(),
-            page_table: pg_table,
+            page_table: Default::default(),
             vma,
             machine_info,
         };
@@ -49,67 +68,36 @@ impl DescriptorFactoryService {
             // should not assign twice
             None
         } else {
+            // setup kpages
+            // TODO: replace into CoW setting
+            {
+                let mut kpage: KPageTable = Default::default();
+                for (addr, _) in &pg_table.0 {
+                    let kp = unsafe { Page::new_from_upage(*addr as *mut _) }.unwrap();
+                    let phy_addr = kp.get_phy();
+                    kpage.insert(*addr, kp);
+                    res.page_table.add_one(*addr, phy_addr); // refill the page table content
+                }
+                self.copy_pages.insert(key, kpage);
+            }
             self.registered_descriptors.insert(key, res);
+            // put buffer and map
+            let mut buf = RMemPhy::new(MAX_KMALLOC_SZ);
+            let mut tmp_buf_table: HashMap<usize, PhyAddrType> = Default::default();
+            let mut start_pa = buf.get_pa(0) as PhyAddrType;
+            let mut start_va = buf.get_ptr() as VirtAddrType;
+            // TODO: optimized into ring buffer
+            for (key, descriptor) in &self.registered_descriptors {
+                let seri_len = descriptor.serialization_buf_len() as u64;
+                let mut out = unsafe { BytesMut::from_raw(start_va as _, seri_len as _) };
+                descriptor.serialize(&mut out);
+                tmp_buf_table.insert(*key, start_pa);
+                (start_va, start_pa) = (start_va + seri_len, start_pa + seri_len);
+            }
+            self.buf = Some(buf);
+            self.registered_buf_table = tmp_buf_table.clone();
             self.get_descriptor_ref(key)
         }
     }
 
-    #[inline(always)]
-    pub fn resume_from_descriptor(file: *mut crate::bindings::file, meta: Arc<Descriptor>) {
-        #[inline]
-        fn unmap_all_regions() {
-            let task = Task::new();
-            let mut md = task.get_memory_descriptor();
-
-            let (mm, _) = task.generate_mm();
-            mm.into_iter().for_each(|m| {
-                md.unmap_region(m.get_start() as _, m.get_sz() as _);
-            });
-        }
-
-        #[inline(always)]
-        unsafe fn map_one_region(file: *mut crate::bindings::file, m: &VMADescriptor) {
-            use crate::bindings::{pmem_vm_mmap, VMFlags};
-            let ret = pmem_vm_mmap(
-                file,
-                m.get_start(),
-                m.get_sz(),
-                m.get_mmap_flags(),
-                crate::kern_wrappers::mm::mmap_flags::MAP_PRIVATE,
-                0,
-            );
-            if ret != m.get_start() {
-                return;
-            }
-            // println!("pmem_vm_mmap: 0x{:x}, mmap_flags: 0x{:x}", m.get_start(), m.get_mmap_flags());
-            let vma = Task::new().get_memory_descriptor().find_vma(m.get_start()).unwrap();
-            if m.is_stack() {
-                // println!("Try to add the stack flags to the vma");
-                vma.vm_flags =
-                    (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::STACK).bits();
-                // println!("Add stack flags to the vma successfully");
-            } else {
-                vma.vm_flags =
-                    (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::DONTEXPAND).bits();
-            }
-        }
-        // =======================================================
-        // 1. Unmap origin vma regions
-        // for (k, v) in &meta.page_table.0 {
-        //     rust_kernel_linux_util::linux_kernel_module::println!("va: 0x{:x}, pa: 0x{:x}", k, v);
-        // }
-        unmap_all_regions();
-        // 2. Map new vma regions
-        (&meta.vma).into_iter().for_each(|m| {
-            unsafe { map_one_region(file, m) }
-        });
-        // 3. Flush state
-        {
-            let mut task = Task::new();
-            task.get_memory_descriptor().flush_tlb();
-            task.set_stack_registers(&meta.regs.others);
-            task.set_tls_fs(meta.regs.fs);
-            task.set_tls_gs(meta.regs.gs);
-        }
-    }
 }

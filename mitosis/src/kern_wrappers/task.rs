@@ -20,6 +20,50 @@ impl Task {
 use crate::descriptors::*;
 
 impl Task {
+    /// Unmap all of the VMA in the task
+    #[inline]
+    pub fn unmap_self(&self) {
+        let mut md = self.get_memory_descriptor();
+        self.get_memory_descriptor().get_vma_iter().for_each(|m| {
+            md.unmap_region(m.get_start() as _, m.get_sz() as _);
+        });
+    }
+
+    /// Map one region into current task
+    #[inline]
+    pub unsafe fn map_one_region(&self,
+                                 file: *mut crate::bindings::file,
+                                 vma_meta: &VMADescriptor) {
+        use crate::bindings::{pmem_vm_mmap, VMFlags};
+        let ret = pmem_vm_mmap(
+            file,
+            vma_meta.get_start(),
+            vma_meta.get_sz(),
+            vma_meta.get_mmap_flags(),
+            crate::kern_wrappers::mm::mmap_flags::MAP_PRIVATE,
+            0,
+        );
+        if ret != vma_meta.get_start() {
+            return;
+        }
+        let vma = self.get_memory_descriptor().find_vma(vma_meta.get_start()).unwrap();
+        if vma_meta.is_stack() {
+            vma.vm_flags =
+                (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::STACK).bits();
+        } else {
+            vma.vm_flags =
+                (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::DONTEXPAND).bits();
+        }
+    }
+
+    #[inline]
+    pub fn flush_vma_state(&mut self, regs: &RegDescriptor) {
+        self.get_memory_descriptor().flush_tlb();
+        self.set_stack_registers(&regs.others);
+        self.set_tls_fs(regs.fs);
+        self.set_tls_gs(regs.gs);
+    }
+
     pub fn generate_reg_descriptor(&self) -> RegDescriptor {
         RegDescriptor {
             others: self.get_stack_registers(),
@@ -28,12 +72,12 @@ impl Task {
         }
     }
 
-    pub fn generate_mm(&self) -> (alloc::vec::Vec<VMADescriptor>, FlatPageTable) { 
-        use crate::kern_wrappers::vma_iters::VMADumpIter; 
+    pub fn generate_mm(&self) -> (alloc::vec::Vec<VMADescriptor>, FlatPageTable) {
+        use crate::kern_wrappers::vma_iters::VMADumpIter;
 
-        let mut pt : FlatPageTable = Default::default();
+        let mut pt: FlatPageTable = Default::default();
         let mut vmas = alloc::vec::Vec::new();
-        
+
         let mm = self.get_memory_descriptor();
         let vma_iters = mm.get_vma_iter();
 
@@ -43,7 +87,7 @@ impl Task {
             total_counts += VMADumpIter::new(&mut pt).execute(&vma);
         }
         crate::log::debug!("Total {} pages touched", total_counts);
-        
+
         (vmas, pt)
     }
 }

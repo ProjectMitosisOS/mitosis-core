@@ -1,33 +1,27 @@
-use alloc::sync::Arc;
-use core::pin::Pin;
-use core::sync::atomic::compiler_fence;
-use core::sync::atomic::Ordering::SeqCst;
-use KRdmaKit::cm::EndPoint;
-use KRdmaKit::device::RContext;
-use KRdmaKit::mem::{Memory, RMemPhy};
 use KRdmaKit::rust_kernel_rdma_base::*;
-use mitosis::descriptors::{Descriptor, DescriptorFactoryService, RDMADescriptor, ReadMeta};
-use mitosis::get_descriptor_pool_mut;
-use mitosis::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
-use mitosis::kern_wrappers::task::Task;
-use mitosis::kern_wrappers::vma::VMA;
+use mitosis::descriptors::{Descriptor, ReadMeta};
+use mitosis::resume::fork_prepare_impl;
+use mitosis::rpc_handlers::payload::ForkResume;
 use crate::linux_kernel_module::bindings::vm_area_struct;
 use crate::linux_kernel_module::c_types::*;
 use crate::*;
-use os_network::rdma::payload;
+use os_network::msg::UDMsg as RMemory;
 
 
-use os_network::{block_on, Conn, Factory, rdma};
+use os_network::{block_on};
+use os_network::bytes::{ToBytes};
 use os_network::msg::UDMsg;
-use os_network::rdma::dc::{DCConn, DCFactory};
-use os_network::rdma::RawGID;
 use os_network::serialize::Serialize;
-use os_network::timeout::Timeout;
 use os_network::ud::UDHyperMeta;
 
 pub struct MySyscallHandler {
-    // storing parent meta info. Fetch by calling `get_parent_meta`
-    meta_buf: Option<RMemPhy>,
+    // For RPC handler and page fault handler
+    session_id: usize,
+
+    pool_id: usize,
+    parent_descriptor: Option<Descriptor>,
+    local_mem: RMemory,
+
     file: *mut mitosis::bindings::file,
 }
 
@@ -62,7 +56,10 @@ impl FileOperations for MySyscallHandler {
         };
 
         Ok(Self {
-            meta_buf: Some(RMemPhy::new(1024 * 1024)),
+            session_id: 30,
+            pool_id: 0,
+            parent_descriptor: None,
+            local_mem: RMemory::new(1024 * 1024 * 4, 0),
             file: file as *mut _,
         })
     }
@@ -90,74 +87,90 @@ impl FileOperations for MySyscallHandler {
     }
 }
 
+const TEST_HANDLER_ID: usize = 73;
+
 impl MySyscallHandler {
+    /// Param of syscall
+    ///
+    /// Param handler_id: Prepare key
+    /// Param nic_idx:    Used for assign the RNIC0 or RNIC1
     #[inline(always)]
     fn test_fork_prepare(&self, _arg: c_ulong) -> c_long {
         crate::log::debug!("In test of fork prepare");
-        let pool_idx = 0;       // todo: self defined
-        let context = unsafe {
-            mitosis::get_rpc_caller_pool_ref()
-                .get_caller_context(pool_idx)
-                .unwrap()
-        };
-        let des_pool = unsafe { get_descriptor_pool_mut() };
-        let raw_gid = RawGID::new(context.get_gid_as_string());
-        if raw_gid.is_some() {
-            des_pool.put_current_descriptor(73, RDMADescriptor {
-                gid: RawGID::new(context.get_gid_as_string()).unwrap(),
-                service_id: mitosis::rdma_context::SERVICE_ID_BASE,
-                rkey: 64,
-            });
-            crate::log::debug!("prepare descriptor success", );
-        }
-
-        let mm = Task::new().get_memory_descriptor();
-        for vma in mm.get_vma_iter() { 
-            log::debug!("{}", vma); 
-        }
-        0
+        let (handler_id, nic_idx) = (TEST_HANDLER_ID, self.pool_id % 2);
+        fork_prepare_impl(handler_id, nic_idx)
     }
 
 
     /// Test the (de)serialization of RegDescriptor
+    ///
+    /// Param gid: Remote IB mac address.
+    ///
+    /// Param handler_id: Prepare key. Should be the same as `fork_prepare`
+    ///
+    /// Param remote_nic_idx: Parent nic idx. Should be the same as `fork_prepare`.
+    /// And this idx should align with gid
     #[inline(always)]
     fn test_fork_resume(&mut self, _arg: c_ulong) -> c_long {
-        crate::log::debug!("In test of fork resume\n");
-        let pool_idx = 0;
+        let local_pool_id = self.pool_id;
+        let nic_num = 2;
         let ctx = unsafe {
             mitosis::get_rpc_caller_pool_ref()
-                .get_caller_context(pool_idx)
+                .get_caller_context(local_pool_id)
                 .unwrap()
         };
-        let gid = os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap();
-        const SESSION_IDX: usize = 66;
-        const RNIC0: u64 = mitosis::rdma_context::SERVICE_ID_BASE;
-        // const RNIC1: u64 = mitosis::rdma_context::SERVICE_ID_BASE + 1;
-        const T0: u64 = mitosis::rpc_service::QD_HINT_BASE as u64;
-        // const T1: u64 = mitosis::rpc_service::QD_HINT_BASE as u64 + 1;
+        let (parent_gid, handler_id, remote_nic_idx) = (
+            // os_network::rdma::RawGID::new(String::from("fe80:0000:0000:0000:248a:0703:009c:7c94")).unwrap(),
+            os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
+            TEST_HANDLER_ID,
+            local_pool_id % nic_num); // TODO: refine the mapping relation
+
         let hyper_meta = UDHyperMeta {
-            gid,
-            service_id: RNIC0,
-            qd_hint: T0,
+            gid: parent_gid,
+            service_id: mitosis::rdma_context::SERVICE_ID_BASE + remote_nic_idx as u64,
+            qd_hint: mitosis::rpc_service::QD_HINT_BASE as u64 + remote_nic_idx as u64,
         };
-        let _ = unsafe { mitosis::get_rpc_caller_pool_mut() }
-            .connect_session_at(
-                pool_idx,
-                SESSION_IDX, // Notice: it is very important to ensure that session ID is unique!
-                hyper_meta,
-            ).expect("failed to connect the endpoint");
+        // 1. setup session
+        if unsafe { mitosis::get_rpc_caller_pool_mut() }
+            .connect_session_at(local_pool_id,
+                                self.session_id, // Notice: it is very important to ensure that session ID is unique!
+                                hyper_meta).is_none() {
+            log::error!("bad connect!");
+            return 0;
+        }
+
+        // 2. RPC fetching
+        if self.call_fork_resume(handler_id, 0).is_none() {
+            log::error!("call fork_resume rpc error!");
+            return -1;
+        }
+        // 3. Apply this descriptor into child process
+        unsafe { self.get_parent_meta().apply_to(self.file) };
+        return 0;
+    }
+}
+
+impl MySyscallHandler {
+    #[inline]
+    fn call_fork_resume(&mut self,
+                        handler_id: usize, auth_key: usize) -> Option<()> {
+        let ctx = unsafe {
+            mitosis::get_rpc_caller_pool_ref()
+                .get_caller_context(self.pool_id)
+                .unwrap()
+        };
         let caller = unsafe {
-            mitosis::rpc_caller_pool::CallerPool::get_global_caller(pool_idx)
+            mitosis::rpc_caller_pool::CallerPool::get_global_caller(self.pool_id)
                 .expect("the caller should be properly inited")
         };
-        // 1. Two-sided RDMA to fetch the address and length information
-        caller.sync_call::<u64>(
-            SESSION_IDX, // remote session ID
+        let payload: ForkResume = ForkResume { handler_id, auth_key };
+        caller.sync_call::<ForkResume>(
+            self.session_id, // remote session ID
             mitosis::rpc_handlers::RPCId::ForkResume as _, // RPC ID
-            0xffffffff as u64,  // send an arg of u64
+            payload,  // send an arg of u64
         ).unwrap();
         caller.register_recv_buf(UDMsg::new(4096, 73)).unwrap(); // should succeed
-        let dst = match block_on(caller) {
+        let remote_meta = match block_on(caller) {
             Ok((_, reply)) => {
                 ReadMeta::deserialize(&reply)
             }
@@ -166,71 +179,23 @@ impl MySyscallHandler {
                 None
             }
         };
-        if dst.is_none() {
-            return -1;
+        if remote_meta.is_none() {
+            return None;
         }
-        let dst = dst.as_ref().unwrap();
-
+        let remote_meta = remote_meta.unwrap();
         // 2. rmem_cpy to fetch remote descriptor
-        let point = caller.get_ss(SESSION_IDX).unwrap().0.get_ss_meta();
-        let mut remote_mem = RemoteMemManager::create(ctx, point);
-        let local = self.meta_buf.as_mut().unwrap();
-        remote_mem.rmem_cpy(local.get_pa(0), dst.addr, dst.length as _, 5000);
-        compiler_fence(SeqCst);
+        let point = caller.get_ss(self.session_id).unwrap().0.get_ss_meta();
 
-
-        // 3. Apply this descriptor into child process
-        DescriptorFactoryService::resume_from_descriptor(self.file, unsafe { self.get_parent_meta() });
-        return 0;
-    }
-}
-
-/// Simple remote memory, implemented by DC primitive
-struct RemoteMemManager<'a> {
-    dc_factory: DCFactory<'a>,
-    remote_point: &'a EndPoint,
-}
-
-impl<'a> RemoteMemManager<'a> {
-    pub fn create(ctx: &'a RContext<'a>, point: &'a EndPoint) -> Self {
-        Self {
-            dc_factory: DCFactory::new(ctx),
-            remote_point: point,
-        }
-    }
-
-    /// Remote mem_cpy, implemented by one-sided RDMA read.
-    ///
-    /// Since we are in kernel, both of dst and src address should be physical
-    #[inline]
-    pub fn rmem_cpy(&mut self, dst: PhyAddrType, src: PhyAddrType, len: u64, timeout_usec: i64) -> isize {
-        type DCReqPayload = payload::Payload<ib_dc_wr>;
-        let point = &self.remote_point;
-        let lkey = unsafe { self.dc_factory.get_context().get_lkey() };
-        // TODO: DC create should not in the critical path!
-        let mut dc = self.dc_factory.create(()).unwrap();
-        let mut payload = DCReqPayload::default()
-            .set_laddr(dst)
-            .set_raddr(src)// copy from src into dst
-            .set_sz(len as _)
-            .set_lkey(lkey)
-            .set_rkey(point.mr.get_rkey())
-            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
-            .set_ah(point);
-        let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
-        os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
-        if dc.post(&payload.as_ref()).is_err() {
-            log::error!("unable to post read qp");
-            return -1;
-        }
-        let mut timeout = Timeout::new(dc,
-                                       timeout_usec as _);
-        if block_on(&mut timeout).is_err() {
-            log::error!("polling dc qp with error");
-            return -1;
-        }
-        return 0;
+        // TODO: extrac dc into global variable
+        let dc = unsafe { crate::GLOBAL_DC::get_mut() };
+        let pa = self.local_mem.get_pa();
+        let lkey = unsafe { ctx.get_lkey() };
+        remote_mem::rmem_cpy(dc, pa, remote_meta.addr,
+                             remote_meta.length as _, lkey,
+                             point);
+        // Deserialize the output
+        self.parent_descriptor = Some(Descriptor::deserialize(self.local_mem.get_bytes()).unwrap());
+        Some(())
     }
 }
 
@@ -238,66 +203,60 @@ impl<'a> RemoteMemManager<'a> {
 impl MySyscallHandler {
     #[inline]
     unsafe fn handle_page_fault(&mut self, vmf: *mut mitosis::bindings::vm_fault) -> c_int {
-        use mitosis::bindings::{pmem_phys_to_virt, pmem_page_to_phy, pmem_alloc_page, PMEM_GFP_HIGHUSER};
+        use mitosis::bindings::{pmem_alloc_page, PMEM_GFP_HIGHUSER};
         // virtual address
         let fault_addr = (*vmf).address;
         let meta = Some(self.get_parent_meta());
-        let phy = meta.as_ref().and_then(|m| {
+        let phy = meta.and_then(|m| {
             m.lookup_pg_table(fault_addr).and_then(|phy_addr| {
-                // One-sided RDMA Read
                 let new_page_p = pmem_alloc_page(PMEM_GFP_HIGHUSER);
                 let new_page_pa = mitosis::bindings::pmem_page_to_phy(new_page_p) as u64;
+                let ctx = unsafe {
+                    mitosis::get_rpc_caller_pool_ref()
+                        .get_caller_context(self.pool_id)
+                        .unwrap()
+                };
+                let caller = unsafe {
+                    mitosis::rpc_caller_pool::CallerPool::get_global_caller(self.pool_id)
+                        .expect("the caller should be properly inited")
+                };
+                let point = caller.get_ss(self.session_id).unwrap().0.get_ss_meta();
+                // let mut remote_mm: RemoteMemManager = RemoteMemManager::create(ctx, point);
+                // rmem_cpy to fetch remote page
+                let dc = unsafe { crate::GLOBAL_DC::get_mut() };
 
-                // TODO: omit `pa==0` case while calling `fork_prepare()`
-                if phy_addr > 0 {
-                    let ctx = unsafe {
-                        mitosis::get_rpc_caller_pool_ref()
-                            .get_caller_context(0)
-                            .unwrap()
-                    };
-                    const SESSION_IDX: usize = 66;
-                    let caller = unsafe {
-                        mitosis::rpc_caller_pool::CallerPool::get_global_caller(0)
-                            .expect("the caller should be properly inited")
-                    };
-                    let point = caller.get_ss(SESSION_IDX).unwrap().0.get_ss_meta();
-                    let mut remote_mm: RemoteMemManager = RemoteMemManager::create(ctx, point);
-                    // rmem_cpy to fetch remote page
-                    remote_mm.rmem_cpy(new_page_pa, phy_addr, 4096, 5000);
-                    (*vmf).page = new_page_p as *mut _;
-                    Some(phy_addr)
-                } else {
-                    // FIXME: How to handle the case `pa==0` ?
-                    let mm = Task::new().get_memory_descriptor();
-                    // let vma = mm.find_vma(fault_addr).unwrap();
-                    let vma = VMA::new(mm.find_vma(fault_addr).unwrap());
-                    log::debug!("Find bad, fault addr: 0x{:x}, is stack: {}, vma start: 0x{:x}, size :{}",
-                        fault_addr, vma.is_stack(), vma.get_start(), vma.get_sz());
-                    None
-                }
+                remote_mem::rmem_cpy(dc, new_page_pa, phy_addr, 4096, unsafe { ctx.get_lkey() },
+                                     point);
+                (*vmf).page = new_page_p as *mut _;
+                Some(phy_addr)
             })
         });
         // check the results
         match phy {
-            Some(phy) => {
-                // log::debug!(
-                //     "Check fault address 0x{:x} => to dumped physical address: 0x{:x}",
-                //     fault_addr, phy
-                // );
-                0
-            }
-            None => {
-                log::error!("Failed to find the fault address: 0x{:x}", fault_addr);
-                // If it is the stack or the heap, we should manually handles the fault like the original page_fault_handler
-                // TO be implemented
-                mitosis::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
-            }
+            Some(_phy) => 0,
+            None => self.handle_remote_page_fault(vmf)
         }
     }
 
+    /// Remote page fault handler, forming the fallback path if the target page is not in the PTE (`phy_addr == 0`)
+    #[inline(always)]
+    unsafe fn handle_remote_page_fault(&mut self, vmf: *mut mitosis::bindings::vm_fault) -> c_int {
+        let fault_addr = (*vmf).address;
+        log::error!("fallback into remote page fault. fault addr: 0x{:x}", fault_addr);
+
+        //get_backed_file_name
+        // let vma = Task::new().get_memory_descriptor().find_vma(fault_addr).unwrap();
+        // let vma = VMA::new(vma);
+        // let fname = vma.get_backed_file_name();
+        // if fname.is_some() {
+        //     log::error!("fault file name:{}", fname.unwrap());
+        // }
+        // TODO: Fetch page from remote (rpage_fault)
+        mitosis::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
+    }
+
     #[inline]
-    unsafe fn get_parent_meta(&self) -> Arc<Descriptor> {
-        let local = self.meta_buf.as_ref().unwrap();
-        Arc::<Descriptor>::from_raw(local.get_ptr() as _)
+    unsafe fn get_parent_meta(&self) -> &Descriptor {
+        self.parent_descriptor.as_ref().unwrap()
     }
 }

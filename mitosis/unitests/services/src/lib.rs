@@ -2,6 +2,7 @@
 
 extern crate alloc;
 
+use alloc::string::String;
 use mitosis::linux_kernel_module;
 use mitosis::log;
 use mitosis::rust_kernel_linux_util::kthread;
@@ -29,7 +30,7 @@ use krdma_test::*;
 fn test_rpc_two() {
     log::info!("Test RPC Two using the refined API.");
 
-    let pool_idx = 0;
+    let pool_idx = 1;
 
     // it is ok, because in the unittest, all sender & receiver share the same context
     let context = unsafe {
@@ -48,11 +49,11 @@ fn test_rpc_two() {
 
                 // CM server on RNIC 0 listens on mitosis::rdma_context::SERVICE_ID_BASE, 
                 // CM server on RNIC 1 listens on mitosis::rdma_context::SERVICE_ID_BASE + 1, etc 
-                service_id: mitosis::rdma_context::SERVICE_ID_BASE,
+                service_id: mitosis::rdma_context::SERVICE_ID_BASE+1,
 
                 // Thread 0's UD registers on mitosis::rpc_service::QD_HINT_BASE, 
                 // Thread 1's UD registers on mitosis::rpc_service::QD_HINT_BASE + 1, etcc 
-                qd_hint: (mitosis::rpc_service::QD_HINT_BASE) as _,
+                qd_hint: (mitosis::rpc_service::QD_HINT_BASE + 1) as _,
             },
         )
         .expect("failed to connect the endpoint");
@@ -236,7 +237,7 @@ fn init() {
     log::info!("in test mitosis service startups!");
 
     let mut config: mitosis::Config = Default::default();
-    config.set_num_nics_used(1).set_rpc_threads(2);
+    config.set_num_nics_used(2).set_rpc_threads(2);
 
     assert!(start_instance(config).is_some());
 }

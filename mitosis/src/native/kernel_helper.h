@@ -89,6 +89,8 @@ pmem_page_to_virt(struct page* page);
 void*
 pmem_phys_to_virt(u64 p);
 
+unsigned int
+pmem_filemap_fault(struct vm_fault *vmf);
 /*
  Page protection flags
  */

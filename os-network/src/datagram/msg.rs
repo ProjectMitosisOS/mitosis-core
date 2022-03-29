@@ -72,6 +72,7 @@ impl UDMsg {
         Self::new_from_phy(RMemPhy::new(size), imm)
     }
 
+    #[inline]
     pub fn get_pa(&self) -> u64 {
         self.pa
     }

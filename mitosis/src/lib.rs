@@ -21,6 +21,8 @@ pub mod kern_wrappers;
 
 pub mod descriptors;
 
+pub mod resume;
+
 use alloc::vec::Vec;
 
 // TODO: doc how to use mitosis
@@ -92,6 +94,7 @@ pub mod rdma_context;
 declare_global!(rdma_driver, alloc::boxed::Box<crate::KRdmaKit::KDriver>);
 declare_global!(rdma_contexts, alloc::vec::Vec<crate::RContext<'static>>);
 
+#[inline]
 pub unsafe fn get_rdma_context_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static crate::RContext<'static>> {
@@ -103,6 +106,7 @@ declare_global!(
     alloc::vec::Vec<core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>>
 );
 
+#[inline]
 pub unsafe fn get_rdma_cm_server_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>> {
@@ -126,6 +130,7 @@ declare_global!(
     alloc::vec::Vec<os_network::datagram::ud::UDFactory<'static>>
 );
 
+#[inline]
 pub unsafe fn get_ud_factory_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static os_network::datagram::ud::UDFactory<'static>> {
@@ -137,6 +142,7 @@ declare_global!(
     alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
 );
 
+#[inline]
 pub unsafe fn get_dc_factory_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
@@ -153,10 +159,12 @@ declare_global!(
     service_caller_pool,
     crate::rpc_caller_pool::CallerPool<'static>
 );
+#[inline]
 pub unsafe fn get_rpc_caller_pool_ref() -> &'static crate::rpc_caller_pool::CallerPool<'static> {
     crate::service_caller_pool::get_ref()
 }
 
+#[inline]
 pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::CallerPool<'static>
 {
     crate::service_caller_pool::get_mut()
@@ -166,10 +174,13 @@ pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::
 pub mod dc_pool;
 
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
+
+#[inline]
 pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_ref()
 }
 
+#[inline]
 pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_mut()
 }

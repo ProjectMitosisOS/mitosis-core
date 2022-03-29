@@ -92,9 +92,9 @@ impl<'a> VMA<'a> {
 
 impl core::fmt::Display for VMA<'_> {
     fn fmt(&self, fmt: &mut ::core::fmt::Formatter) -> core::fmt::Result {
-        let vm_flags = self.get_flags();
+        // let vm_flags = self.get_flags();
         fmt.write_fmt(format_args!(
-            "VMA 0x{:x}~0x{:x}, sz {}, file: {:?}",
+            "VMA 0x{:x}~0x{:x}, sz: {}, file: {:?}",
             self.get_start(),
             self.get_end(),
             self.get_sz(),

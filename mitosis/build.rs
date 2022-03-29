@@ -51,6 +51,7 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     "pmem_get_current_cpu",
     "pmem_get_cpu",
     "pmem_put_cpu",
+    "pmem_filemap_fault",
     "schedule",
     // vmalloc, vfree
     "vmalloc",

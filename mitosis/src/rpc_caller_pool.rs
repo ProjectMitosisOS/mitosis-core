@@ -56,6 +56,7 @@ impl<'a> CallerPool<'a> {
         session_id: usize,
         meta: UDHyperMeta,
     ) -> core::option::Option<()> {
+        // fetch by sidr connect
         let meta = self.create_meta_at(idx, meta)?;
         let my_gid =
             os_network::rdma::RawGID::new(self.contexts.get(idx).unwrap().get_gid_as_string())
@@ -99,8 +100,11 @@ impl<'a> CallerPool<'a> {
             .factories
             .get(idx)
             .expect("The idx is out of pool's range.");
-        let meta = factory.create_meta(meta).expect("failed to create meta");
-        Some(meta)
+        if let Ok(meta) = factory.create_meta(meta) {
+            Some(meta)
+        }else {
+            None
+        }
     }
 }
 
