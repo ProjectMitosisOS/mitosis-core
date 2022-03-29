@@ -9,6 +9,8 @@ use KRdmaKit::rust_kernel_rdma_base::*;
 use mitosis::descriptors::{Descriptor, DescriptorFactoryService, RDMADescriptor, ReadMeta};
 use mitosis::get_descriptor_pool_mut;
 use mitosis::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
+use mitosis::kern_wrappers::task::Task;
+use mitosis::kern_wrappers::vma::VMA;
 use crate::linux_kernel_module::bindings::vm_area_struct;
 use crate::linux_kernel_module::c_types::*;
 use crate::*;
@@ -261,8 +263,11 @@ impl MySyscallHandler {
                     Some(phy_addr)
                 } else {
                     // FIXME: How to handle the case `pa==0` ?
-                    // (*vmf).page = new_page_p as *mut _;
-                    // Some(new_page_pa)
+                    let mm = Task::new().get_memory_descriptor();
+                    // let vma = mm.find_vma(fault_addr).unwrap();
+                    let vma = VMA::new(mm.find_vma(fault_addr).unwrap());
+                    log::debug!("Find bad, fault addr: 0x{:x}, is stack: {}, vma start: 0x{:x}, size :{}",
+                        fault_addr, vma.is_stack(), vma.get_start(), vma.get_sz());
                     None
                 }
             })
