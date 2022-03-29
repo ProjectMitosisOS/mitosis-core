@@ -3,7 +3,6 @@ use hashbrown::HashMap;
 use crate::descriptors::{Descriptor, RDMADescriptor, VMADescriptor};
 use crate::kern_wrappers::Process;
 use crate::kern_wrappers::task::Task;
-use crate::linux_kernel_module::println;
 
 /// A data structure for RPC to lookup the descriptor 
 /// It should be initialized in startup.rs
@@ -64,7 +63,6 @@ impl DescriptorFactoryService {
 
             let (mm, _) = task.generate_mm();
             mm.into_iter().for_each(|m| {
-                println!("unmap start:0x{:x}, sz:{}, flag: 0x{:x}", m.get_start(), m.get_sz(), m.get_mmap_flags());
                 md.unmap_region(m.get_start() as _, m.get_sz() as _);
             });
         }
@@ -81,26 +79,25 @@ impl DescriptorFactoryService {
                 0,
             );
             if ret != m.get_start() {
-                println!("sanity check the mmap result: {}.", ret);
-                println!("a map failed to resolve the correct address: 0x{:x}.", m.get_start());
                 return;
             }
-            println!("pmem_vm_mmap: 0x{:x}, mmap_flags: 0x{:x}", m.get_start(), m.get_mmap_flags());
+            // println!("pmem_vm_mmap: 0x{:x}, mmap_flags: 0x{:x}", m.get_start(), m.get_mmap_flags());
             let vma = Task::new().get_memory_descriptor().find_vma(m.get_start()).unwrap();
             if m.is_stack() {
-                println!("Try to add the stack flags to the vma");
+                // println!("Try to add the stack flags to the vma");
                 vma.vm_flags =
                     (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::STACK).bits();
-                println!("Add stack flags to the vma successfully");
+                // println!("Add stack flags to the vma successfully");
             } else {
                 vma.vm_flags =
                     (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::DONTEXPAND).bits();
             }
         }
-        println!("pg table sz:{}", meta.page_table.len());
         // =======================================================
         // 1. Unmap origin vma regions
-        return;
+        // for (k, v) in &meta.page_table.0 {
+        //     rust_kernel_linux_util::linux_kernel_module::println!("va: 0x{:x}, pa: 0x{:x}", k, v);
+        // }
         unmap_all_regions();
         // 2. Map new vma regions
         (&meta.vma).into_iter().for_each(|m| {

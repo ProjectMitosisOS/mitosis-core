@@ -2,11 +2,13 @@ use alloc::sync::Arc;
 use core::pin::Pin;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering::SeqCst;
-use KRdmaKit::mem::{Memory, pa_to_va, RMemPhy};
+use KRdmaKit::cm::EndPoint;
+use KRdmaKit::device::RContext;
+use KRdmaKit::mem::{Memory, RMemPhy};
 use KRdmaKit::rust_kernel_rdma_base::*;
 use mitosis::descriptors::{Descriptor, DescriptorFactoryService, RDMADescriptor, ReadMeta};
 use mitosis::get_descriptor_pool_mut;
-use mitosis::linux_kernel_module::println;
+use mitosis::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::linux_kernel_module::bindings::vm_area_struct;
 use crate::linux_kernel_module::c_types::*;
 use crate::*;
@@ -15,6 +17,7 @@ use os_network::rdma::payload;
 
 use os_network::{block_on, Conn, Factory, rdma};
 use os_network::msg::UDMsg;
+use os_network::rdma::dc::{DCConn, DCFactory};
 use os_network::rdma::RawGID;
 use os_network::serialize::Serialize;
 use os_network::timeout::Timeout;
@@ -160,79 +163,117 @@ impl MySyscallHandler {
             return -1;
         }
         let dst = dst.as_ref().unwrap();
-        log::debug!("addr:0x{:x}, len:{}", dst.addr, dst.length);
-        // 2. One sided RDMA read to fetch remote descriptor
+
+        // 2. rmem_cpy to fetch remote descriptor
         let point = caller.get_ss(SESSION_IDX).unwrap().0.get_ss_meta();
-        let lkey = unsafe { ctx.get_lkey() };
-        let client_factory = rdma::dc::DCFactory::new(&ctx);
-        let mut dc = client_factory.create(()).unwrap();
-        type DCReqPayload = payload::Payload<ib_dc_wr>;
-        let mut local = self.meta_buf.as_mut().unwrap();
-        let mut payload = DCReqPayload::default()
-            .set_laddr(local.get_pa(0))
-            .set_raddr(dst.addr)
-            .set_sz(dst.length as _)
-            .set_lkey(lkey)
-            .set_rkey(point.mr.get_rkey())
-            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
-            .set_ah(point);
-        let timeout_usec = 5000;
-        let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
-        os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
-        if dc.post(&payload.as_ref()).is_err() {
-            log::error!("unable to post read qp");
-            return -1;
-        }
-        let mut timeout = Timeout::new(dc, timeout_usec);
-        if block_on(&mut timeout).is_err() {
-            log::error!("polling dc qp with error");
-            return -1;
-        }
+        let mut remote_mem = RemoteMemManager::create(ctx, point);
+        let local = self.meta_buf.as_mut().unwrap();
+        remote_mem.rmem_cpy(local.get_pa(0), dst.addr, dst.length as _, 5000);
         compiler_fence(SeqCst);
+
+
         // 3. Apply this descriptor into child process
         DescriptorFactoryService::resume_from_descriptor(self.file, unsafe { self.get_parent_meta() });
         return 0;
     }
 }
 
+/// Simple remote memory, implemented by DC primitive
+struct RemoteMemManager<'a> {
+    dc_factory: DCFactory<'a>,
+    remote_point: &'a EndPoint,
+}
+
+impl<'a> RemoteMemManager<'a> {
+    pub fn create(ctx: &'a RContext<'a>, point: &'a EndPoint) -> Self {
+        Self {
+            dc_factory: DCFactory::new(ctx),
+            remote_point: point,
+        }
+    }
+
+    /// Remote mem_cpy, implemented by one-sided RDMA read.
+    ///
+    /// Since we are in kernel, both of dst and src address should be physical
+    #[inline]
+    pub fn rmem_cpy(&mut self, dst: PhyAddrType, src: PhyAddrType, len: u64, timeout_usec: i64) -> isize {
+        type DCReqPayload = payload::Payload<ib_dc_wr>;
+        let point = &self.remote_point;
+        let lkey = unsafe { self.dc_factory.get_context().get_lkey() };
+        // TODO: DC create should not in the critical path!
+        let mut dc = self.dc_factory.create(()).unwrap();
+        let mut payload = DCReqPayload::default()
+            .set_laddr(dst)
+            .set_raddr(src)// copy from src into dst
+            .set_sz(len as _)
+            .set_lkey(lkey)
+            .set_rkey(point.mr.get_rkey())
+            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
+            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
+            .set_ah(point);
+        let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
+        os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+        if dc.post(&payload.as_ref()).is_err() {
+            log::error!("unable to post read qp");
+            return -1;
+        }
+        let mut timeout = Timeout::new(dc,
+                                       timeout_usec as _);
+        if block_on(&mut timeout).is_err() {
+            log::error!("polling dc qp with error");
+            return -1;
+        }
+        return 0;
+    }
+}
+
+
 impl MySyscallHandler {
     #[inline]
     unsafe fn handle_page_fault(&mut self, vmf: *mut mitosis::bindings::vm_fault) -> c_int {
+        use mitosis::bindings::{pmem_phys_to_virt, pmem_page_to_phy, pmem_alloc_page, PMEM_GFP_HIGHUSER};
         // virtual address
         let fault_addr = (*vmf).address;
-        log::debug!("handle fault virtual addr: 0x{:x}", fault_addr);
         let meta = Some(self.get_parent_meta());
         let phy = meta.as_ref().and_then(|m| {
             m.lookup_pg_table(fault_addr).and_then(|phy_addr| {
-                log::debug!("handle fault virtual addr: 0x{:x}, pa: 0x{:0x}", fault_addr, phy_addr);
+                // One-sided RDMA Read
+                let new_page_p = pmem_alloc_page(PMEM_GFP_HIGHUSER);
+                let new_page_pa = mitosis::bindings::pmem_page_to_phy(new_page_p) as u64;
 
-                let new_page_p = mitosis::bindings::pmem_alloc_page(
-                    mitosis::bindings::PMEM_GFP_HIGHUSER,
-                );
-
-                mitosis::bindings::memcpy(
-                    mitosis::bindings::pmem_page_to_virt(new_page_p) as _,  // dst
-                    mitosis::bindings::pmem_phys_to_virt(phy_addr) as _,    // src
-                    4096,
-                );
-                (*vmf).page = new_page_p as *mut _;
-                Some(phy_addr)
+                // TODO: omit `pa==0` case while calling `fork_prepare()`
+                if phy_addr > 0 {
+                    let ctx = unsafe {
+                        mitosis::get_rpc_caller_pool_ref()
+                            .get_caller_context(0)
+                            .unwrap()
+                    };
+                    const SESSION_IDX: usize = 66;
+                    let caller = unsafe {
+                        mitosis::rpc_caller_pool::CallerPool::get_global_caller(0)
+                            .expect("the caller should be properly inited")
+                    };
+                    let point = caller.get_ss(SESSION_IDX).unwrap().0.get_ss_meta();
+                    let mut remote_mm: RemoteMemManager = RemoteMemManager::create(ctx, point);
+                    // rmem_cpy to fetch remote page
+                    remote_mm.rmem_cpy(new_page_pa, phy_addr, 4096, 5000);
+                    (*vmf).page = new_page_p as *mut _;
+                    Some(phy_addr)
+                } else {
+                    // FIXME: How to handle the case `pa==0` ?
+                    // (*vmf).page = new_page_p as *mut _;
+                    // Some(new_page_pa)
+                    None
+                }
             })
         });
-        if phy.is_some() {
-            log::debug!("Fetched handle fault virtual addr: 0x{:x}, pa: 0x{:0x}", fault_addr, phy.unwrap());
-        } else {
-            log::debug!("NotFound in pg_table handle fault virtual addr: 0x{:x}", fault_addr);
-        }
-
         // check the results
         match phy {
             Some(phy) => {
-                log::debug!(
-                    "Check fault address 0x{:x} => to dumped physical address: 0x{:x}",
-                    fault_addr, phy
-                );
+                // log::debug!(
+                //     "Check fault address 0x{:x} => to dumped physical address: 0x{:x}",
+                //     fault_addr, phy
+                // );
                 0
             }
             None => {
