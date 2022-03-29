@@ -17,6 +17,9 @@ impl<'a> VMA<'a> {
     }
 }
 
+use alloc::string::String;
+use rust_kernel_linux_util::string::ptr2string;
+
 impl<'a> VMA<'a> {
     pub fn new(vma: &'a crate::bindings::vm_area_struct) -> Self {
         Self { vma_inner: vma }
@@ -75,16 +78,27 @@ impl<'a> VMA<'a> {
     pub unsafe fn get_raw_ptr(&self) -> *mut vm_area_struct {
         self.vma_inner as *const vm_area_struct as _
     }
+
+    pub unsafe fn get_backed_file_name(&self) -> core::option::Option<String> {
+        if self.vma_inner.vm_file != core::ptr::null_mut() {
+            let file = *(self.vma_inner.vm_file);
+            let dentry = *(file.f_path.dentry);
+
+            return Some(ptr2string(&dentry.d_iname as *const _));
+        }
+        None
+    }
 }
 
 impl core::fmt::Display for VMA<'_> {
     fn fmt(&self, fmt: &mut ::core::fmt::Formatter) -> core::fmt::Result {
         let vm_flags = self.get_flags();
         fmt.write_fmt(format_args!(
-            "Meta vm:  exe: {} r: {} w: {}",
-            vm_flags.contains(VMFlags::EXEC),
-            vm_flags.contains(VMFlags::READ),
-            vm_flags.contains(VMFlags::WRITE)
+            "VMA 0x{:x}~0x{:x}, sz {}, file: {:?}",
+            self.get_start(),
+            self.get_end(),
+            self.get_sz(),
+            unsafe { self.get_backed_file_name() },
         ))
     }
 }

@@ -17,26 +17,32 @@ impl VMADescriptor {
     pub fn is_stack(&self) -> bool {
         self.get_flags().contains(VMFlags::STACK)
     }
+
     #[inline]
     pub fn get_start(&self) -> VirtAddrType {
         self.range.0
     }
+
     #[inline]
     pub fn get_end(&self) -> VirtAddrType {
         self.range.1
     }
+
     #[inline]
     pub fn get_sz(&self) -> u64 {
         self.range.1 - self.range.0
     }
+
     #[inline]
     pub fn get_prot(&self) -> crate::bindings::pgprot_t {
         self.prot
     }
+    
     #[inline]
     pub fn get_flags(&self) -> crate::bindings::VMFlags {
         unsafe { crate::bindings::VMFlags::from_bits_unchecked(self.flags) }
     }
+
     #[inline]
     pub fn get_mmap_flags(&self) -> crate::linux_kernel_module::c_types::c_ulong {
         let mut ret = 0;

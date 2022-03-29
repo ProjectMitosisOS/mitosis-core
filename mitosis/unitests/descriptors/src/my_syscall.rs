@@ -72,7 +72,7 @@ impl FileOperations for MySyscallHandler {
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
         match cmd {
             0 => self.test_fork_prepare(arg),                                // fork_prepare
-            1 => self.test_fork_resume(arg),                   // fork_resume
+            1 => self.test_fork_resume(arg),                                 // fork_resume
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -109,6 +109,11 @@ impl MySyscallHandler {
                 rkey: 64,
             });
             crate::log::debug!("prepare descriptor success", );
+        }
+
+        let mm = Task::new().get_memory_descriptor();
+        for vma in mm.get_vma_iter() { 
+            log::debug!("{}", vma); 
         }
         0
     }

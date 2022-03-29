@@ -12,7 +12,7 @@ fn test_descriptors_serialization() {
 
         client.test(0).unwrap();    // fork_prepare
         client.test(1).unwrap();    // fork_resume
-
+        
         assert_eq!(dmesg_contains(&String::from("ERROR")), false);
     });
 }
