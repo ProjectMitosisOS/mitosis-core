@@ -83,6 +83,9 @@ pmem_free_page(struct page* p);
 u64
 pmem_page_to_phy(struct page* page);
 
+u64
+pmem_page_to_virt(struct page* page);
+
 void*
 pmem_phys_to_virt(u64 p);
 

@@ -1,10 +1,12 @@
+use alloc::sync::Arc;
 use core::pin::Pin;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering::SeqCst;
-use KRdmaKit::mem::{Memory, RMemPhy};
+use KRdmaKit::mem::{Memory, pa_to_va, RMemPhy};
 use KRdmaKit::rust_kernel_rdma_base::*;
-use mitosis::descriptors::{Descriptor, RDMADescriptor, ReadMeta};
+use mitosis::descriptors::{Descriptor, DescriptorFactoryService, RDMADescriptor, ReadMeta};
 use mitosis::get_descriptor_pool_mut;
+use mitosis::linux_kernel_module::println;
 use crate::linux_kernel_module::bindings::vm_area_struct;
 use crate::linux_kernel_module::c_types::*;
 use crate::*;
@@ -18,15 +20,46 @@ use os_network::serialize::Serialize;
 use os_network::timeout::Timeout;
 use os_network::ud::UDHyperMeta;
 
-pub struct MySyscallHandler;
+pub struct MySyscallHandler {
+    // storing parent meta info. Fetch by calling `get_parent_meta`
+    meta_buf: Option<RMemPhy>,
+    file: *mut mitosis::bindings::file,
+}
+
+unsafe impl Sync for MySyscallHandler {}
+
+unsafe impl Send for MySyscallHandler {}
+
+static mut MY_VM_OP: mitosis::bindings::vm_operations_struct = unsafe {
+    core::mem::transmute([0u8; core::mem::size_of::<mitosis::bindings::vm_operations_struct>()])
+};
+
+#[allow(dead_code)]
+unsafe extern "C" fn open_handler(_area: *mut mitosis::bindings::vm_area_struct) {}
+
+#[allow(dead_code)]
+unsafe extern "C" fn page_fault_handler(vmf: *mut mitosis::bindings::vm_fault) -> c_int {
+    let handler: *mut MySyscallHandler = (*(*vmf).vma).vm_private_data as *mut _;
+    (*handler).handle_page_fault(vmf)
+}
 
 #[allow(non_upper_case_globals)]
 impl FileOperations for MySyscallHandler {
     #[inline]
     fn open(
-        _file: *mut crate::linux_kernel_module::bindings::file,
+        file: *mut crate::linux_kernel_module::bindings::file,
     ) -> crate::linux_kernel_module::KernelResult<Self> {
-        Ok(Self)
+        unsafe {
+            MY_VM_OP = Default::default();
+            MY_VM_OP.open = Some(open_handler);
+            MY_VM_OP.fault = Some(page_fault_handler);
+            MY_VM_OP.access = None;
+        };
+
+        Ok(Self {
+            meta_buf: Some(RMemPhy::new(1024 * 1024)),
+            file: file as *mut _,
+        })
     }
 
     #[allow(non_snake_case)]
@@ -43,8 +76,12 @@ impl FileOperations for MySyscallHandler {
     }
 
     #[inline]
-    fn mmap(&mut self, _vma_p: *mut vm_area_struct) -> c_int {
-        unimplemented!();
+    fn mmap(&mut self, vma_p: *mut vm_area_struct) -> c_int {
+        unsafe {
+            (*vma_p).vm_private_data = (self as *mut Self).cast::<c_void>();
+            (*vma_p).vm_ops = &mut MY_VM_OP as *mut mitosis::bindings::vm_operations_struct as *mut _;
+        }
+        0
     }
 }
 
@@ -74,7 +111,7 @@ impl MySyscallHandler {
 
     /// Test the (de)serialization of RegDescriptor
     #[inline(always)]
-    fn test_fork_resume(&self, _arg: c_ulong) -> c_long {
+    fn test_fork_resume(&mut self, _arg: c_ulong) -> c_long {
         crate::log::debug!("In test of fork resume\n");
         let pool_idx = 0;
         let ctx = unsafe {
@@ -129,9 +166,8 @@ impl MySyscallHandler {
         let lkey = unsafe { ctx.get_lkey() };
         let client_factory = rdma::dc::DCFactory::new(&ctx);
         let mut dc = client_factory.create(()).unwrap();
-        const MEM_SZ: usize = 1024 * 1024;
         type DCReqPayload = payload::Payload<ib_dc_wr>;
-        let mut local = RMemPhy::new(MEM_SZ);
+        let mut local = self.meta_buf.as_mut().unwrap();
         let mut payload = DCReqPayload::default()
             .set_laddr(local.get_pa(0))
             .set_raddr(dst.addr)
@@ -154,9 +190,63 @@ impl MySyscallHandler {
             return -1;
         }
         compiler_fence(SeqCst);
-        let _content = unsafe { &*(local.get_ptr() as *mut Descriptor) };
-
         // 3. Apply this descriptor into child process
+        DescriptorFactoryService::resume_from_descriptor(self.file, unsafe { self.get_parent_meta() });
         return 0;
+    }
+}
+
+impl MySyscallHandler {
+    #[inline]
+    unsafe fn handle_page_fault(&mut self, vmf: *mut mitosis::bindings::vm_fault) -> c_int {
+        // virtual address
+        let fault_addr = (*vmf).address;
+        log::debug!("handle fault virtual addr: 0x{:x}", fault_addr);
+        let meta = Some(self.get_parent_meta());
+        let phy = meta.as_ref().and_then(|m| {
+            m.lookup_pg_table(fault_addr).and_then(|phy_addr| {
+                log::debug!("handle fault virtual addr: 0x{:x}, pa: 0x{:0x}", fault_addr, phy_addr);
+
+                let new_page_p = mitosis::bindings::pmem_alloc_page(
+                    mitosis::bindings::PMEM_GFP_HIGHUSER,
+                );
+
+                mitosis::bindings::memcpy(
+                    mitosis::bindings::pmem_page_to_virt(new_page_p) as _,  // dst
+                    mitosis::bindings::pmem_phys_to_virt(phy_addr) as _,    // src
+                    4096,
+                );
+                (*vmf).page = new_page_p as *mut _;
+                Some(phy_addr)
+            })
+        });
+        if phy.is_some() {
+            log::debug!("Fetched handle fault virtual addr: 0x{:x}, pa: 0x{:0x}", fault_addr, phy.unwrap());
+        } else {
+            log::debug!("NotFound in pg_table handle fault virtual addr: 0x{:x}", fault_addr);
+        }
+
+        // check the results
+        match phy {
+            Some(phy) => {
+                log::debug!(
+                    "Check fault address 0x{:x} => to dumped physical address: 0x{:x}",
+                    fault_addr, phy
+                );
+                0
+            }
+            None => {
+                log::error!("Failed to find the fault address: 0x{:x}", fault_addr);
+                // If it is the stack or the heap, we should manually handles the fault like the original page_fault_handler
+                // TO be implemented
+                mitosis::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
+            }
+        }
+    }
+
+    #[inline]
+    unsafe fn get_parent_meta(&self) -> Arc<Descriptor> {
+        let local = self.meta_buf.as_ref().unwrap();
+        Arc::<Descriptor>::from_raw(local.get_ptr() as _)
     }
 }

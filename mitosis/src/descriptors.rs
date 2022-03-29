@@ -24,6 +24,7 @@ pub use vma::*;
 pub mod factory;
 
 pub use factory::DescriptorFactoryService;
+use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
@@ -45,6 +46,11 @@ impl Descriptor {
             vma: vma,
             machine_info: mac_info,
         }
+    }
+
+    #[inline]
+    pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
+        self.page_table.get(virt)
     }
 }
 

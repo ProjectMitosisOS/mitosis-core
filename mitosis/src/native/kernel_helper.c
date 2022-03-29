@@ -203,6 +203,12 @@ pmem_page_to_phy(struct page* page)
   return page_to_phys(page);
 }
 
+u64
+pmem_page_to_virt(struct page* page)
+{
+    return page_to_virt(page);
+}
+
 void*
 pmem_phys_to_virt(u64 p)
 {

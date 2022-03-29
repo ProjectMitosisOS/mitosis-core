@@ -32,6 +32,7 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     "pmem_alloc_page",
     "pmem_free_page",
     "pmem_page_to_phy",
+    "pmem_page_to_virt",
     "pmem_phys_to_virt",
     "memcpy",
     // mmap related
