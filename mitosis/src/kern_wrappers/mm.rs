@@ -111,7 +111,7 @@ impl<'a> Iterator for VMAIter<'a> {
         } else {
             let res = self.cur;
             self.cur = unsafe { (*res).vm_next };
-            unsafe { Some(VMA::new(&(*res))) }
+            unsafe { Some(VMA::new(&mut (*res))) }
         }
     }
 }

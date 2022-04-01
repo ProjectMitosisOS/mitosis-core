@@ -1,10 +1,10 @@
-use crate::bindings::{vm_area_struct, VMFlags};
+use crate::bindings::{vm_area_struct, VMFlags, file};
 
 use super::mm::VirtAddrType;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct VMA<'a> {
-    vma_inner: &'a vm_area_struct,
+    vma_inner: &'a mut vm_area_struct,
 }
 
 impl<'a> VMA<'a> {
@@ -21,7 +21,7 @@ use alloc::string::String;
 use rust_kernel_linux_util::string::ptr2string;
 
 impl<'a> VMA<'a> {
-    pub fn new(vma: &'a crate::bindings::vm_area_struct) -> Self {
+    pub fn new(vma: &'a mut crate::bindings::vm_area_struct) -> Self {
         Self { vma_inner: vma }
     }
 
@@ -54,6 +54,10 @@ impl<'a> VMA<'a> {
         unsafe { crate::bindings::VMFlags::from_bits_unchecked(self.vma_inner.vm_flags) }
     }
 
+    pub fn set_raw_flags(&mut self, flags : crate::linux_kernel_module::c_types::c_ulong) {
+        self.vma_inner.vm_flags = flags;
+    }    
+
     pub fn get_raw_flags(&self) -> crate::linux_kernel_module::c_types::c_ulong {
         self.vma_inner.vm_flags
     }
@@ -77,6 +81,10 @@ impl<'a> VMA<'a> {
 
     pub unsafe fn get_raw_ptr(&self) -> *mut vm_area_struct {
         self.vma_inner as *const vm_area_struct as _
+    }
+
+    pub unsafe fn get_file_ptr(&self) -> *mut file { 
+        self.vma_inner.vm_file
     }
 
     pub unsafe fn get_backed_file_name(&self) -> core::option::Option<String> {

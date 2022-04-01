@@ -49,7 +49,6 @@ impl DescriptorFactoryService {
         self.registered_buf_table.get(&key)
     }
 
-
     #[inline(always)]
     pub fn put_current_descriptor(
         &mut self,

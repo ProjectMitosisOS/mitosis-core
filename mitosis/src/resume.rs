@@ -1,13 +1,11 @@
 mod fallback;
-
 pub use fallback::*;
 
 mod remote_paging;
-
 pub use remote_paging::*;
 
-
 use os_network::rdma::RawGID;
+
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 use crate::descriptors::{RDMADescriptor};

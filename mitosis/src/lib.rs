@@ -14,14 +14,15 @@ pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 pub const VERSION: usize = 0;
 
+pub mod resume;
 pub mod syscalls;
 
 pub mod bindings;
 pub mod kern_wrappers;
 
-pub mod descriptors;
+pub mod shadow_process;
 
-pub mod resume;
+pub mod descriptors;
 
 use alloc::vec::Vec;
 

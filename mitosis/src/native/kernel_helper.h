@@ -147,4 +147,12 @@ unsigned int pmem_get_current_cpu(void);
 unsigned int pmem_get_cpu(void);
 unsigned int pmem_put_cpu(void);
 
+/*
+ file related
+ */
+
+void pmem_get_file(struct file *f);
+
+void pmem_put_file(struct file *f);
+
 #endif
