@@ -1,13 +1,11 @@
 use hashbrown::HashMap;
-use os_network::bytes::BytesMut;
-use os_network::KRdmaKit::mem::Memory;
+use os_network::bytes::{ToBytes};
 use os_network::serialize::Serialize;
 use crate::descriptors::{Descriptor, RDMADescriptor};
-use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
+use crate::kern_wrappers::mm::{PhyAddrType};
 use crate::kern_wrappers::page::{KPageTable, Page};
 use crate::kern_wrappers::Process;
-use crate::KRdmaKit::consts::MAX_KMALLOC_SZ;
-use crate::KRdmaKit::mem::RMemPhy;
+use os_network::msg::UDMsg as RMemory;
 
 
 /// A data structure for RPC to lookup the descriptor
@@ -17,10 +15,8 @@ pub struct DescriptorFactoryService {
     // TODO: shall we record the serialized buffer to avoid on-the-fly serialization? 
     registered_descriptors: HashMap<usize, super::Descriptor>,
     copy_pages: HashMap<usize, KPageTable>,
-    // Map from `descriptor key` to `buffer physical address`
-    registered_buf_table: HashMap<usize, PhyAddrType>,
-    // Buffer of descriptors after serialization
-    buf: Option<RMemPhy>,
+    // Local memory hash
+    buf_hash: HashMap<usize, RMemory>,
 }
 
 impl DescriptorFactoryService {
@@ -29,8 +25,7 @@ impl DescriptorFactoryService {
             // TODO: Lock maybe time consuming ? => do not lock on read
             registered_descriptors: Default::default(),
             copy_pages: Default::default(),
-            registered_buf_table: Default::default(),
-            buf: None,
+            buf_hash: Default::default(),
         }
     }
 
@@ -45,8 +40,12 @@ impl DescriptorFactoryService {
     }
 
     #[inline(always)]
-    pub fn get_descriptor_dma_buf(&self, key: usize) -> Option<&PhyAddrType> {
-        self.registered_buf_table.get(&key)
+    pub fn get_descriptor_dma_buf(&self, key: usize) -> Option<PhyAddrType> {
+        if let Some(rmem) = self.buf_hash.get(&key) {
+            Some(rmem.get_pa())
+        } else {
+            None
+        }
     }
 
 
@@ -58,12 +57,13 @@ impl DescriptorFactoryService {
         let process = Process::new_from_current();
         let task = process.get_task();
         let (vma, pg_table) = task.generate_mm();
-        let mut res = Descriptor {
+        let mut descriptor_meta = Descriptor {
             regs: task.generate_reg_descriptor(),
             page_table: Default::default(),
             vma,
             machine_info,
         };
+
         if self.get_descriptor_ref(key).is_some() {
             // should not assign twice
             None
@@ -76,28 +76,16 @@ impl DescriptorFactoryService {
                     let kp = unsafe { Page::new_from_upage(*addr as *mut _) }.unwrap();
                     let phy_addr = kp.get_phy();
                     kpage.insert(*addr, kp);
-                    res.page_table.add_one(*addr, phy_addr); // refill the page table content
+                    descriptor_meta.page_table.add_one(*addr, phy_addr); // refill the page table content
                 }
                 self.copy_pages.insert(key, kpage);
             }
-            self.registered_descriptors.insert(key, res);
             // put buffer and map
-            let mut buf = RMemPhy::new(MAX_KMALLOC_SZ);
-            let mut tmp_buf_table: HashMap<usize, PhyAddrType> = Default::default();
-            let mut start_pa = buf.get_pa(0) as PhyAddrType;
-            let mut start_va = buf.get_ptr() as VirtAddrType;
-            // TODO: optimized into ring buffer
-            for (key, descriptor) in &self.registered_descriptors {
-                let seri_len = descriptor.serialization_buf_len() as u64;
-                let mut out = unsafe { BytesMut::from_raw(start_va as _, seri_len as _) };
-                descriptor.serialize(&mut out);
-                tmp_buf_table.insert(*key, start_pa);
-                (start_va, start_pa) = (start_va + seri_len, start_pa + seri_len);
-            }
-            self.buf = Some(buf);
-            self.registered_buf_table = tmp_buf_table.clone();
+            let mut buf = RMemory::new(descriptor_meta.serialization_buf_len(), 0);
+            descriptor_meta.serialize(buf.get_bytes_mut());
+            self.buf_hash.insert(key, buf);
+            self.registered_descriptors.insert(key, descriptor_meta);
             self.get_descriptor_ref(key)
         }
     }
-
 }

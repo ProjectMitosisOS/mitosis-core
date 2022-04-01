@@ -54,7 +54,7 @@ pub(crate) fn handle_fork_resume(input: &BytesMut, output: &mut BytesMut) -> usi
     if let Some(meta) = dfs.get_descriptor_ref(handler_id) {
         // 2. Write back
         let dst = ReadMeta {
-            addr: *dfs.get_descriptor_dma_buf(handler_id).unwrap(),
+            addr: dfs.get_descriptor_dma_buf(handler_id).unwrap(),
             length: meta.serialization_buf_len() as _,
         };
         output.resize(dst.serialization_buf_len());
