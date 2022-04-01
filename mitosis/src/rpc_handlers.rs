@@ -43,7 +43,7 @@ pub(crate) fn handle_fork_resume(input: &BytesMut, output: &mut BytesMut) -> usi
     use payload::ForkResume;
     let fork_resume = ForkResume::deserialize(input);
     if fork_resume.is_none() {
-        return 1;
+        return 0;
     }
     let fork_resume = fork_resume.unwrap();
     let (handler_id, auth_key): (usize, usize) =

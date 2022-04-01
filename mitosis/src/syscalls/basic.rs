@@ -124,7 +124,7 @@ impl MitosisHandler {
                 .unwrap()
         };
         let (parent_gid, handler_id, remote_nic_idx) = (
-            // os_network::rdma::RawGID::new(String::from("fe80:0000:0000:0000:248a:0703:009c:7c94")).unwrap(),
+            // os_network::rdma::RawGID::new(alloc::string::String::from("fe80:0000:0000:0000:248a:0703:009c:7c94")).unwrap(),
             os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
             TEST_HANDLER_ID,
             local_pool_id % nic_num); // TODO: refine the mapping relation
@@ -191,15 +191,17 @@ impl MitosisHandler {
         let point = caller.get_ss(self.session_id).unwrap().0.get_ss_meta();
 
         // TODO: extrac dc into global variable
-        let dc = unsafe {get_dc_pool_service_mut()}.get_dc_qp(0).unwrap();
-        let pa = self.local_mem.get_pa();
+        let dc = unsafe { get_dc_pool_service_mut() }.get_dc_qp(0).unwrap();
+        let buf_dma = self.local_mem.get_pa();
         let lkey = unsafe { ctx.get_lkey() };
-        Self::rmem_cpy(dc, pa, remote_meta.addr,
-                             remote_meta.length as _, lkey,
-                             point);
+        Self::rmem_cpy(dc, buf_dma, remote_meta.addr,
+                       remote_meta.length as _, lkey,
+                       point);
         // Deserialize the output
-        self.parent_descriptor = Some(Descriptor::deserialize(self.local_mem.get_bytes()).unwrap());
-        Some(())
+        Descriptor::deserialize(self.local_mem.get_bytes()).map_or(None, |d| {
+            self.parent_descriptor = Some(d);
+            Some(())
+        })
     }
 
     /// Remote mem_cpy, implemented by one-sided RDMA read.
@@ -240,7 +242,6 @@ impl MitosisHandler {
         }
         return 0;
     }
-
 }
 
 
@@ -267,10 +268,10 @@ impl MitosisHandler {
                 let point = caller.get_ss(self.session_id).unwrap().0.get_ss_meta();
                 // let mut remote_mm: RemoteMemManager = RemoteMemManager::create(ctx, point);
                 // rmem_cpy to fetch remote page
-                let dc = unsafe {get_dc_pool_service_mut()}.get_dc_qp(0).unwrap();
+                let dc = unsafe { get_dc_pool_service_mut() }.get_dc_qp(0).unwrap();
 
                 Self::rmem_cpy(dc, new_page_pa, phy_addr, 4096, unsafe { ctx.get_lkey() },
-                                     point);
+                               point);
                 (*vmf).page = new_page_p as *mut _;
                 Some(phy_addr)
             })
