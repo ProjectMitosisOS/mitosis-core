@@ -6,19 +6,23 @@ use crate::syscalls::FileOperations;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-#[derive(Debug, Default)]
+#[allow(dead_code)]
+struct ResumeDataStruct {
+    key: usize,
+    descriptor: crate::descriptors::Descriptor,
+}
+
+#[derive(Default)]
 struct CallerData {
     prepared_key: Option<usize>,
-    resumed_key: Option<usize>,
+    resume_related: Option<ResumeDataStruct>,
 }
 
 /// The MitosisSysCallService has the following two jobs:
 ///  1. handle up parent/child system calls
 ///  2. register the corresponding pagefault handler
-///
 pub struct MitosisSysCallHandler {
     caller_status: CallerData, // structure to encapsulate caller's status
-    remote_data: Option<()>,
     my_file: *mut crate::bindings::file,
 }
 
@@ -48,7 +52,6 @@ impl FileOperations for MitosisSysCallHandler {
         Ok(Self {
             my_file: file as *mut _,
             caller_status: Default::default(),
-            remote_data: None,
         })
     }
 
@@ -99,7 +102,7 @@ impl MitosisSysCallHandler {
 
     #[inline]
     fn syscall_local_resume(&mut self, key: c_ulong) -> c_long {
-        if self.caller_status.resumed_key.is_some() {
+        if self.caller_status.resume_related.is_some() {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
         }
@@ -107,7 +110,10 @@ impl MitosisSysCallHandler {
         let process_service = unsafe { crate::get_sps_mut() };
         let descriptor = process_service.query_descriptor(key as _);
         if descriptor.is_some() {
-            self.caller_status.resumed_key = Some(key as _);
+            self.caller_status.resume_related = Some(ResumeDataStruct {
+                key: key as _,
+                descriptor: descriptor.unwrap().clone(),
+            });
             descriptor.unwrap().apply_to(self.my_file);
             return 0;
         }

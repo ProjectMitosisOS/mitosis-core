@@ -8,7 +8,7 @@ use hashbrown::HashMap;
 use os_network::bytes::BytesMut;
 
 /// Record the mapping between the va and remote pa of a process
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct FlatPageTable(pub HashMap<VirtAddrType, PhyAddrType>);
 
 impl FlatPageTable {

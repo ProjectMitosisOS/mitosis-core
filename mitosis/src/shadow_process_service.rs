@@ -1,4 +1,5 @@
 use hashbrown::HashMap;
+use alloc::vec::Vec;
 
 use crate::descriptors::Descriptor;
 use crate::shadow_process::*;
@@ -12,6 +13,7 @@ use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
 struct ProcessBundler {
     process: ShadowProcess,
     serialized_buf: RMemory,
+    bound_dc_targets : Vec<()>,
 }
 
 impl ProcessBundler {
@@ -21,6 +23,7 @@ impl ProcessBundler {
         Self {
             process: process,
             serialized_buf: buf,
+            bound_dc_targets : Vec::new(),
         }
     }
 }
@@ -56,7 +59,7 @@ impl ShadowProcessService {
 
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() };
         let rdma_descriptor =
-            unsafe { crate::get_dc_pool_service_ref().get_rdma_context(pool_idx as _) }?;
+            unsafe { crate::get_dc_pool_service_ref().get_rdma_descriptor(pool_idx as _) }?;
 
         self.registered_processes.insert(
             key,

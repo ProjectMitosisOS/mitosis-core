@@ -26,7 +26,7 @@ use crate::kern_wrappers::task::Task;
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
 #[allow(dead_code)]
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Descriptor {
     pub regs: RegDescriptor,
     pub page_table: FlatPageTable,

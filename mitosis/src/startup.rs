@@ -8,7 +8,6 @@ use rust_kernel_linux_util::timer::KTimer;
 use alloc::vec::Vec;
 
 pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
-
     crate::log::info!("Try to start MITOSIS instance, init global services");
     let timer = KTimer::new();
 
@@ -59,6 +58,9 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     unsafe {
         crate::dc_pool_service::init(
             crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool"),
+        );
+        crate::dc_target_service::init(
+            crate::dc_pool::DCTargetPool::new().expect("Failed to create DC Target pool"),
         )
     };
 
@@ -83,7 +85,10 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     }
     crate::log::info!("Probe myself RPC handlers done");
 
-    crate::log::info!("All initialization done, takes {} ms", timer.get_passed_usec() / 1000);
+    crate::log::info!(
+        "All initialization done, takes {} ms",
+        timer.get_passed_usec() / 1000
+    );
 
     Some(())
 }
@@ -95,6 +100,7 @@ pub fn end_instance() {
         crate::service_caller_pool::drop();
         crate::service_rpc::drop();
         crate::sp_service::drop();
+        crate::dc_target_service::drop();
     };
     end_rdma();
 }

@@ -188,8 +188,10 @@ pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::
 
 /// A pool of DCQPs 
 pub mod dc_pool;
+pub mod remote_paging;
 
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
+declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
 
 #[inline]
 pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
