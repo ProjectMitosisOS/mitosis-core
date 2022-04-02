@@ -57,7 +57,7 @@ impl Task {
     }
 
     #[inline]
-    pub fn flush_vma_state(&mut self, regs: &RegDescriptor) {
+    pub fn set_mm_reg_states(&mut self, regs: &RegDescriptor) {
         self.get_memory_descriptor().flush_tlb();
         self.set_stack_registers(&regs.others);
         self.set_tls_fs(regs.fs);

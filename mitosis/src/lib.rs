@@ -14,13 +14,15 @@ pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 pub const VERSION: usize = 0;
 
-pub mod resume;
+// pub mod resume;
 pub mod syscalls;
+pub mod core_syscall_handler;
 
 pub mod bindings;
 pub mod kern_wrappers;
 
 pub mod shadow_process;
+pub mod shadow_process_service;
 
 pub mod descriptors;
 
@@ -186,6 +188,7 @@ pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'
     crate::dc_pool_service::get_mut()
 }
 
+/* 
 // Descriptor pool, used for container preparation
 declare_global!(descriptor_pool, crate::descriptors::DescriptorFactoryService);
 
@@ -197,4 +200,16 @@ pub unsafe fn get_descriptor_pool_ref() -> &'static crate::descriptors::Descript
 #[inline]
 pub unsafe fn get_descriptor_pool_mut() -> &'static mut crate::descriptors::DescriptorFactoryService {
     crate::descriptor_pool::get_mut()
+} */
+
+declare_global!(sp_service, crate::shadow_process_service::ShadowProcessService);
+
+#[inline]
+pub unsafe fn get_sps_ref() -> &'static crate::shadow_process_service::ShadowProcessService {
+    crate::sp_service::get_ref()
+}
+
+#[inline]
+pub unsafe fn get_sps_mut() -> &'static mut crate::shadow_process_service::ShadowProcessService {
+    crate::sp_service::get_mut()
 }

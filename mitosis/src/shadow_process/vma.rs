@@ -51,13 +51,13 @@ impl Drop for ShadowVMA<'_> {
 
 type CopyPageTable = super::page_table::ShadowPageTable<Copy4KPage>;
 
-struct VMACopyPTGenerater<'a, 'b> {
+pub(crate) struct VMACopyPTGenerater<'a, 'b> {
     vma: &'a ShadowVMA<'a>,
     inner: &'b mut CopyPageTable,
     inner_flat: &'b mut crate::descriptors::FlatPageTable,
 }
 
-impl<'a,'b> VMACopyPTGenerater<'a, 'b> {
+impl<'a, 'b> VMACopyPTGenerater<'a, 'b> {
     pub fn new(
         vma: &'a ShadowVMA,
         inner: &'b mut CopyPageTable,
@@ -91,6 +91,15 @@ impl VMACopyPTGenerater<'_, '_> {
         _next: crate::linux_kernel_module::c_types::c_ulong,
         walk: *mut mm_walk,
     ) -> crate::linux_kernel_module::c_types::c_int {
-        unimplemented!();
-    }    
+        let my: &mut Self = &mut (*((*walk).private as *mut Self));
+
+        let phy_addr = pmem_get_phy_from_pte(pte);
+        if phy_addr > 0 {
+            // the page table is present
+            my.inner_flat.add_one(addr, phy_addr);
+            my.inner
+                .add_page(Copy4KPage::new(addr as _).expect("Fail to copy from user space"));
+        }
+        0
+    }
 }

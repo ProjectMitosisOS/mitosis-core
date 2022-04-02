@@ -60,8 +60,8 @@ impl Descriptor {
         (&self.vma).into_iter().for_each(|m| {
             unsafe {task.map_one_region(file, m)}
         });
-        // 3. Flush state
-        task.flush_vma_state(&self.regs);
+        // 3. Re-set states
+        task.set_mm_reg_states(&self.regs);
     }
 }
 

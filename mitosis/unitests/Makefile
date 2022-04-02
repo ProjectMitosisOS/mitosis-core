@@ -45,9 +45,8 @@ clean:
 uninstall:
 	sudo rmmod testmodule
 
-
 install:
-	sudo rmmod testmodule ;python build.py descriptors && sudo insmod testmodule.ko
+	sudo rmmod testmodule ;python build.py fork && sudo insmod testmodule.ko
 
 parent:
 	python parent.py
