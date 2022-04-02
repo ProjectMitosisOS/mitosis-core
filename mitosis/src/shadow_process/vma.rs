@@ -1,6 +1,8 @@
 use crate::bindings::*;
 use crate::kern_wrappers::vma::VMA;
 
+use super::Copy4KPage;
+
 /// The shadow VMA is just a wrapper over the original process's VMA
 /// The difference is that, upon creation, it will change the process's
 /// map flag to SHARED to allow COW. It will also increase the reference counter
@@ -45,4 +47,50 @@ impl Drop for ShadowVMA<'_> {
             }
         }
     }
+}
+
+type CopyPageTable = super::page_table::ShadowPageTable<Copy4KPage>;
+
+struct VMACopyPTGenerater<'a, 'b> {
+    vma: &'a ShadowVMA<'a>,
+    inner: &'b mut CopyPageTable,
+    inner_flat: &'b mut crate::descriptors::FlatPageTable,
+}
+
+impl<'a,'b> VMACopyPTGenerater<'a, 'b> {
+    pub fn new(
+        vma: &'a ShadowVMA,
+        inner: &'b mut CopyPageTable,
+        inner_flat: &'b mut crate::descriptors::FlatPageTable,
+    ) -> Self {
+        Self {
+            vma: vma,
+            inner: inner,
+            inner_flat: inner_flat,
+        }
+    }
+}
+
+use crate::kern_wrappers::vma_iters::*;
+
+impl VMACopyPTGenerater<'_, '_> {
+    pub fn generate(&self) {
+        let mut walk: mm_walk = Default::default();
+        walk.pte_entry = Some(Self::handle_pte_entry);
+        walk.private = self as *const _ as *mut crate::linux_kernel_module::c_types::c_void;
+
+        let mut engine = VMWalkEngine::new(walk);
+        unsafe { engine.walk(self.vma.vma_inner.get_raw_ptr()) };
+    }
+
+    #[allow(non_upper_case_globals)]
+    #[allow(unused_variables)]
+    pub unsafe extern "C" fn handle_pte_entry(
+        pte: *mut pte_t,
+        addr: crate::linux_kernel_module::c_types::c_ulong,
+        _next: crate::linux_kernel_module::c_types::c_ulong,
+        walk: *mut mm_walk,
+    ) -> crate::linux_kernel_module::c_types::c_int {
+        unimplemented!();
+    }    
 }

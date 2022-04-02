@@ -6,19 +6,15 @@ use crate::linux_kernel_module;
 
 // sub descriptors
 pub mod reg;
-
 pub use reg::*;
 
 pub mod page_table;
-
 pub use page_table::*;
 
 pub mod rdma;
-
 pub use rdma::*;
 
 pub mod vma;
-
 pub use vma::*;
 
 pub mod factory;

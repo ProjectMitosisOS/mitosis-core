@@ -139,7 +139,7 @@ impl VMATraverseIter {
 
 /// A simple wrapper for helping walking through the page tables
 #[derive(Debug)]
-struct VMWalkEngine {
+pub(crate) struct VMWalkEngine {
     walk_callbacks: mm_walk,
 }
 

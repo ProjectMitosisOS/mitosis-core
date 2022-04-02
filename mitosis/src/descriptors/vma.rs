@@ -1,6 +1,7 @@
 use crate::bindings::VMFlags;
 use crate::kern_wrappers::mm::VirtAddrType;
 
+/// The VMA descriptors can generate from VMA in kern_wrappers 
 #[derive(Copy, Clone, Default)]
 pub struct VMADescriptor {
     pub range: (

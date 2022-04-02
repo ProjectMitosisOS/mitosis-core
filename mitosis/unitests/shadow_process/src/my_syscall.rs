@@ -23,6 +23,7 @@ impl FileOperations for MySyscallHandler {
         match cmd {
             0 => self.handle_basic(arg),
             1 => self.handle_page_test(arg),
+            3 => self.handle_page_table_test(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -76,6 +77,11 @@ impl MySyscallHandler {
 
         let mut pg = ShadowPageTable::<Copy4KPage>::new();
         pg.add_page(page);
+        0
+    }
+
+    #[inline(always)]
+    fn handle_page_table_test(&self, arg : c_ulong) -> c_long { 
         0
     }
 }
