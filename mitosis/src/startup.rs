@@ -3,12 +3,17 @@ use crate::rdma_context::*;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
+use rust_kernel_linux_util::timer::KTimer;
+
 use alloc::vec::Vec;
 
 pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
-    crate::log::info!("Start MITOSIS instance, init global services");
+
+    crate::log::info!("Try to start MITOSIS instance, init global services");
+    let timer = KTimer::new();
 
     start_rdma(&config).expect("fail to create RDMA context");
+    crate::log::info!("Initialize RDMA context done");
 
     // high-level RDMA-related data structures
 
@@ -40,6 +45,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
             crate::rpc_service::Service::new(&config).expect("Failed to create the RPC service. "),
         );
     };
+    crate::log::info!("RPC service initializes done");
 
     // RPC caller pool
     unsafe {
@@ -61,10 +67,23 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 
     // TODO: other services
 
+    crate::log::info!("Start waiting for the RPC servers to start...");
+    crate::rpc_service::wait_handlers_ready_barrier(config.rpc_threads_num);
+    crate::log::info!("All RPC thread handlers initialized!");
+
     // establish an RPC to myself
     for i in 0..config.rpc_threads_num {
-        let session_id = calculate_session_id(config.machine_id, i, crate::MAX_RPC_THREADS_CNT);
+        probe_remote_rpc_end(
+            config.machine_id,
+            unsafe { crate::service_rpc::get_ref() }
+                .get_connect_info(i)
+                .expect("Self RPC handler connection info uninitialized"),
+        )
+        .expect("failed to connect to my RPC handlers!");
     }
+    crate::log::info!("Probe myself RPC handlers done");
+
+    crate::log::info!("All initialization done, takes {} ms", timer.get_passed_usec() / 1000);
 
     Some(())
 }
@@ -81,8 +100,8 @@ pub fn end_instance() {
 }
 
 /// calculate the session ID of the remote end handler
-pub fn calculate_session_id(mac_id: usize, thread_id: usize, max_nthreads: usize) -> usize {
-    mac_id * max_nthreads + thread_id
+pub fn calculate_session_id(mac_id: usize, thread_id: usize, max_callers: usize) -> usize {
+    mac_id * max_callers + thread_id
 }
 
 use os_network::ud::UDHyperMeta;
@@ -93,14 +112,13 @@ use os_network::ud::UDHyperMeta;
 ///
 /// TODO: We should wrap a global lock, since this function can called by many applications
 ///
-/// # Arguments
-/// * session_id: the session ID to the remote server. It is carefully calculated according to cal_session_id()
 pub fn probe_remote_rpc_end(
-    session_id: usize,
+    remote_machine_id: usize,
     connect_info: crate::rpc_service::HandlerConnectInfo,
 ) -> core::option::Option<()> {
     let len = unsafe { crate::get_rpc_caller_pool_ref().len() };
     for i in 0..len {
+        let session_id = calculate_session_id(remote_machine_id, i, len);
         unsafe { crate::get_rpc_caller_pool_mut() }
             .connect_session_at(
                 i,

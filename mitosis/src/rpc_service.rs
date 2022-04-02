@@ -10,6 +10,18 @@ use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
 
 use crate::linux_kernel_module;
 
+use core::sync::atomic::{AtomicUsize,Ordering};
+
+static RPC_HANDLER_READY_NUM: AtomicUsize = AtomicUsize::new(0);
+
+pub(crate) fn wait_handlers_ready_barrier(wait_num : usize) { 
+    loop { 
+        if RPC_HANDLER_READY_NUM.load(Ordering::SeqCst) >= wait_num { 
+            return;
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct HandlerConnectInfo {
     pub gid: alloc::string::String,
@@ -183,6 +195,7 @@ impl Service {
                 Err(e) => crate::log::error!("post recv buf err: {:?}", e),
             }
         }
+        RPC_HANDLER_READY_NUM.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
 
         let mut counter = 0;
         let mut timer = KTimer::new();
