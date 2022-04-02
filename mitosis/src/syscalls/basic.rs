@@ -61,7 +61,7 @@ impl FileOperations for MitosisHandler {
 
         Ok(Self {
             session_id: 30,
-            pool_id: 0,
+            pool_id: 0,         // TODO: could be replaced by `get_cpu()`
             parent_descriptor: None,
             local_mem: RMemory::new(1024 * 1024 * 4, 0),
             file: file as *mut _,
@@ -192,7 +192,7 @@ impl MitosisHandler {
 
         // TODO: extrac dc into global variable
 
-        let dc = unsafe { get_dc_pool_service_mut() }.get_dc_qp(0).unwrap();
+        let dc = unsafe { get_dc_pool_service_mut() }.get_dc_qp(self.pool_id).unwrap();
         let buf_dma = self.local_mem.get_pa();
         let lkey = unsafe { ctx.get_lkey() };
         Self::rmem_cpy(dc, buf_dma, remote_meta.addr,
@@ -271,7 +271,7 @@ impl MitosisHandler {
                 // let mut remote_mm: RemoteMemManager = RemoteMemManager::create(ctx, point);
                 // rmem_cpy to fetch remote page
 
-                let dc = unsafe { get_dc_pool_service_mut() }.get_dc_qp(0).unwrap();
+                let dc = unsafe { get_dc_pool_service_mut() }.get_dc_qp(self.pool_id).unwrap();
 
                 Self::rmem_cpy(dc, new_page_pa, phy_addr, 4096, unsafe { ctx.get_lkey() },
                                point);
