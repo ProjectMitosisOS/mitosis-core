@@ -50,6 +50,10 @@ impl Service {
     pub fn get_connect_info(&self, idx: usize) -> core::option::Option<HandlerConnectInfo> {
         self.connect_infos.get(idx).map(|c| c.clone())
     }
+
+    pub fn calculate_qd_hint(idx: usize) -> usize {
+        QD_HINT_BASE + idx
+    }
 }
 
 impl Service {
@@ -58,6 +62,19 @@ impl Service {
             threads: Vec::new(),
             connect_infos: Vec::new(),
         };
+
+        // init the RPC connect info
+        for i in 0..config.rpc_threads_num {
+            let nic_to_use = i % config.num_nics_used;
+            let local_context = unsafe { crate::rdma_contexts::get_ref().get(nic_to_use).unwrap() };
+            let qd_hint = Self::calculate_qd_hint(i);
+
+            res.connect_infos.push(HandlerConnectInfo {
+                gid: local_context.get_gid_as_string(),
+                service_id: crate::rdma_context::SERVICE_ID_BASE + nic_to_use as u64,
+                qd_hint: qd_hint as u64,
+            });
+        }
 
         for i in 0..config.rpc_threads_num {
             let arg = Box::new(ThreadCTX {
@@ -134,14 +151,14 @@ impl Service {
             crate::rdma_cm_service::get_mut()
                 .get(arg.nic_to_use)
                 .unwrap()
-                .reg_ud(QD_HINT_BASE + arg.id, server_ud.get_qp())
+                .reg_ud(Service::calculate_qd_hint(arg.id), server_ud.get_qp())
         };
 
         let mut rpc_server = UDRPCHook::new(
             unsafe { crate::ud_factories::get_ref().get(arg.nic_to_use).unwrap() },
             server_ud,
             UDReceiverFactory::new()
-                .set_qd_hint((QD_HINT_BASE + arg.id) as _)
+                .set_qd_hint(Service::calculate_qd_hint(arg.id) as _)
                 .set_lkey(lkey)
                 .create(temp_ud),
         );
