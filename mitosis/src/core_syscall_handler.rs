@@ -6,14 +6,30 @@ use crate::syscalls::FileOperations;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
+#[derive(Debug, Default)]
+struct CallerData {
+    prepared_id: Option<usize>,
+    resumed_id: Option<usize>,
+}
+
 /// The MitosisSysCallService has the following two jobs:
 ///  1. handle up parent/child system calls
 ///  2. register the corresponding pagefault handler
 ///
 pub struct MitosisSysCallHandler {
-    caller_status: (), // structure to encapsulate caller's status
+    caller_status: CallerData, // structure to encapsulate caller's status
     remote_data: Option<()>,
     my_file: *mut crate::bindings::file,
+}
+
+impl Drop for MitosisSysCallHandler {
+    fn drop(&mut self) {
+        self.caller_status.prepared_id.map(|k| {
+            crate::log::debug!("unregister prepared process {}", k);
+            let process_service = unsafe { crate::get_sps_mut() };
+            process_service.unregister(k);
+        });
+    }
 }
 
 #[allow(non_upper_case_globals)]
@@ -31,7 +47,7 @@ impl FileOperations for MitosisSysCallHandler {
 
         Ok(Self {
             my_file: file as *mut _,
-            caller_status: (),
+            caller_status: Default::default(),
             remote_data: None,
         })
     }
@@ -63,9 +79,20 @@ impl FileOperations for MitosisSysCallHandler {
 
 /// The system call parts
 impl MitosisSysCallHandler {
-    fn syscall_prepare(&mut self, arg: c_ulong) -> c_long {
-        crate::log::debug!("In prepare systemcall handler");
-        0
+    fn syscall_prepare(&mut self, key: c_ulong) -> c_long {
+        if self.caller_status.prepared_id.is_some() {
+            crate::log::error!("We don't support multiple fork yet. ");
+            return -1;
+        }
+
+        let process_service = unsafe { crate::get_sps_mut() };
+        let res = process_service.add_myself_copy(key as _);
+
+        if res.is_some() {
+            self.caller_status.prepared_id = Some(key as _);
+            return 0;
+        }
+        return -1;
     }
 }
 

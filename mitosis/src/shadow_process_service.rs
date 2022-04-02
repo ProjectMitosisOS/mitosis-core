@@ -2,8 +2,11 @@ use hashbrown::HashMap;
 
 use crate::shadow_process::*;
 
-use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
+#[allow(unused_imports)]
+use crate::linux_kernel_module;
+
 use os_network::bytes::ToBytes;
+use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
 
 struct ProcessBundler {
     process: ShadowProcess,
@@ -26,9 +29,36 @@ pub struct ShadowProcessService {
 }
 
 impl ShadowProcessService {
-    pub fn new() -> Self { 
-        Self { 
-            registered_processes : Default::default()
+    pub fn new() -> Self {
+        Self {
+            registered_processes: Default::default(),
         }
+    }
+
+    pub fn add_myself_copy(&mut self, key: usize) -> core::option::Option<()> {
+        if self.registered_processes.contains_key(&key) {
+            crate::log::warn!(
+                "Failed to prepare: the register key {} has already been taken. ",
+                key
+            );
+            return None;
+        }
+
+        let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() };
+        let rdma_descriptor =
+            unsafe { crate::get_dc_pool_service_ref().get_rdma_context(pool_idx as _) }?;
+
+        self.registered_processes.insert(
+            key,
+            ProcessBundler::new(crate::shadow_process::ShadowProcess::new_copy(
+                rdma_descriptor,
+            )),
+        );
+
+        return Some(());
+    }
+
+    pub fn unregister(&mut self, key: usize) {
+        self.registered_processes.remove(&key);
     }
 }

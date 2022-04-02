@@ -52,7 +52,7 @@ impl Default for Config {
             num_nics_used: 1,
             rpc_threads_num: 2,
             machine_id: 0,
-            max_core_cnt: 24,
+            max_core_cnt: 48,
             peers_gid: Vec::new(),
         }
     }
