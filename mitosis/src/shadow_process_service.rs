@@ -1,5 +1,6 @@
 use hashbrown::HashMap;
 
+use crate::descriptors::Descriptor;
 use crate::shadow_process::*;
 
 #[allow(unused_imports)]
@@ -35,6 +36,10 @@ impl ShadowProcessService {
         }
     }
 
+    pub fn query_descriptor(&self, key : usize) -> core::option::Option<&crate::descriptors::Descriptor> { 
+        self.registered_processes.get(&key).map(|s| s.get_descriptor_ref())
+    }
+
     pub fn add_myself_copy(&mut self, key: usize) -> core::option::Option<()> {
         if self.registered_processes.contains_key(&key) {
             crate::log::warn!(
@@ -56,7 +61,7 @@ impl ShadowProcessService {
         );
 
         return Some(());
-    }
+    }    
 
     pub fn unregister(&mut self, key: usize) {
         self.registered_processes.remove(&key);

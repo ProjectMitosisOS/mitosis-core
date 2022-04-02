@@ -1,4 +1,5 @@
 use core::option::Option;
+use std::os::raw::c_ulong;
 
 use crate::linux_kernel_module::c_types::*;
 use crate::syscalls::FileOperations;
@@ -57,6 +58,7 @@ impl FileOperations for MitosisSysCallHandler {
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
         match cmd {
             mitosis_protocol::CALL_PREPARE => self.syscall_prepare(arg),
+            mitosis_protocol::CALL_RESUME_LOCAL => self.syscall_local_resume(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -79,6 +81,8 @@ impl FileOperations for MitosisSysCallHandler {
 
 /// The system call parts
 impl MitosisSysCallHandler {
+
+    #[inline]
     fn syscall_prepare(&mut self, key: c_ulong) -> c_long {
         if self.caller_status.prepared_id.is_some() {
             crate::log::error!("We don't support multiple fork yet. ");
@@ -90,6 +94,17 @@ impl MitosisSysCallHandler {
 
         if res.is_some() {
             self.caller_status.prepared_id = Some(key as _);
+            return 0;
+        }
+        return -1;
+    }
+
+    #[inline]
+    fn syscall_local_resume(&mut self, key : c_ulong) -> c_long { 
+        let process_service = unsafe { crate::get_sps_mut() };
+        let descriptor = process_service.query_descriptor(key);
+        if descriptor.is_some() { 
+            descriptor.unwrap().apply_to(self.my_file);
             return 0;
         }
         return -1;
@@ -112,7 +127,7 @@ unsafe extern "C" fn page_fault_handler(vmf: *mut crate::bindings::vm_fault) -> 
 
 impl MitosisSysCallHandler {
     #[inline(always)]
-    unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
+    unsafe fn handle_page_fault(&mut self, _vmf: *mut crate::bindings::vm_fault) -> c_int {
         unimplemented!();
     }
 }
