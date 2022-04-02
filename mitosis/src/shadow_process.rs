@@ -25,7 +25,7 @@ impl ShadowProcess {
     pub fn new_copy(rdma_descriptor : crate::descriptors::RDMADescriptor) -> Self { 
         // data structures of myself
         let mut shadow_pt = ShadowPageTable::<Copy4KPage>::new();
-        let shadow_vmas : Vec<ShadowVMA::<'static>> = Vec::new();
+        let mut shadow_vmas : Vec<ShadowVMA::<'static>> = Vec::new();
 
         // data structures for descriptors 
         let mut vma_descriptors = Vec::new();
@@ -38,6 +38,7 @@ impl ShadowProcess {
             vma_descriptors.push(vma.generate_descriptor());
             
             let s_vma = ShadowVMA::new(vma, false);            
+            shadow_vmas.push(s_vma);
         }
 
         unimplemented!();
