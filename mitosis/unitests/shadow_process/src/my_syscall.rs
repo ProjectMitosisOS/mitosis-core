@@ -22,6 +22,7 @@ impl FileOperations for MySyscallHandler {
         crate::log::debug!("in ioctrl");
         match cmd {
             0 => self.handle_basic(arg),
+            1 => self.handle_page_test(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -62,6 +63,17 @@ impl MySyscallHandler {
         }
         log::debug!("vma cnt {}, backed by file cnt {}", vma_cnt, vma_file_cnt);
 
+        0
+    }
+
+    #[inline(always)]
+    fn handle_page_test(&self, arg: c_ulong) -> c_long {
+        crate::log::debug!("handle page tests, with arg {}", arg);
+        let page = unsafe { Copy4KPage::new(arg as _).expect("failed to create the page") };
+
+        // now check the content
+        let bytes = unsafe { page.to_bytes().clone_and_resize(16).unwrap() };
+        log::debug!("check bytes content: {:?}", bytes);
         0
     }
 }
