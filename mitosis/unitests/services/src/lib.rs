@@ -2,7 +2,6 @@
 
 extern crate alloc;
 
-use alloc::string::String;
 use mitosis::linux_kernel_module;
 use mitosis::log;
 use mitosis::rust_kernel_linux_util::kthread;
@@ -30,7 +29,7 @@ use krdma_test::*;
 fn test_rpc_two() {
     log::info!("Test RPC Two using the refined API.");
 
-    let pool_idx = 1;
+    let pool_idx = 0;
 
     // it is ok, because in the unittest, all sender & receiver share the same context
     let context = unsafe {
@@ -42,18 +41,18 @@ fn test_rpc_two() {
     let _ = unsafe { mitosis::get_rpc_caller_pool_mut() }
         .connect_session_at(
             pool_idx,
-            64, // Notice: it is very important to ensure that session ID is unique! 
+            64, // Notice: it is very important to ensure that session ID is unique!
             UDHyperMeta {
                 // the remote machine's RDMA gid. Since we are unit test, we use the local gid
                 gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
 
-                // CM server on RNIC 0 listens on mitosis::rdma_context::SERVICE_ID_BASE, 
-                // CM server on RNIC 1 listens on mitosis::rdma_context::SERVICE_ID_BASE + 1, etc 
-                service_id: mitosis::rdma_context::SERVICE_ID_BASE+1,
+                // CM server on RNIC 0 listens on mitosis::rdma_context::SERVICE_ID_BASE,
+                // CM server on RNIC 1 listens on mitosis::rdma_context::SERVICE_ID_BASE + 1, etc
+                service_id: mitosis::rdma_context::SERVICE_ID_BASE,
 
-                // Thread 0's UD registers on mitosis::rpc_service::QD_HINT_BASE, 
-                // Thread 1's UD registers on mitosis::rpc_service::QD_HINT_BASE + 1, etcc 
-                qd_hint: (mitosis::rpc_service::QD_HINT_BASE + 1) as _,
+                // Thread 0's UD registers on mitosis::rpc_service::QD_HINT_BASE,
+                // Thread 1's UD registers on mitosis::rpc_service::QD_HINT_BASE + 1, etcc
+                qd_hint: (mitosis::rpc_service::QD_HINT_BASE) as _,
             },
         )
         .expect("failed to connect the endpoint");
@@ -62,7 +61,7 @@ fn test_rpc_two() {
     let caller = unsafe {
         mitosis::rpc_caller_pool::CallerPool::get_global_caller(pool_idx)
             .expect("the caller should be properly inited")
-    };    
+    };
 
     crate::log::info!("now start to test RPC caller");
 
@@ -72,7 +71,7 @@ fn test_rpc_two() {
             mitosis::rpc_handlers::RPCId::Echo as _, // RPC ID
             0xffffffff as u64,  // send an arg of u64
         )
-        .unwrap();    
+        .unwrap();
 
     let res = block_on(caller);
     match res {
@@ -82,7 +81,7 @@ fn test_rpc_two() {
             // Note that in real benchmark, we need to register the _ to the caller
         }
         Err(e) => log::error!("client call error: {:?}", e),
-    };        
+    };
 }
 
 fn test_rpc() {
@@ -148,7 +147,7 @@ fn test_rpc() {
         .unwrap();
 
     let timeout_usec = 1000_000; // 1 sec
-                                 //  then, the client can check the result
+    //  then, the client can check the result
     let mut caller_timeout = Timeout::new(caller, timeout_usec);
     let res = block_on(&mut caller_timeout);
     match res {
@@ -237,7 +236,7 @@ fn init() {
     log::info!("in test mitosis service startups!");
 
     let mut config: mitosis::Config = Default::default();
-    config.set_num_nics_used(2).set_rpc_threads(2);
+    config.set_num_nics_used(1).set_rpc_threads(2);
 
     assert!(start_instance(config).is_some());
 }
