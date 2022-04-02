@@ -39,12 +39,18 @@ impl Copy4KPage {
         })
     }
 
-    pub fn get_kva(&self) -> *mut crate::linux_kernel_module::c_types::c_void { 
+    pub fn get_kva(&self) -> *mut crate::linux_kernel_module::c_types::c_void {
         unsafe { pmem_phys_to_virt(pmem_page_to_phy(self.inner as *const _ as _)) }
     }
 
     pub fn to_bytes(&self) -> BytesMut {
         unsafe { BytesMut::from_raw(self.get_kva() as _, _4K) }
+    }
+}
+
+impl super::page_table::GetPhyAddr for Copy4KPage {
+    fn get_physical_addr(self) -> crate::kern_wrappers::mm::PhyAddrType {
+        unsafe { crate::bindings::pmem_page_to_phy(self.inner as *mut _) }
     }
 }
 

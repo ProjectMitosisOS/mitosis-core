@@ -36,7 +36,6 @@ impl FileOperations for MySyscallHandler {
     }
 }
 
-use alloc::vec::Vec;
 use mitosis::kern_wrappers::*;
 use mitosis::shadow_process::*;
 
@@ -74,6 +73,9 @@ impl MySyscallHandler {
         // now check the content
         let bytes = unsafe { page.to_bytes().clone_and_resize(16).unwrap() };
         log::debug!("check bytes content: {:?}", bytes);
+
+        let mut pg = ShadowPageTable::<Copy4KPage>::new();
+        pg.add_page(page);
         0
     }
 }
