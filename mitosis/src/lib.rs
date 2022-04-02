@@ -30,10 +30,14 @@ use alloc::vec::Vec;
 
 // TODO: doc how to use mitosis
 
+pub const MAX_RPC_THREADS_CNT : usize = 10;
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub(crate) num_nics_used: usize,
+
     pub(crate) rpc_threads_num: usize,
+
     // my machine ID
     pub(crate) machine_id: usize,
     // how many CPU core is available on the machine
@@ -61,6 +65,7 @@ impl Config {
     }
 
     pub fn set_rpc_threads(&mut self, num: usize) -> &mut Self {
+        assert!(num <= MAX_RPC_THREADS_CNT);
         self.rpc_threads_num = num;
         self
     }

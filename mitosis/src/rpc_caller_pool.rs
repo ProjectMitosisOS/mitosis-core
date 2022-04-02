@@ -40,6 +40,11 @@ impl<'a> CallerPool<'a> {
     }
 
     #[inline(always)]
+    pub fn len(&self) -> usize { 
+        self.pool.len()
+    }
+
+    #[inline(always)]
     pub fn get_caller(&'a mut self, idx: usize) -> core::option::Option<&'a mut UDCaller<'a>> {
         self.pool.get_mut(idx)
     }

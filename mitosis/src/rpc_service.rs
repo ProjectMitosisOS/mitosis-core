@@ -1,6 +1,8 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
+use os_network::KRdmaKit::cm::ServerCM;
+
 use rust_kernel_linux_util::kthread;
 use rust_kernel_linux_util::kthread::JoinHandler;
 
@@ -8,16 +10,53 @@ use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
 
 use crate::linux_kernel_module;
 
+#[derive(Debug)]
+pub struct HandlerConnectInfo {
+    pub gid: alloc::string::String,
+    pub service_id: u64,
+    pub qd_hint: u64,
+}
+
+impl Clone for HandlerConnectInfo {
+    fn clone(&self) -> HandlerConnectInfo {
+        Self {
+            gid: self.gid.clone(),
+            service_id: self.service_id,
+            qd_hint: self.qd_hint,
+        }
+    }
+}
+
 /// RPC service implements a UDRpcHook defined in os-network
 /// Note: It must be created after all the RDMA context has been initialized.
+/// Session ID mapping:
+///    The RPC caller that connects to the machine (mac_id)'s (thread_id)'s:
+///    * session_id = mac_id * max_rpc_threads + thread_id
 pub struct Service {
     threads: Vec<JoinHandler>,
+    connect_infos: Vec<HandlerConnectInfo>,
+}
+
+impl core::fmt::Debug for Service {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("MitosisRPCService")
+            .field("threads_num", &self.threads.len())
+            .field("connect_infos", &self.connect_infos)
+            .finish()
+    }
+}
+
+impl Service {
+    pub fn get_connect_info(&self, idx: usize) -> core::option::Option<HandlerConnectInfo> {
+        self.connect_infos.get(idx).map(|c| c.clone())
+    }
 }
 
 impl Service {
     pub fn new(config: &crate::Config) -> core::option::Option<Self> {
         let mut res = Self {
             threads: Vec::new(),
+            connect_infos: Vec::new(),
         };
 
         for i in 0..config.rpc_threads_num {
@@ -33,6 +72,8 @@ impl Service {
             let handler = builder.spawn(Self::worker).ok()?;
             res.threads.push(handler);
         }
+
+        crate::log::debug!("RPC service creation done: {:?}", res);
 
         Some(res)
     }
@@ -75,7 +116,7 @@ impl Service {
 
         // init the UD RPC hook
         type UDRPCHook<'a, 'b> =
-        os_network::rpc::hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
+            os_network::rpc::hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
 
         let local_context = unsafe { crate::rdma_contexts::get_ref().get(arg.nic_to_use).unwrap() };
         let lkey = unsafe { local_context.get_lkey() };
