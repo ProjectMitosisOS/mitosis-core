@@ -75,6 +75,10 @@ impl Config {
         self
     }
 
+    pub fn get_machine_id(&self) -> usize { 
+        self.machine_id
+    }
+
     pub fn add_gid(&mut self, gid: alloc::string::String) -> &mut Self {
         self.peers_gid.push(gid);
         self
@@ -84,6 +88,10 @@ impl Config {
         self.max_core_cnt = cnt;
         self
     }
+
+    pub fn get_max_core_cnt(&self) -> usize {
+        self.max_core_cnt
+    }    
 }
 
 // kernel-space global variables
