@@ -1,5 +1,4 @@
 use core::option::Option;
-use std::os::raw::c_ulong;
 
 use crate::linux_kernel_module::c_types::*;
 use crate::syscalls::FileOperations;
@@ -9,8 +8,8 @@ use crate::linux_kernel_module;
 
 #[derive(Debug, Default)]
 struct CallerData {
-    prepared_id: Option<usize>,
-    resumed_id: Option<usize>,
+    prepared_key: Option<usize>,
+    resumed_key: Option<usize>,
 }
 
 /// The MitosisSysCallService has the following two jobs:
@@ -25,7 +24,7 @@ pub struct MitosisSysCallHandler {
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
-        self.caller_status.prepared_id.map(|k| {
+        self.caller_status.prepared_key.map(|k| {
             crate::log::debug!("unregister prepared process {}", k);
             let process_service = unsafe { crate::get_sps_mut() };
             process_service.unregister(k);
@@ -81,10 +80,9 @@ impl FileOperations for MitosisSysCallHandler {
 
 /// The system call parts
 impl MitosisSysCallHandler {
-
     #[inline]
     fn syscall_prepare(&mut self, key: c_ulong) -> c_long {
-        if self.caller_status.prepared_id.is_some() {
+        if self.caller_status.prepared_key.is_some() {
             crate::log::error!("We don't support multiple fork yet. ");
             return -1;
         }
@@ -93,17 +91,23 @@ impl MitosisSysCallHandler {
         let res = process_service.add_myself_copy(key as _);
 
         if res.is_some() {
-            self.caller_status.prepared_id = Some(key as _);
+            self.caller_status.prepared_key = Some(key as _);
             return 0;
         }
         return -1;
     }
 
     #[inline]
-    fn syscall_local_resume(&mut self, key : c_ulong) -> c_long { 
+    fn syscall_local_resume(&mut self, key: c_ulong) -> c_long {
+        if self.caller_status.resumed_key.is_some() {
+            crate::log::error!("We don't support multiple resume yet. ");
+            return -1;
+        }
+
         let process_service = unsafe { crate::get_sps_mut() };
-        let descriptor = process_service.query_descriptor(key);
-        if descriptor.is_some() { 
+        let descriptor = process_service.query_descriptor(key as _);
+        if descriptor.is_some() {
+            self.caller_status.resumed_key = Some(key as _);
             descriptor.unwrap().apply_to(self.my_file);
             return 0;
         }

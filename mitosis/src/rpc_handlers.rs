@@ -75,5 +75,4 @@ pub(crate) fn handle_fork_resume(input: &BytesMut, output: &mut BytesMut) -> usi
         };
     }
     */
-    return 0;
 }

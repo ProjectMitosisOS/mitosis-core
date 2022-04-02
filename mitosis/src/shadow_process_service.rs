@@ -36,8 +36,13 @@ impl ShadowProcessService {
         }
     }
 
-    pub fn query_descriptor(&self, key : usize) -> core::option::Option<&crate::descriptors::Descriptor> { 
-        self.registered_processes.get(&key).map(|s| s.get_descriptor_ref())
+    pub fn query_descriptor(
+        &self,
+        key: usize,
+    ) -> core::option::Option<&crate::descriptors::Descriptor> {
+        self.registered_processes
+            .get(&key)
+            .map(|s| s.process.get_descriptor_ref())
     }
 
     pub fn add_myself_copy(&mut self, key: usize) -> core::option::Option<()> {
@@ -61,7 +66,7 @@ impl ShadowProcessService {
         );
 
         return Some(());
-    }    
+    }
 
     pub fn unregister(&mut self, key: usize) {
         self.registered_processes.remove(&key);
