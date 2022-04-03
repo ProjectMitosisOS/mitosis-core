@@ -18,6 +18,12 @@ pub struct IBAddressHandler {
     pub inner: *mut ib_ah,
 }
 
+impl IBAddressHandler { 
+    pub unsafe fn get_inner(&self) -> *mut ib_ah { 
+        self.inner
+    }
+}
+
 impl Drop for IBAddressHandler {
     fn drop(&mut self) {
         assert!(self.inner != core::ptr::null_mut());
