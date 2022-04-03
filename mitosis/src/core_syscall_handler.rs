@@ -1,6 +1,7 @@
 use core::option::Option;
 
 use crate::linux_kernel_module::c_types::*;
+use crate::remote_paging::{self, AccessInfo};
 use crate::syscalls::FileOperations;
 
 #[allow(unused_imports)]
@@ -10,6 +11,7 @@ use crate::linux_kernel_module;
 struct ResumeDataStruct {
     key: usize,
     descriptor: crate::descriptors::Descriptor,
+    access_info: crate::remote_paging::AccessInfo,
 }
 
 #[derive(Default)]
@@ -114,6 +116,8 @@ impl MitosisSysCallHandler {
             self.caller_status.resume_related = Some(ResumeDataStruct {
                 key: key as _,
                 descriptor: descriptor.unwrap().clone(),
+                // access info cannot failed to create
+                access_info: AccessInfo::new(&descriptor.unwrap().machine_info).unwrap(),
             });
             descriptor.unwrap().apply_to(self.my_file);
             return 0;
@@ -138,8 +142,44 @@ unsafe extern "C" fn page_fault_handler(vmf: *mut crate::bindings::vm_fault) -> 
 
 impl MitosisSysCallHandler {
     #[inline(always)]
-    unsafe fn handle_page_fault(&mut self, _vmf: *mut crate::bindings::vm_fault) -> c_int {
-        unimplemented!();
+    unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
+        let fault_addr = (*vmf).address;
+        let remote_addr = self
+            .caller_status
+            .resume_related
+            .as_ref()
+            .unwrap()
+            .descriptor
+            .lookup_pg_table(fault_addr);
+
+        if remote_addr.is_none() {
+            // TODO: fallback?
+            crate::log::error!("failed to lookup the mapped address");
+            return crate::bindings::FaultFlags::SIGSEGV.bits()
+                as linux_kernel_module::c_types::c_int;
+        }
+
+        // mapped, do the remote reads:
+        use crate::bindings::{pmem_alloc_page, PMEM_GFP_HIGHUSER};
+
+        // TODO; check whether the allocation is good?
+        let new_page_p = pmem_alloc_page(PMEM_GFP_HIGHUSER);
+        let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
+
+        let res = crate::remote_paging::RemotePagingService::remote_read(
+            new_page_pa,
+            remote_addr.unwrap(),
+            4096,
+            &self.caller_status.resume_related.as_ref().unwrap().access_info,
+        );
+
+        match res {
+            Ok(_) => 0,
+            Err(e) => {
+                crate::log::error!("Failed to read the remote page {:?}", e);
+                crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
+            }
+        }
     }
 }
 

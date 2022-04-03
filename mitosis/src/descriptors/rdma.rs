@@ -1,5 +1,5 @@
 use crate::kern_wrappers::mm::PhyAddrType;
-use os_network::rdma::{dc::DCTarget, RawGID};
+use os_network::rdma::dc::DCTarget;
 
 use os_network::KRdmaKit::rust_kernel_rdma_base::bindings::ib_gid;
 
@@ -33,16 +33,16 @@ impl RDMADescriptor {
             .expect("failed to create a DCTarget from the pool");
         let ctx = unsafe { crate::get_rdma_context_ref(idx).unwrap() };
 
-        // now fill the fields 
-        let my = Self { 
-            service_id : 0, // deprecated field
-            port_num : ctx.get_port(),
-            gid : ctx.get_gid(), 
-            lid : ctx.get_lid(), 
+        // now fill the fields
+        let my = Self {
+            service_id: 0, // deprecated field
+            port_num: ctx.get_port(),
+            gid: ctx.get_gid(),
+            lid: ctx.get_lid(),
 
-            rkey : key, 
-            dct_key : target.get_dc_key(),
-            dct_num : target.get_dct_num(),
+            rkey: key,
+            dct_key: target.get_dc_key(),
+            dct_num: target.get_dct_num(),
         };
 
         Some((target, my))

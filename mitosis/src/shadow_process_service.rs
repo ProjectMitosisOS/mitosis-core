@@ -3,9 +3,8 @@ use alloc::vec::Vec;
 
 use hashbrown::HashMap;
 use os_network::rdma::dc::DCTarget;
-use os_network::KRdmaKit::qp::DCTServer;
 
-use crate::descriptors::{Descriptor, RDMADescriptor};
+use crate::descriptors::RDMADescriptor;
 use crate::shadow_process::*;
 
 #[allow(unused_imports)]

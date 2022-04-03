@@ -1,15 +1,13 @@
 use alloc::vec::Vec;
 
 use os_network::rdma::dc::*;
-use os_network::rdma::RawGID;
-use os_network::KRdmaKit::qp::DCTargetMeta;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
 /// The clients(children)-side DCQP pool
 pub struct DCPool<'a> {
-    pool: Vec<(DCConn<'a>, u64)>,
+    pool: Vec<(DCConn<'a>, u32)>,
     nic_idxs: Vec<usize>,
     // TODO: should initialize a DC Target pool
     // a simple DC key cannot protect all the stuffs in a fine-grained way
@@ -17,10 +15,10 @@ pub struct DCPool<'a> {
 
 impl<'a> DCPool<'a> {
     pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&mut DCConn<'a>> {
-        self.pool.get_mut(idx).map(|v| v.0)
+        self.pool.get_mut(idx).map(|v| &mut v.0)
     }
 
-    pub fn get_dc_qp_key(&mut self, idx: usize) -> core::option::Option<(&mut DCConn<'a>, u64)> {
+    pub fn get_dc_qp_key(&mut self, idx: usize) -> core::option::Option<&mut (DCConn<'a>, u32)> {
         self.pool.get_mut(idx)
     }
 
