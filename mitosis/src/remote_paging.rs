@@ -41,10 +41,56 @@ impl AccessInfo {
 
 pub struct RemotePagingService;
 
+use os_network::msg::UDMsg as RMemory;
+type DCReqPayload = os_network::rdma::payload::Payload<ib_dc_wr>;
+
 impl RemotePagingService {
+    #[inline]
+    pub(crate) fn remote_descriptor_fetch(
+        d: crate::rpc_handlers::DescriptorLookupReply,
+        caller: &mut crate::rpc_caller_pool::UDCaller<'static>,
+        session_id : usize
+    ) -> Result<RMemory, <os_network::rdma::dc::DCConn<'static> as Conn>::IOResult> {
+        let descriptor_buf = RMemory::new(d.sz, 0);
+        let point = caller.get_ss(session_id).unwrap().0.get_ss_meta();
+
+        let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
+        let (dc_qp, lkey) = unsafe { crate::get_dc_pool_service_mut().get_dc_qp_key(pool_idx) }
+            .expect("failed to get DCQP");
+
+        let mut payload = DCReqPayload::default()
+            .set_laddr(descriptor_buf.get_pa())
+            .set_raddr(d.pa) // copy from src into dst
+            .set_sz(d.sz as _)
+            .set_lkey(*lkey)
+            .set_rkey(point.mr.get_rkey())
+            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
+            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
+            .set_ah(point);
+
+        let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
+        os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+
+        // now sending the RDMA request
+        dc_qp.post(&payload.as_ref())?;
+
+        // wait for the request to complete
+        let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
+        match block_on(&mut timeout_dc) {
+            Ok(_) => Ok(descriptor_buf),
+            Err(e) => {
+                if e.is_elapsed() {
+                    // The fallback path? DC cannot distinguish from failures
+                    unimplemented!();
+                }
+                Err(e.into_inner().unwrap())
+            }
+        }
+    }
+
     /// read the remote physical addr `dst` to `src`, both expressed in physical address
     #[inline]
-    pub fn remote_read(
+    pub(crate) fn remote_read(
         dst: PhyAddrType,
         src: PhyAddrType,
         sz: usize,
@@ -53,8 +99,6 @@ impl RemotePagingService {
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
         let (dc_qp, lkey) = unsafe { crate::get_dc_pool_service_mut().get_dc_qp_key(pool_idx) }
             .expect("failed to get DCQP");
-
-        type DCReqPayload = os_network::rdma::payload::Payload<ib_dc_wr>;
 
         let mut payload = DCReqPayload::default()
             .set_laddr(dst)

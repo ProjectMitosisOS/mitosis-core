@@ -1,10 +1,12 @@
 use core::option::Option;
 
+use crate::descriptors::Descriptor;
 use crate::linux_kernel_module::c_types::*;
-use crate::remote_paging::AccessInfo;
+use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
 
 use os_network::block_on;
+use os_network::bytes::ToBytes;
 use os_network::timeout::TimeoutWRef;
 
 #[allow(unused_imports)]
@@ -178,6 +180,42 @@ impl MitosisSysCallHandler {
                 match DescriptorLookupReply::deserialize(&reply) {
                     Some(d) => {
                         crate::log::debug!("sanity check query descriptor result {:?}", d);
+
+                        // fetch the descriptor with one-sided RDMA
+                        let desc_buf = RemotePagingService::remote_descriptor_fetch(
+                            d,
+                            caller,
+                            remote_session_id,
+                        );
+                        crate::log::debug!("sanity check fetched desc_buf {:?}", desc_buf.is_ok());
+                        if desc_buf.is_err() {
+                            crate::log::error!("failed to fetch descriptor {:?}", desc_buf.err());
+                            return -1;
+                        }
+
+                        // deserialize
+                        let des = Descriptor::deserialize(desc_buf.unwrap().get_bytes());
+                        if des.is_none() {
+                            crate::log::error!("failed to deserialize descriptor");
+                            return -1;
+                        }
+                        let des = des.unwrap();
+                        crate::log::debug!("sanity check: {:?}", des.machine_info);
+
+                        let access_info = AccessInfo::new(&des.machine_info);
+                        if access_info.is_none() { 
+                            crate::log::error!("failed to create access info");
+                            return -1;
+                        }
+
+                        des.apply_to(self.my_file);
+
+                        self.caller_status.resume_related = Some(ResumeDataStruct {
+                            key: key as _,
+                            descriptor: des,
+                            // access info cannot failed to create
+                            access_info: access_info.unwrap(),
+                        });
                         return 0;
                     }
                     None => {
@@ -190,7 +228,6 @@ impl MitosisSysCallHandler {
                 return -1;
             }
         };
-        -1
     }
 }
 

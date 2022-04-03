@@ -12,7 +12,7 @@ use os_network::KRdmaKit::device::RContext;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-type UDCaller<'a> = Caller<UDReceiver<'a>, UDSession<'a>>;
+pub(crate) type UDCaller<'a> = Caller<UDReceiver<'a>, UDSession<'a>>;
 
 /// The pool maintains a thread_local_pool of callers
 /// Each CPU core can use the dedicated pool

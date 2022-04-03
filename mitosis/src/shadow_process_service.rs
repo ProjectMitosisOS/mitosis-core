@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use hashbrown::HashMap;
 use os_network::rdma::dc::DCTarget;
 
-use crate::descriptors::RDMADescriptor;
+use crate::descriptors::{Descriptor, RDMADescriptor};
 use crate::shadow_process::*;
 
 #[allow(unused_imports)]
@@ -16,7 +16,7 @@ use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
 struct ProcessBundler {
     process: ShadowProcess,
     serialized_buf: RMemory,
-    
+
     #[allow(dead_code)] // place holder to prevent NIC release the resources
     bound_dc_targets: Vec<Arc<DCTarget>>,
 }
@@ -25,6 +25,14 @@ impl ProcessBundler {
     fn new(process: ShadowProcess, targets: Arc<DCTarget>) -> Self {
         let mut buf = RMemory::new(process.get_descriptor_ref().serialization_buf_len(), 0);
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
+
+        /*
+        crate::log::debug!("pre-check desc info {:?}", process.get_descriptor_ref().machine_info);
+        let desc = Descriptor::deserialize(buf.get_bytes_mut()).unwrap();
+        crate::log::debug!("post-check desc info {:?}", desc.machine_info);
+        */
+
+        crate::log::debug!("Process bundle descriptor len: {}", buf.len());
 
         let mut bound_targets = Vec::new();
         bound_targets.push(targets);
@@ -48,8 +56,10 @@ impl ShadowProcessService {
         }
     }
 
-    pub fn query_descriptor_buf(&self, key: usize) -> core::option::Option<&RMemory> { 
-        self.registered_processes.get(&key).map(|s| &s.serialized_buf)
+    pub fn query_descriptor_buf(&self, key: usize) -> core::option::Option<&RMemory> {
+        self.registered_processes
+            .get(&key)
+            .map(|s| &s.serialized_buf)
     }
 
     pub fn query_descriptor(
