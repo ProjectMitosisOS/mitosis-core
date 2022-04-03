@@ -41,7 +41,7 @@ fn test_rpc_two() {
     let _ = unsafe { mitosis::get_rpc_caller_pool_mut() }
         .connect_session_at(
             pool_idx,
-            64, // Notice: it is very important to ensure that session ID is unique!
+            0xdeadbeaf, // Notice: it is very important to ensure that session ID is unique!
             UDHyperMeta {
                 // the remote machine's RDMA gid. Since we are unit test, we use the local gid
                 gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
@@ -67,9 +67,9 @@ fn test_rpc_two() {
 
     caller
         .sync_call(
-            64, // remote session ID
+            0xdeadbeaf,                              // remote session ID
             mitosis::rpc_handlers::RPCId::Echo as _, // RPC ID
-            0xffffffff as u64,  // send an arg of u64
+            0xffffffff as u64,                       // send an arg of u64
         )
         .unwrap();
 
@@ -147,7 +147,7 @@ fn test_rpc() {
         .unwrap();
 
     let timeout_usec = 1000_000; // 1 sec
-    //  then, the client can check the result
+                                 //  then, the client can check the result
     let mut caller_timeout = Timeout::new(caller, timeout_usec);
     let res = block_on(&mut caller_timeout);
     match res {
@@ -236,7 +236,11 @@ fn init() {
     log::info!("in test mitosis service startups!");
 
     let mut config: mitosis::Config = Default::default();
-    config.set_num_nics_used(1).set_rpc_threads(2);
+    config
+        .set_num_nics_used(1)
+        .set_rpc_threads(2)
+        .set_max_core_cnt(1)
+        .set_init_dc_targets(12);
 
     assert!(start_instance(config).is_some());
 }
