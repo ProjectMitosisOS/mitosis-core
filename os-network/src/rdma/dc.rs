@@ -1,13 +1,15 @@
 use alloc::sync::Arc;
 
 use KRdmaKit::device::RContext;
-use KRdmaKit::qp::{DCOp, DC};
+use KRdmaKit::qp::{DCOp, DC, DCTServer,Config};
 use KRdmaKit::rust_kernel_rdma_base::ib_dc_wr;
 use KRdmaKit::rust_kernel_rdma_base::*;
 
 use rust_kernel_linux_util as log;
 
 use core::marker::PhantomData;
+
+pub type DCTarget = DCTServer;
 
 pub struct DCFactory<'a> {
     rctx: &'a RContext<'a>,
@@ -20,6 +22,12 @@ impl<'a> DCFactory<'a> {
 
     pub fn get_context(&self) -> &RContext<'_> {
         self.rctx
+    }
+
+    pub fn create_target(&self, key : u64) -> core::option::Option<Arc<DCTarget>> { 
+        let mut config : Config = Default::default();
+        config.dc_key = key as _;
+        DCTarget::new_from_config(config, self.rctx)
     }
 }
 

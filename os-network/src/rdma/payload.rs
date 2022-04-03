@@ -28,7 +28,14 @@ pub trait RDMAWR {
 
 pub trait UDWR {
     fn set_ah(&mut self, end_point: &EndPoint);
+    fn set_ah_ptr(&mut self, ah : *mut ib_ah) -> &mut Self;
 }
+
+pub trait DCWR {
+    fn set_dc_access_key(&mut self, key : u64) -> &mut Self;
+    fn set_dc_num(&mut self, num : u32) -> &mut Self;
+}
+
 
 pub struct Payload<T>
 where
@@ -139,6 +146,26 @@ where
         self.wr.set_ah(endpoint);
         self
     }
+
+    pub fn set_ah_ptr(&mut self, ah : *mut ib_ah) -> &mut Self {
+        self.wr.set_ah_ptr(ah);
+        self
+    }
+}
+
+impl<T> Payload<T>
+where
+    T: Default + SendWR + DCWR,
+{
+    pub fn set_dc_access_key(&mut self, key : u64) -> &mut Self {
+        self.wr.set_dc_access_key(key);
+        self
+    }
+
+    pub fn set_dc_num(&mut self, num : u32) -> &mut Self {
+        self.wr.set_dc_num(num);
+        self
+    }    
 }
 
 /// Default Payload will be marked with immediate data as 0

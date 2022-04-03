@@ -141,7 +141,31 @@ fn test_dc_one_sided() {
     }
 }
 
-#[krdma_test(test_dc_factory, test_dc_one_sided)]
+fn test_dc_target() { 
+    let timeout_usec = 5000000;
+    let driver = unsafe { KDRIVER::get_ref() };
+
+    // Prepare for server side RCtrl
+    let server_ctx = driver
+        .devices()
+        .into_iter()
+        .next()
+        .expect("no rdma device available")
+        .open()
+        .unwrap();
+
+    // create the target
+    let server_factory = rdma::dc::DCFactory::new(&server_ctx);        
+    let target = server_factory.create_target(0xdeadbeaf).expect("failed to create DC target");
+
+    // Create the dc qp
+    let client_ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    let client_factory = rdma::dc::DCFactory::new(&client_ctx);        
+
+    
+}
+
+#[krdma_test(test_dc_factory, test_dc_one_sided, test_dc_target)]
 fn ctx_init() {
     unsafe {
         KDRIVER::init(KDriver::create().unwrap());

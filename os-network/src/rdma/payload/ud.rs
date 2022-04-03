@@ -31,11 +31,18 @@ impl super::SendWR for ib_ud_wr {
     }
 }
 
+use crate::rdma::payload::ib_ah; 
+
 impl super::UDWR for ib_ud_wr {
     fn set_ah(&mut self, end_point: &KRdmaKit::cm::EndPoint) {
         self.ah = end_point.ah; 
         self.remote_qkey = end_point.qkey as u32;
         self.remote_qpn = end_point.qpn as u32;
+    }
+
+    fn set_ah_ptr(&mut self, ah : *mut ib_ah) -> &mut Self {
+        self.ah = ah;
+        self
     }    
 }
 
