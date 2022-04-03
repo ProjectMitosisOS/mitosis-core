@@ -49,7 +49,7 @@ impl ShadowProcess {
             vma_descriptors.push(vma.generate_descriptor());
 
             let s_vma = ShadowVMA::new(vma, false);
-            VMACopyPTGenerater::new(&s_vma, &mut shadow_pt, &mut pt).generate();
+            VMACopyPTGenerator::new(&s_vma, &mut shadow_pt, &mut pt).generate();
 
             shadow_vmas.push(s_vma);
         }

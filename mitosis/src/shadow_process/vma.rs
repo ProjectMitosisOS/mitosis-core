@@ -51,13 +51,13 @@ impl Drop for ShadowVMA<'_> {
 
 type CopyPageTable = super::page_table::ShadowPageTable<Copy4KPage>;
 
-pub(crate) struct VMACopyPTGenerater<'a, 'b> {
+pub(crate) struct VMACopyPTGenerator<'a, 'b> {
     vma: &'a ShadowVMA<'a>,
     inner: &'b mut CopyPageTable,
     inner_flat: &'b mut crate::descriptors::FlatPageTable,
 }
 
-impl<'a, 'b> VMACopyPTGenerater<'a, 'b> {
+impl<'a, 'b> VMACopyPTGenerator<'a, 'b> {
     pub fn new(
         vma: &'a ShadowVMA,
         inner: &'b mut CopyPageTable,
@@ -73,7 +73,7 @@ impl<'a, 'b> VMACopyPTGenerater<'a, 'b> {
 
 use crate::kern_wrappers::vma_iters::*;
 
-impl VMACopyPTGenerater<'_, '_> {
+impl VMACopyPTGenerator<'_, '_> {
     pub fn generate(&self) {
         let mut walk: mm_walk = Default::default();
         walk.pte_entry = Some(Self::handle_pte_entry);
