@@ -1,6 +1,8 @@
 use os_network::rdma::RawGID;
 use crate::kern_wrappers::mm::PhyAddrType;
 
+use os_network::KRdmaKit::rust_kernel_rdma_base::bindings::ib_gid;
+
 #[allow(dead_code)]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct RDMADescriptor {
@@ -9,6 +11,11 @@ pub struct RDMADescriptor {
     // However, CM still uses one RTT
     pub gid: RawGID,
     pub service_id: u64,
+
+    /// fields for ah access field
+    pub port_num : usize,
+
+    /// fields for DCT accesses
     pub rkey: u32,
     pub dct_key : u64,
     pub dct_num : u64,

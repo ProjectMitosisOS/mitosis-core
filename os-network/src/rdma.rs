@@ -6,6 +6,13 @@ use KRdmaKit::rust_kernel_rdma_base::sa_path_rec;
 
 pub const MAX_GID_LEN: usize = 40; // The maximum string length of IPv6
 
+#[derive(Clone, Copy)]
+pub struct IBAddressHandlerMeta { 
+    lid : u16, 
+    port_num : usize, 
+    gid : ib_gid,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RawGID {
     inner: [u8; MAX_GID_LEN],
