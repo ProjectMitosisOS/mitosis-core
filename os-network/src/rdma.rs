@@ -8,9 +8,9 @@ pub const MAX_GID_LEN: usize = 40; // The maximum string length of IPv6
 
 #[derive(Debug, Clone, Copy)]
 pub struct IBAddressHandlerMeta {
-    lid: u16,
-    port_num: u16,
-    gid: ib_gid,
+    pub lid: u16,
+    pub port_num: u16,
+    pub gid: ib_gid,
 }
 
 #[derive(Debug)]

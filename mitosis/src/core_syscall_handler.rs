@@ -109,6 +109,7 @@ impl MitosisSysCallHandler {
 
         let process_service = unsafe { crate::get_sps_mut() };
         let descriptor = process_service.query_descriptor(key as _);
+
         if descriptor.is_some() {
             self.caller_status.resume_related = Some(ResumeDataStruct {
                 key: key as _,

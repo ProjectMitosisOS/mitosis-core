@@ -9,7 +9,7 @@ use crate::linux_kernel_module;
 
 /// The clients(children)-side DCQP pool
 pub struct DCPool<'a> {
-    pool: Vec<DCConn<'a>>,
+    pool: Vec<(DCConn<'a>, u64)>,
     nic_idxs: Vec<usize>,
     // TODO: should initialize a DC Target pool
     // a simple DC key cannot protect all the stuffs in a fine-grained way
@@ -17,6 +17,10 @@ pub struct DCPool<'a> {
 
 impl<'a> DCPool<'a> {
     pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&mut DCConn<'a>> {
+        self.pool.get_mut(idx).map(|v| v.0)
+    }
+
+    pub fn get_dc_qp_key(&mut self, idx: usize) -> core::option::Option<(&mut DCConn<'a>, u64)> {
         self.pool.get_mut(idx)
     }
 
@@ -53,12 +57,18 @@ impl<'a> DCPool<'a> {
 
         for i in 0..config.max_core_cnt {
             let nic_idx = i % config.num_nics_used;
-            res.push(
+            res.push((
                 unsafe { crate::get_dc_factory_ref(nic_idx) }
                     .expect("fatal, should not fail to create dc factory")
                     .create(())
                     .expect("Failed to create DC QP"),
-            );
+                unsafe {
+                    crate::get_dc_factory_ref(nic_idx)
+                        .expect("fatal, should not fail to create dc factory")
+                        .get_context()
+                        .get_lkey()
+                },
+            ));
             nic_idxs.push(nic_idx);
         }
 

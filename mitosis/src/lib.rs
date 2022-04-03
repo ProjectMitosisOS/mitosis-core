@@ -173,6 +173,14 @@ pub unsafe fn get_dc_factory_ref(
     crate::dc_factories::get_ref().get(nic_idx)
 }
 
+#[inline]
+pub fn random_select_dc_factory_on_core(
+) -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
+    let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
+    let id = pool_idx % crate::dc_factories::get_ref().len();
+    crate::dc_factories::get_ref().get(id)
+}
+
 declare_global!(service_rpc, crate::rpc_service::Service);
 
 /// A pool of connected RPC clients

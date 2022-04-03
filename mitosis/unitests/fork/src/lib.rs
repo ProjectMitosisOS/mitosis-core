@@ -19,7 +19,7 @@ use os_network::block_on;
 impl linux_kernel_module::KernelModule for Module {
     fn init() -> linux_kernel_module::KernelResult<Self> {
         let mut config: mitosis::Config = Default::default();
-        config.set_num_nics_used(2).set_rpc_threads(2);
+        config.set_num_nics_used(2).set_rpc_threads(2).set_init_dc_targets(12);
         
         assert!(start_instance(config.clone()).is_some());
 

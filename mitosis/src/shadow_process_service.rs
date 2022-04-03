@@ -1,7 +1,11 @@
-use hashbrown::HashMap;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 
-use crate::descriptors::Descriptor;
+use hashbrown::HashMap;
+use os_network::rdma::dc::DCTarget;
+use os_network::KRdmaKit::qp::DCTServer;
+
+use crate::descriptors::{Descriptor, RDMADescriptor};
 use crate::shadow_process::*;
 
 #[allow(unused_imports)]
@@ -13,17 +17,21 @@ use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
 struct ProcessBundler {
     process: ShadowProcess,
     serialized_buf: RMemory,
-    bound_dc_targets : Vec<()>,
+    bound_dc_targets: Vec<Arc<DCTarget>>,
 }
 
 impl ProcessBundler {
-    fn new(process: ShadowProcess) -> Self {
+    fn new(process: ShadowProcess, targets: Arc<DCTarget>) -> Self {
         let mut buf = RMemory::new(process.get_descriptor_ref().serialization_buf_len(), 0);
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
+
+        let mut bound_targets = Vec::new();
+        bound_targets.push(targets);
+
         Self {
             process: process,
             serialized_buf: buf,
-            bound_dc_targets : Vec::new(),
+            bound_dc_targets: bound_targets,
         }
     }
 }
@@ -57,15 +65,14 @@ impl ShadowProcessService {
             return None;
         }
 
-        let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() };
-        let rdma_descriptor =
-            unsafe { crate::get_dc_pool_service_ref().get_rdma_descriptor(pool_idx as _) }?;
+        let (target, descriptor) = RDMADescriptor::new_from_dc_target_pool()?;
 
         self.registered_processes.insert(
             key,
-            ProcessBundler::new(crate::shadow_process::ShadowProcess::new_copy(
-                rdma_descriptor,
-            )),
+            ProcessBundler::new(
+                crate::shadow_process::ShadowProcess::new_copy(descriptor),
+                target,
+            ),
         );
 
         return Some(());
