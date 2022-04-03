@@ -16,6 +16,8 @@ use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
 struct ProcessBundler {
     process: ShadowProcess,
     serialized_buf: RMemory,
+    
+    #[allow(dead_code)] // place holder to prevent NIC release the resources
     bound_dc_targets: Vec<Arc<DCTarget>>,
 }
 

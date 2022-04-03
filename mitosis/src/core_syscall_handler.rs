@@ -1,7 +1,7 @@
 use core::option::Option;
 
 use crate::linux_kernel_module::c_types::*;
-use crate::remote_paging::{self, AccessInfo};
+use crate::remote_paging::AccessInfo;
 use crate::syscalls::FileOperations;
 
 #[allow(unused_imports)]
@@ -170,7 +170,12 @@ impl MitosisSysCallHandler {
             new_page_pa,
             remote_addr.unwrap(),
             4096,
-            &self.caller_status.resume_related.as_ref().unwrap().access_info,
+            &self
+                .caller_status
+                .resume_related
+                .as_ref()
+                .unwrap()
+                .access_info,
         );
 
         match res {
