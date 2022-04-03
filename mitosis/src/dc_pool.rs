@@ -25,23 +25,6 @@ impl<'a> DCPool<'a> {
     pub fn get_ctx_id(&self, idx: usize) -> core::option::Option<usize> {
         self.nic_idxs.get(idx).map(|v| *v)
     }
-
-    pub fn get_rdma_descriptor(
-        &self,
-        pool_id: usize,
-    ) -> core::option::Option<crate::descriptors::RDMADescriptor> {
-        let nic_idx = self.nic_idxs.get(pool_id)?;
-
-        let context = unsafe { crate::get_rdma_context_ref(*nic_idx) }.unwrap();
-
-        /*
-        Some(crate::descriptors::RDMADescriptor {
-            gid: RawGID::new(context.get_gid_as_string()).unwrap(),
-            service_id: crate::rdma_context::SERVICE_ID_BASE + *nic_idx as u64,
-            rkey: unsafe { context.get_rkey() },
-        }) */
-        unimplemented!();
-    }
 }
 
 use os_network::Factory;

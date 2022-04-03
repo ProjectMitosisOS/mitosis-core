@@ -143,6 +143,7 @@ unsafe extern "C" fn page_fault_handler(vmf: *mut crate::bindings::vm_fault) -> 
 impl MitosisSysCallHandler {
     #[inline(always)]
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
+        crate::log::debug!("in page fault handle");
         let fault_addr = (*vmf).address;
         let remote_addr = self
             .caller_status

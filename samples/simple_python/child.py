@@ -7,7 +7,7 @@ dump_key = 73
 
 
 def main():
-    fd = syscall_wrapper.sopen()
+    fd = syscall_lib.open()
     print('fd: %d' % fd)
     syscall_lib.call_resume_local(fd, dump_key)
 

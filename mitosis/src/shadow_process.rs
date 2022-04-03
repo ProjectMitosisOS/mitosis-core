@@ -21,8 +21,8 @@ pub struct ShadowProcess {
     copy_shadow_pagetable: ShadowPageTable<Copy4KPage>,
 }
 
-impl ShadowProcess { 
-    pub fn get_descriptor_ref(&self) -> &crate::descriptors::Descriptor { 
+impl ShadowProcess {
+    pub fn get_descriptor_ref(&self) -> &crate::descriptors::Descriptor {
         &self.descriptor
     }
 }
@@ -54,11 +54,12 @@ impl ShadowProcess {
             shadow_vmas.push(s_vma);
         }
 
+        /*
         crate::log::debug!(
             "sanity check new shadow process, pt len {} spt len {}",
             pt.len(),
             shadow_pt.len()
-        );
+        ); */
 
         Self {
             shadow_vmas: shadow_vmas,
