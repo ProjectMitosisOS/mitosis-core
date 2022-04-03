@@ -141,7 +141,7 @@ fn test_dc_one_sided() {
     }
 }
 
-fn test_dc_target() { 
+fn test_dc_target() {
     let timeout_usec = 5000000;
     let driver = unsafe { KDRIVER::get_ref() };
 
@@ -155,15 +155,21 @@ fn test_dc_target() {
         .unwrap();
 
     // create the target
-    let server_factory = rdma::dc::DCFactory::new(&server_ctx);        
-    let target = server_factory.create_target(0xdeadbeaf).expect("failed to create DC target");
+    let server_factory = rdma::dc::DCFactory::new(&server_ctx);
+    let target = server_factory
+        .create_target(0xdeadbeaf)
+        .expect("failed to create DC target");
 
     // Create the dc qp
     let client_ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
-    let client_factory = rdma::dc::DCFactory::new(&client_ctx);        
+    let client_factory = rdma::dc::DCFactory::new(&client_ctx);
 
     let ah_meta = IBAddressHandlerMeta::new(&server_ctx);
     log::debug!("check ah meta: {:?}", ah_meta);
+
+    let ah0 = IBAddressHandlerMeta::create_ah(&client_ctx, ah_meta)
+        .expect("failed to create the ah using client ctx");
+    log::debug!("check created ah {:?}", ah0);
 }
 
 #[krdma_test(test_dc_factory, test_dc_one_sided, test_dc_target)]
