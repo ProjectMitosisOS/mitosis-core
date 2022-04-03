@@ -19,7 +19,7 @@ use rust_kernel_linux_util as log;
 use os_network::block_on;
 use os_network::bytes::BytesMut;
 use os_network::conn::Factory;
-use os_network::rdma::payload;
+use os_network::rdma::{payload, IBAddressHandlerMeta};
 use os_network::timeout::Timeout;
 use os_network::{rdma, Conn};
 
@@ -162,7 +162,8 @@ fn test_dc_target() {
     let client_ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
     let client_factory = rdma::dc::DCFactory::new(&client_ctx);        
 
-    
+    let ah_meta = IBAddressHandlerMeta::new(&server_ctx);
+    log::debug!("check ah meta: {:?}", ah_meta);
 }
 
 #[krdma_test(test_dc_factory, test_dc_one_sided, test_dc_target)]
