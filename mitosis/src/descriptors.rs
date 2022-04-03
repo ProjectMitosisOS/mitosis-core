@@ -17,9 +17,8 @@ pub use rdma::*;
 pub mod vma;
 pub use vma::*;
 
-pub mod factory;
-
-pub use factory::DescriptorFactoryService;
+// pub mod factory;
+// pub use factory::DescriptorFactoryService;
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::kern_wrappers::task::Task;
 

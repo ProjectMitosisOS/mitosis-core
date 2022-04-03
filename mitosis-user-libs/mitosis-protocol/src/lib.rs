@@ -13,6 +13,7 @@ pub const CALL_PREPARE : IoctlCmdType = 4;
 
 /// Resume from a local image
 pub const CALL_RESUME_LOCAL : IoctlCmdType = 5;
+pub const CALL_RESUME_LOCAL_W_RPC : IoctlCmdType = 6;
 
 /// Resume from a remote image
-pub const CALL_RESUME_REMOTE : IoctlCmdType = 6;
+pub const CALL_RESUME_REMOTE : IoctlCmdType = 7;

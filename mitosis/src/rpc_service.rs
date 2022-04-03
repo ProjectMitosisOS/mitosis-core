@@ -1,8 +1,6 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
-use os_network::KRdmaKit::cm::ServerCM;
-
 use rust_kernel_linux_util::kthread;
 use rust_kernel_linux_util::kthread::JoinHandler;
 
@@ -10,13 +8,13 @@ use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
 
 use crate::linux_kernel_module;
 
-use core::sync::atomic::{AtomicUsize,Ordering};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 static RPC_HANDLER_READY_NUM: AtomicUsize = AtomicUsize::new(0);
 
-pub(crate) fn wait_handlers_ready_barrier(wait_num : usize) { 
-    loop { 
-        if RPC_HANDLER_READY_NUM.load(Ordering::SeqCst) >= wait_num { 
+pub(crate) fn wait_handlers_ready_barrier(wait_num: usize) {
+    loop {
+        if RPC_HANDLER_READY_NUM.load(Ordering::SeqCst) >= wait_num {
             return;
         }
     }
@@ -184,7 +182,7 @@ impl Service {
             .register(RPCId::Echo as _, handle_echo);
         rpc_server
             .get_mut_service()
-            .register(RPCId::ForkResume as _, handle_fork_resume);
+            .register(RPCId::Query as _, handle_descriptor_addr_lookup);
 
         // register msg buffers
         // pre-most receive buffers

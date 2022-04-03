@@ -48,6 +48,10 @@ impl ShadowProcessService {
         }
     }
 
+    pub fn query_descriptor_buf(&self, key: usize) -> core::option::Option<&RMemory> { 
+        self.registered_processes.get(&key).map(|s| &s.serialized_buf)
+    }
+
     pub fn query_descriptor(
         &self,
         key: usize,

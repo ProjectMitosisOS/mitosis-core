@@ -9,6 +9,11 @@ use alloc::vec::Vec;
 
 pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     crate::log::info!("Try to start MITOSIS instance, init global services");
+    unsafe {
+        crate::mac_id::init(config.machine_id);
+        crate::max_caller_num::init(config.max_core_cnt);
+    };
+
     let timer = KTimer::new();
 
     start_rdma(&config).expect("fail to create RDMA context");

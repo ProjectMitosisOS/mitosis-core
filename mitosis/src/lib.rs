@@ -32,6 +32,13 @@ use alloc::vec::Vec;
 
 pub const MAX_RPC_THREADS_CNT: usize = 10;
 
+pub fn get_calling_cpu_id() -> usize {
+    unsafe { crate::bindings::pmem_get_current_cpu() as _ }
+}
+
+declare_global!(mac_id, usize);
+declare_global!(max_caller_num, usize);
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub(crate) num_nics_used: usize,

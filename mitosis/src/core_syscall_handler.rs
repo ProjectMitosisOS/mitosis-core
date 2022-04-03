@@ -4,6 +4,9 @@ use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::AccessInfo;
 use crate::syscalls::FileOperations;
 
+use os_network::block_on;
+use os_network::timeout::TimeoutWRef;
+
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
@@ -63,6 +66,7 @@ impl FileOperations for MitosisSysCallHandler {
         match cmd {
             mitosis_protocol::CALL_PREPARE => self.syscall_prepare(arg),
             mitosis_protocol::CALL_RESUME_LOCAL => self.syscall_local_resume(arg),
+            mitosis_protocol::CALL_RESUME_LOCAL_W_RPC => self.syscall_local_resume_w_rpc(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -82,6 +86,8 @@ impl FileOperations for MitosisSysCallHandler {
         0
     }
 }
+
+const TIMEOUT_USEC: i64 = 1000_000; // 1s
 
 /// The system call parts
 impl MitosisSysCallHandler {
@@ -123,6 +129,68 @@ impl MitosisSysCallHandler {
             return 0;
         }
         return -1;
+    }
+
+    /// This is just a sample test function
+    #[inline]
+    fn syscall_local_resume_w_rpc(&mut self, key: c_ulong) -> c_long {
+        if self.caller_status.resume_related.is_some() {
+            crate::log::error!("We don't support multiple resume yet. ");
+            return -1;
+        }
+
+        // send an RPC to the remote to query the descriptor address
+        let caller = unsafe {
+            crate::rpc_caller_pool::CallerPool::get_global_caller(crate::get_calling_cpu_id())
+                .expect("the caller should be properly initialized")
+        };
+
+        // ourself must have been connected in the startup process
+        let remote_session_id = unsafe {
+            crate::startup::calculate_session_id(
+                *crate::mac_id::get_ref(),
+                crate::get_calling_cpu_id(),
+                *crate::max_caller_num::get_ref(),
+            )
+        };
+
+        let key: usize = key as _;
+
+        caller
+            .sync_call::<usize>(
+                remote_session_id,
+                crate::rpc_handlers::RPCId::Query as _,
+                key,
+            )
+            .unwrap();
+
+        let mut timeout_caller = TimeoutWRef::new(caller, TIMEOUT_USEC);
+
+        use crate::rpc_handlers::DescriptorLookupReply;
+        use os_network::serialize::Serialize;
+
+        let _reply = match block_on(&mut timeout_caller) {
+            Ok((msg, reply)) => {
+                // first re-purpose the data
+                caller
+                    .register_recv_buf(msg)
+                    .expect("register msg buffer cannot fail");
+                match DescriptorLookupReply::deserialize(&reply) {
+                    Some(d) => {
+                        crate::log::debug!("sanity check query descriptor result {:?}", d);
+                        return 0;
+                    }
+                    None => {
+                        return -1;
+                    }
+                }
+            }
+            Err(e) => {
+                crate::log::error!("client receiver reply err {:?}", e);
+                return -1;
+            }
+        };
+        -1
     }
 }
 
