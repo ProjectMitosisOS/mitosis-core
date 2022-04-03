@@ -187,6 +187,27 @@ impl MySyscallHandler {
             crate::log::error!("de-serialize fail on {:?}", result);
         }
 
+        // make a complex tests 
+        let (_target,descriptor) = RDMADescriptor::new_from_dc_target_pool().expect("failed to get RDMA descriptor");
+        log::debug!("sanity check RDMA descriptor content {:?}", descriptor);
+
+        let result = descriptor.serialize(&mut bytes);
+        if !result {
+            crate::log::error!("fail to serialize RDMADescriptor");
+            return 0;
+        }        
+
+        let result = RDMADescriptor::deserialize(&bytes);
+        if result.is_none() {
+            crate::log::error!("fail to deserialize RemoteRDMADescriptor");
+            return 0;
+        }        
+
+        let result = result.unwrap();
+        if result != descriptor {
+            crate::log::error!("de-serialize fail on {:?} for target content", result);
+        }        
+
         crate::log::info!("pass RDMADescriptor (de)serialization test\n");
         0
     }

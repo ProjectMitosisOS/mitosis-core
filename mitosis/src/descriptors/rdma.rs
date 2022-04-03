@@ -1,5 +1,5 @@
-use os_network::rdma::RawGID;
 use crate::kern_wrappers::mm::PhyAddrType;
+use os_network::rdma::{dc::DCTarget, RawGID};
 
 use os_network::KRdmaKit::rust_kernel_rdma_base::bindings::ib_gid;
 
@@ -13,17 +13,41 @@ pub struct RDMADescriptor {
     pub service_id: u64,
 
     /// fields for ah access field
-    pub port_num : u16,
-    pub gid : ib_gid,
-    pub lid : u16,
+    pub port_num: u8,
+    pub gid: ib_gid,
+    pub lid: u16,
 
     /// fields for DCT accesses
     pub rkey: u32,
-    pub dct_key : u64,
-    pub dct_num : u64,
+    pub dct_key: usize,
+    pub dct_num: u32,
 }
 
+use alloc::sync::Arc;
+
 impl RDMADescriptor {
+    pub fn new_from_dc_target_pool() -> core::option::Option<(Arc<DCTarget>, Self)> {
+        let service = unsafe { crate::get_dc_target_service_mut() };
+        let (target, idx, key) = service
+            .pop_one()
+            .expect("failed to create a DCTarget from the pool");
+        let ctx = unsafe { crate::get_rdma_context_ref(idx).unwrap() };
+
+        // now fill the fields 
+        let my = Self { 
+            service_id : 0, // deprecated field
+            port_num : ctx.get_port(),
+            gid : ctx.get_gid(), 
+            lid : ctx.get_lid(), 
+
+            rkey : key, 
+            dct_key : target.get_dc_key(),
+            dct_num : target.get_dct_num(),
+        };
+
+        Some((target, my))
+    }
+
     pub fn get_rkey(&self) -> u32 {
         self.rkey
     }

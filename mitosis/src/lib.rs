@@ -210,6 +210,11 @@ pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'
     crate::dc_pool_service::get_mut()
 }
 
+#[inline]
+pub unsafe fn get_dc_target_service_mut() -> &'static mut crate::dc_pool::DCTargetPool {
+    crate::dc_target_service::get_mut()
+}
+
 /*
 // Descriptor pool, used for container preparation
 declare_global!(descriptor_pool, crate::descriptors::DescriptorFactoryService);

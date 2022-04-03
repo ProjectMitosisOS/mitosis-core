@@ -75,6 +75,7 @@ use os_network::rdma::dc::DCTarget;
 /// The servers(Parents)-side DC targets pool
 pub struct DCTargetPool {
     pool: Vec<Arc<DCTarget>>,
+    nic_idxs: Vec<usize>,
     keys: Vec<u32>,
 }
 
@@ -86,6 +87,7 @@ impl DCTargetPool {
 
         let mut pool = Vec::new();
         let mut keys = Vec::new();
+        let mut nic_idxs = Vec::new();
 
         for i in 0..config.init_dc_targets {
             let nic_idx = i % config.num_nics_used;
@@ -97,17 +99,21 @@ impl DCTargetPool {
                     .expect("Failed to create DC Target"),
             );
             keys.push(unsafe { factory.get_context().get_rkey() });
+            nic_idxs.push(nic_idx);
         }
         Some(Self {
             pool: pool,
             keys: keys,
+            nic_idxs: nic_idxs,
         })
     }
 
-    pub fn pop_one(&mut self) -> core::option::Option<(Arc<DCTarget>, u32)> { 
+    pub fn pop_one(&mut self) -> core::option::Option<(Arc<DCTarget>, usize, u32)> {
         let target = self.pool.pop().expect("No target left");
         let key = self.keys.pop().unwrap();
-        Some((target, key))
+        let idx = self.nic_idxs.pop().unwrap();
+
+        Some((target, idx, key))
     }
 
     // fill the dc target pool in the background

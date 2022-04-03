@@ -23,6 +23,7 @@ impl linux_kernel_module::KernelModule for Module {
             .set_rpc_threads(1)
             .set_max_core_cnt(1)
             .set_init_dc_targets(2);
+            
         mitosis::startup::start_instance(config);
 
         Ok(Self {
