@@ -9,11 +9,13 @@ pub struct RDMADescriptor {
     // TODO: these fields are not correct.
     // The design of MITOSIS requires client using no-roundtrip to fork from the parent.
     // However, CM still uses one RTT
-    pub gid: RawGID,
+    // pub gid: RawGID,
     pub service_id: u64,
 
     /// fields for ah access field
-    pub port_num : usize,
+    pub port_num : u16,
+    pub gid : ib_gid,
+    pub lid : u16,
 
     /// fields for DCT accesses
     pub rkey: u32,

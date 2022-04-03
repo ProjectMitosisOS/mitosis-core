@@ -15,8 +15,8 @@ pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 pub const VERSION: usize = 0;
 
 // pub mod resume;
-pub mod syscalls;
 pub mod core_syscall_handler;
+pub mod syscalls;
 
 pub mod bindings;
 pub mod kern_wrappers;
@@ -30,7 +30,7 @@ use alloc::vec::Vec;
 
 // TODO: doc how to use mitosis
 
-pub const MAX_RPC_THREADS_CNT : usize = 10;
+pub const MAX_RPC_THREADS_CNT: usize = 10;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -44,6 +44,8 @@ pub struct Config {
     pub(crate) max_core_cnt: usize,
     // gid is RDMA address
     pub(crate) peers_gid: Vec<alloc::string::String>,
+
+    pub(crate) init_dc_targets: usize,
 }
 
 impl Default for Config {
@@ -54,6 +56,7 @@ impl Default for Config {
             machine_id: 0,
             max_core_cnt: 48,
             peers_gid: Vec::new(),
+            init_dc_targets: 256,
         }
     }
 }
@@ -75,7 +78,7 @@ impl Config {
         self
     }
 
-    pub fn get_machine_id(&self) -> usize { 
+    pub fn get_machine_id(&self) -> usize {
         self.machine_id
     }
 
@@ -91,7 +94,12 @@ impl Config {
 
     pub fn get_max_core_cnt(&self) -> usize {
         self.max_core_cnt
-    }    
+    }
+
+    pub fn set_init_dc_targets(&mut self, num: usize) -> &mut Self {
+        self.init_dc_targets = num;
+        self
+    }
 }
 
 // kernel-space global variables
@@ -165,7 +173,6 @@ pub unsafe fn get_dc_factory_ref(
     crate::dc_factories::get_ref().get(nic_idx)
 }
 
-
 declare_global!(service_rpc, crate::rpc_service::Service);
 
 /// A pool of connected RPC clients
@@ -186,7 +193,7 @@ pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::
     crate::service_caller_pool::get_mut()
 }
 
-/// A pool of DCQPs 
+/// A pool of DCQPs
 pub mod dc_pool;
 pub mod remote_paging;
 
@@ -203,7 +210,7 @@ pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'
     crate::dc_pool_service::get_mut()
 }
 
-/* 
+/*
 // Descriptor pool, used for container preparation
 declare_global!(descriptor_pool, crate::descriptors::DescriptorFactoryService);
 
@@ -217,7 +224,10 @@ pub unsafe fn get_descriptor_pool_mut() -> &'static mut crate::descriptors::Desc
     crate::descriptor_pool::get_mut()
 } */
 
-declare_global!(sp_service, crate::shadow_process_service::ShadowProcessService);
+declare_global!(
+    sp_service,
+    crate::shadow_process_service::ShadowProcessService
+);
 
 #[inline]
 pub unsafe fn get_sps_ref() -> &'static crate::shadow_process_service::ShadowProcessService {

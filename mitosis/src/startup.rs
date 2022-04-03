@@ -54,13 +54,13 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
         )
     };
 
-    // DCQP Pool
+    // DCQP & target pool
     unsafe {
         crate::dc_pool_service::init(
             crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool"),
         );
         crate::dc_target_service::init(
-            crate::dc_pool::DCTargetPool::new().expect("Failed to create DC Target pool"),
+            crate::dc_pool::DCTargetPool::new(&config).expect("Failed to create DC Target pool"),
         )
     };
 
@@ -96,11 +96,11 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
+        crate::dc_target_service::drop();
         crate::dc_pool_service::drop();
         crate::service_caller_pool::drop();
         crate::service_rpc::drop();
         crate::sp_service::drop();
-        crate::dc_target_service::drop();
     };
     end_rdma();
 }

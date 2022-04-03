@@ -69,15 +69,45 @@ impl<'a> DCPool<'a> {
     }
 }
 
+use alloc::sync::Arc;
+use os_network::rdma::dc::DCTarget;
+
 /// The servers(Parents)-side DC targets pool
 pub struct DCTargetPool {
-    pool: Vec<()>,
+    pool: Vec<Arc<DCTarget>>,
+    keys: Vec<u32>,
 }
 
 impl DCTargetPool {
-    pub fn new() -> core::option::Option<Self> {
+    /// Note: this initialization function must be called **after** the contexts
+    /// has been properly initialized.
+    pub fn new(config: &crate::Config) -> core::option::Option<Self> {
         crate::log::info!("Start initializing server-side DCTarget pool.");
-        Some(Self { pool: Vec::new() })
+
+        let mut pool = Vec::new();
+        let mut keys = Vec::new();
+
+        for i in 0..config.init_dc_targets {
+            let nic_idx = i % config.num_nics_used;
+            let factory =
+                unsafe { crate::get_dc_factory_ref(nic_idx).expect("Failed to get DC factory") };
+            pool.push(
+                factory
+                    .create_target((i + 73) as _)
+                    .expect("Failed to create DC Target"),
+            );
+            keys.push(unsafe { factory.get_context().get_rkey() });
+        }
+        Some(Self {
+            pool: pool,
+            keys: keys,
+        })
+    }
+
+    pub fn pop_one(&mut self) -> core::option::Option<(Arc<DCTarget>, u32)> { 
+        let target = self.pool.pop().expect("No target left");
+        let key = self.keys.pop().unwrap();
+        Some((target, key))
     }
 
     // fill the dc target pool in the background
