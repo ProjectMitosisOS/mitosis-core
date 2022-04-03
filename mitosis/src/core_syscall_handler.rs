@@ -143,8 +143,9 @@ unsafe extern "C" fn page_fault_handler(vmf: *mut crate::bindings::vm_fault) -> 
 impl MitosisSysCallHandler {
     #[inline(always)]
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
-        crate::log::debug!("in page fault handle");
         let fault_addr = (*vmf).address;
+        // crate::log::debug!("fault addr 0x{:x}", fault_addr);
+
         let remote_addr = self
             .caller_status
             .resume_related
@@ -155,10 +156,12 @@ impl MitosisSysCallHandler {
 
         if remote_addr.is_none() {
             // TODO: fallback?
-            crate::log::error!("failed to lookup the mapped address");
+            crate::log::error!("failed to lookup the mapped address 0x{:x}", fault_addr);
             return crate::bindings::FaultFlags::SIGSEGV.bits()
                 as linux_kernel_module::c_types::c_int;
         }
+
+        // crate::log::debug!("lookup address {:?}", remote_addr);
 
         // mapped, do the remote reads:
         use crate::bindings::{pmem_alloc_page, PMEM_GFP_HIGHUSER};
@@ -180,7 +183,10 @@ impl MitosisSysCallHandler {
         );
 
         match res {
-            Ok(_) => 0,
+            Ok(_) => {
+                (*vmf).page = new_page_p as *mut _;
+                0
+            }
             Err(e) => {
                 crate::log::error!("Failed to read the remote page {:?}", e);
                 crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int

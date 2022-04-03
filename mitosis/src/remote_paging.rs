@@ -6,6 +6,9 @@ use os_network::{block_on, Conn};
 use crate::kern_wrappers::mm::PhyAddrType;
 use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 
+#[allow(unused_imports)]
+use crate::linux_kernel_module;
+
 const TIMEOUT_USEC: i64 = 1000; // 1ms
 
 #[derive(Debug)]
@@ -65,11 +68,15 @@ impl RemotePagingService {
             .set_dc_access_key(access_info.dct_key as _)
             .set_dc_num(access_info.dct_num);
 
+        // crate::log::debug!("payload update done, key {}", lkey);
+
         let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
         os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
 
         // now sending the RDMA request
         dc_qp.post(&payload.as_ref())?;
+
+        // crate::log::debug!("post dc request done");
 
         // wait for the request to complete
         let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);

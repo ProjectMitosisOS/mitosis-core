@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
 pub trait GetPhyAddr {
-    fn get_physical_addr(self) -> crate::kern_wrappers::mm::PhyAddrType;
+    fn get_physical_addr(&self) -> crate::kern_wrappers::mm::PhyAddrType;
 }
 
 pub struct ShadowPageTable<P: GetPhyAddr> {

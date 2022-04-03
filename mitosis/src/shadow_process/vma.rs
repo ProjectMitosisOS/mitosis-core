@@ -1,7 +1,7 @@
 use crate::bindings::*;
 use crate::kern_wrappers::vma::VMA;
 
-use super::Copy4KPage;
+use super::{Copy4KPage, GetPhyAddr};
 
 /// The shadow VMA is just a wrapper over the original process's VMA
 /// The difference is that, upon creation, it will change the process's
@@ -95,10 +95,11 @@ impl VMACopyPTGenerater<'_, '_> {
 
         let phy_addr = pmem_get_phy_from_pte(pte);
         if phy_addr > 0 {
+            let copied_page = Copy4KPage::new(addr as _).expect("Fail to copy from user space");
+            my.inner_flat.add_one(addr, copied_page.get_physical_addr());
+
             // the page table is present
-            my.inner_flat.add_one(addr, phy_addr);
-            my.inner
-                .add_page(Copy4KPage::new(addr as _).expect("Fail to copy from user space"));
+            my.inner.add_page(copied_page);
         }
         0
     }

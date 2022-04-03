@@ -49,8 +49,8 @@ impl Copy4KPage {
 }
 
 impl super::page_table::GetPhyAddr for Copy4KPage {
-    fn get_physical_addr(self) -> crate::kern_wrappers::mm::PhyAddrType {
-        unsafe { crate::bindings::pmem_page_to_phy(self.inner as *mut _) }
+    fn get_physical_addr(&self) -> crate::kern_wrappers::mm::PhyAddrType {
+        unsafe { crate::bindings::pmem_page_to_phy(self.inner as *const _ as *mut _) }
     }
 }
 
