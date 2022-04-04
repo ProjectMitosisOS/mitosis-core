@@ -155,4 +155,16 @@ void pmem_get_file(struct file *f);
 
 void pmem_put_file(struct file *f);
 
+
+/*
+ page related 
+ */
+void pmem_get_page(struct page *page);
+void pmem_put_page(struct page *page);
+
+void pmem_page_dup_rmap(struct page *page, bool compound);
+
+void pmem_page_free_rmap(struct page *page, bool compound);
+
+
 #endif

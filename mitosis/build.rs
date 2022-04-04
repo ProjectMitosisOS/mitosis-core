@@ -58,6 +58,12 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     // vmalloc, vfree
     "vmalloc",
     "vfree",
+
+    // page related
+    "pmem_get_page",
+    "pmem_put_page",
+    "pmem_page_dup_rmap",
+    "pmem_page_free_rmap",
 ];
 
 const INCLUDED_VARS: &[&str] = &[

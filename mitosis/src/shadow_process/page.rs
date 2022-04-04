@@ -59,3 +59,33 @@ impl Drop for Copy4KPage {
         unsafe { pmem_free_page(self.inner as *mut _) };
     }
 }
+
+/// A wrapper over the original linux's page data structure
+/// It will mark the original page using COW
+pub struct COW4KPage {
+    inner: &'static mut page, // linux data structure wrapper always use the 'static lifetime
+}
+
+impl COW4KPage {
+    pub unsafe fn new(page: *mut page) -> Option<Self> {
+        crate::bindings::pmem_get_page(page);
+        crate::bindings::pmem_page_dup_rmap(page, false);
+
+        Some(Self { inner: &mut (*page) })
+    }
+}
+
+impl Drop for COW4KPage {
+    fn drop(&mut self) {
+        unsafe {
+            pmem_put_page(self.inner as *mut _);
+            crate::bindings::pmem_page_free_rmap(self.inner as *mut _, false);
+        };
+    }
+}
+
+impl super::page_table::GetPhyAddr for COW4KPage {
+    fn get_physical_addr(&self) -> crate::kern_wrappers::mm::PhyAddrType {
+        unsafe { crate::bindings::pmem_page_to_phy(self.inner as *const _ as *mut _) }
+    }
+}

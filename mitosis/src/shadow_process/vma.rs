@@ -1,7 +1,7 @@
 use crate::bindings::*;
 use crate::kern_wrappers::vma::VMA;
 
-use super::{Copy4KPage, GetPhyAddr};
+use super::{Copy4KPage, GetPhyAddr, COW4KPage};
 
 /// The shadow VMA is just a wrapper over the original process's VMA
 /// The difference is that, upon creation, it will change the process's
@@ -50,6 +50,7 @@ impl Drop for ShadowVMA<'_> {
 }
 
 type CopyPageTable = super::page_table::ShadowPageTable<Copy4KPage>;
+type COWPageTable = super::page_table::ShadowPageTable<COW4KPage>;
 
 pub(crate) struct VMACopyPTGenerator<'a, 'b> {
     vma: &'a ShadowVMA<'a>,
@@ -103,4 +104,12 @@ impl VMACopyPTGenerator<'_, '_> {
         }
         0
     }
+}
+
+/// This iterator will traverse the pages of VMA, 
+/// marks all the page to COW, and store the references in a page table
+pub(crate) struct VMACOWPTGenerator<'a, 'b> {
+    vma: &'a ShadowVMA<'a>,
+    inner: &'b mut COWPageTable,
+    inner_flat: &'b mut crate::descriptors::FlatPageTable,
 }

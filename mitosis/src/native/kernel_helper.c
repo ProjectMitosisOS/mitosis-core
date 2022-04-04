@@ -256,3 +256,30 @@ void pmem_get_file(struct file *f) {
 void pmem_put_file(struct file *f) {
   fput(f);
 }
+
+static inline void page_free_rmap(struct page *page, bool compound)
+{
+    atomic_dec(compound ? compound_mapcount_ptr(page) : &page->_mapcount);
+}
+
+static inline void page_dup_rmap(struct page *page, bool compound)
+{
+    atomic_inc(compound ? compound_mapcount_ptr(page) : &page->_mapcount);
+}
+
+void pmem_page_dup_rmap(struct page *page, bool compound) {
+  page_dup_rmap(page, compound);
+}
+
+void pmem_page_free_rmap(struct page *page, bool compound) {
+  page_free_rmap(page, compound);
+}
+
+void pmem_get_page(struct page *page) {
+  return get_page(page);
+}
+
+void pmem_put_page(struct page *page) {
+  return put_page(page);
+}
+
