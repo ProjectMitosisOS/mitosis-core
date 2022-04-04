@@ -48,7 +48,7 @@ impl MySyscallHandler {
         let task = task::Task::new();
         crate::log::info!("get task {:?}", task);
 
-        let pt_regs = task::Task::get_stack_registers();
+        let pt_regs = task::Task::new().get_stack_registers();
         crate::log::info!("sanity check stack registers {:?}", pt_regs);
         0
     }

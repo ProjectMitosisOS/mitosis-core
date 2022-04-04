@@ -66,6 +66,7 @@ impl FileOperations for MitosisSysCallHandler {
     #[inline]
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
         match cmd {
+            mitosis_protocol::CALL_NIL => 0, // a nill core do nothing
             mitosis_protocol::CALL_PREPARE => self.syscall_prepare(arg),
             mitosis_protocol::CALL_RESUME_LOCAL => self.syscall_local_resume(arg),
             mitosis_protocol::CALL_RESUME_LOCAL_W_RPC => self.syscall_local_resume_w_rpc(arg),

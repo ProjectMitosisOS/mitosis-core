@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 use hashbrown::HashMap;
 use os_network::rdma::dc::DCTarget;
 
+#[allow(unused_imports)]
 use crate::descriptors::{Descriptor, RDMADescriptor};
 use crate::shadow_process::*;
 
