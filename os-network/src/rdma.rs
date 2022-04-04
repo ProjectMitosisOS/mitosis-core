@@ -2,11 +2,55 @@
 use alloc::string::String;
 
 use KRdmaKit::device::RContext;
-use KRdmaKit::rust_kernel_rdma_base::sa_path_rec;
+use KRdmaKit::rust_kernel_rdma_base::{ib_ah, ib_gid, sa_path_rec};
 
 pub const MAX_GID_LEN: usize = 40; // The maximum string length of IPv6
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
+pub struct IBAddressHandlerMeta {
+    pub lid: u16,
+    pub port_num: u16,
+    pub gid: ib_gid,
+}
+
+#[derive(Debug)]
+pub struct IBAddressHandler {
+    pub inner: *mut ib_ah,
+}
+
+impl IBAddressHandler { 
+    pub unsafe fn get_inner(&self) -> *mut ib_ah { 
+        self.inner
+    }
+}
+
+impl Drop for IBAddressHandler {
+    fn drop(&mut self) {
+        assert!(self.inner != core::ptr::null_mut());
+        unsafe { KRdmaKit::rust_kernel_rdma_base::rdma_destroy_ah(self.inner) };
+    }
+}
+
+impl IBAddressHandlerMeta {
+    pub fn new(ctx: &RContext) -> Self {
+        Self {
+            lid: ctx.get_lid(),
+            port_num: ctx.get_port() as _,
+            gid: ctx.get_gid(),
+        }
+    }
+
+    pub fn create_ah(ctx: &RContext, meta: Self) -> core::option::Option<IBAddressHandler> {
+        let res =
+            KRdmaKit::qp::create_ib_ah_ptr(ctx.get_pd(), meta.port_num as _, meta.lid, meta.gid);
+        if res != core::ptr::null_mut() {
+            return Some(IBAddressHandler { inner: res });
+        }
+        return None;
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RawGID {
     inner: [u8; MAX_GID_LEN],
     real_len: usize,

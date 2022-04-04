@@ -64,6 +64,11 @@ pub struct Timeout<T> {
     delay: Delay,
 }
 
+pub struct TimeoutWRef<'a, T> { 
+    value : &'a mut T, 
+    delay : Delay,
+}
+
 impl<T> Timeout<T> {
     /// create a Timeout to wrap a future
     pub fn new(value: T, timeout_usec: i64) -> Timeout<T> {
@@ -103,7 +108,45 @@ impl<T> Timeout<T> {
     }    
 }
 
+impl<'a, T> TimeoutWRef<'a, T> {
+    /// create a Timeout to wrap a future
+    pub fn new(value: &'a mut T, timeout_usec: i64) -> TimeoutWRef<'a, T> {
+        Self {
+            value: value,
+            delay: Delay::new(timeout_usec),
+        }
+    }
+}
+
 impl<T> Future for Timeout<T>
+where
+    T: Future,
+{
+    type Output = T::Output; // result, passed_msec
+    type Error = Error<T::Error>;
+
+    fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
+        // First, try polling the future
+        match self.value.poll() {
+            Ok(Async::Ready(v)) => {
+                return Ok(Async::Ready(v));
+            }
+            Ok(Async::NotReady) => {}
+            Err(e) => return Err(Error::inner(e)),
+        }
+
+        // Now check the timer
+        match self.delay.poll() {
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Ok(Async::Ready(_passed)) => {
+                return Err(Error::elapsed()); 
+            }
+            Err(_) => panic!(),
+        }
+    }
+}
+
+impl<'a, T> Future for TimeoutWRef<'a, T>
 where
     T: Future,
 {

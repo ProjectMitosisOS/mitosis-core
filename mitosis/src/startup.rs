@@ -3,12 +3,21 @@ use crate::rdma_context::*;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
+use rust_kernel_linux_util::timer::KTimer;
+
 use alloc::vec::Vec;
 
 pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
-    crate::log::info!("Start MITOSIS instance, init global services");
+    crate::log::info!("Try to start MITOSIS instance, init global services");
+    unsafe {
+        crate::mac_id::init(config.machine_id);
+        crate::max_caller_num::init(config.max_core_cnt);
+    };
+
+    let timer = KTimer::new();
 
     start_rdma(&config).expect("fail to create RDMA context");
+    crate::log::info!("Initialize RDMA context done");
 
     // high-level RDMA-related data structures
 
@@ -40,6 +49,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
             crate::rpc_service::Service::new(&config).expect("Failed to create the RPC service. "),
         );
     };
+    crate::log::info!("RPC service initializes done");
 
     // RPC caller pool
     unsafe {
@@ -49,21 +59,41 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
         )
     };
 
-    // DCQP Pool
+    // DCQP & target pool
     unsafe {
         crate::dc_pool_service::init(
             crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool"),
+        );
+        crate::dc_target_service::init(
+            crate::dc_pool::DCTargetPool::new(&config).expect("Failed to create DC Target pool"),
         )
     };
 
-    // Global parent descriptor pool
-    unsafe {
-        crate::descriptor_pool::init(
-            crate::descriptors::DescriptorFactoryService::create(),
-        )
-    };
+    // Global shadow process service
+    unsafe { crate::sp_service::init(crate::shadow_process_service::ShadowProcessService::new()) };
 
     // TODO: other services
+
+    crate::log::info!("Start waiting for the RPC servers to start...");
+    crate::rpc_service::wait_handlers_ready_barrier(config.rpc_threads_num);
+    crate::log::info!("All RPC thread handlers initialized!");
+
+    // establish an RPC to myself
+    for i in 0..config.rpc_threads_num {
+        probe_remote_rpc_end(
+            config.machine_id,
+            unsafe { crate::service_rpc::get_ref() }
+                .get_connect_info(i)
+                .expect("Self RPC handler connection info uninitialized"),
+        )
+        .expect("failed to connect to my RPC handlers!");
+    }
+    crate::log::info!("Probe myself RPC handlers done");
+
+    crate::log::info!(
+        "All initialization done, takes {} ms",
+        timer.get_passed_usec() / 1000
+    );
 
     Some(())
 }
@@ -71,10 +101,47 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
+        crate::dc_target_service::drop();
         crate::dc_pool_service::drop();
         crate::service_caller_pool::drop();
         crate::service_rpc::drop();
-        crate::descriptor_pool::drop();
+        crate::sp_service::drop();
     };
     end_rdma();
+}
+
+/// calculate the session ID of the remote end handler
+pub fn calculate_session_id(mac_id: usize, thread_id: usize, max_callers: usize) -> usize {
+    mac_id * max_callers + thread_id
+}
+
+use os_network::ud::UDHyperMeta;
+
+/// Connect the RPC session to the remote nodes
+///
+/// Note: This function should be called after the start_instance call
+///
+/// TODO: We should wrap a global lock, since this function can called by many applications
+///
+pub fn probe_remote_rpc_end(
+    remote_machine_id: usize,
+    connect_info: crate::rpc_service::HandlerConnectInfo,
+) -> core::option::Option<()> {
+    let len = unsafe { crate::get_rpc_caller_pool_ref().len() };
+    for i in 0..len {
+        let session_id = calculate_session_id(remote_machine_id, i, len);
+        unsafe { crate::get_rpc_caller_pool_mut() }
+            .connect_session_at(
+                i,
+                session_id, // Notice: it is very important to ensure that session ID is unique!
+                UDHyperMeta {
+                    // the remote machine's RDMA gid. Since we are unit test, we use the local gid
+                    gid: os_network::rdma::RawGID::new(connect_info.gid.clone()).unwrap(),
+                    service_id: connect_info.service_id,
+                    qd_hint: connect_info.qd_hint,
+                },
+            )
+            .expect("failed to connect the endpoint");
+    }
+    Some(())
 }

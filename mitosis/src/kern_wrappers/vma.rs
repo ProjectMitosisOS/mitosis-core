@@ -1,10 +1,10 @@
-use crate::bindings::{vm_area_struct, VMFlags};
+use crate::bindings::{vm_area_struct, VMFlags, file};
 
 use super::mm::VirtAddrType;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct VMA<'a> {
-    vma_inner: &'a vm_area_struct,
+    vma_inner: &'a mut vm_area_struct,
 }
 
 impl<'a> VMA<'a> {
@@ -21,7 +21,7 @@ use alloc::string::String;
 use rust_kernel_linux_util::string::ptr2string;
 
 impl<'a> VMA<'a> {
-    pub fn new(vma: &'a crate::bindings::vm_area_struct) -> Self {
+    pub fn new(vma: &'a mut crate::bindings::vm_area_struct) -> Self {
         Self { vma_inner: vma }
     }
 
@@ -54,6 +54,10 @@ impl<'a> VMA<'a> {
         unsafe { crate::bindings::VMFlags::from_bits_unchecked(self.vma_inner.vm_flags) }
     }
 
+    pub fn set_raw_flags(&mut self, flags : crate::linux_kernel_module::c_types::c_ulong) {
+        self.vma_inner.vm_flags = flags;
+    }    
+
     pub fn get_raw_flags(&self) -> crate::linux_kernel_module::c_types::c_ulong {
         self.vma_inner.vm_flags
     }
@@ -79,6 +83,10 @@ impl<'a> VMA<'a> {
         self.vma_inner as *const vm_area_struct as _
     }
 
+    pub unsafe fn get_file_ptr(&self) -> *mut file { 
+        self.vma_inner.vm_file
+    }
+
     pub unsafe fn get_backed_file_name(&self) -> core::option::Option<String> {
         if self.vma_inner.vm_file != core::ptr::null_mut() {
             let file = *(self.vma_inner.vm_file);
@@ -92,9 +100,9 @@ impl<'a> VMA<'a> {
 
 impl core::fmt::Display for VMA<'_> {
     fn fmt(&self, fmt: &mut ::core::fmt::Formatter) -> core::fmt::Result {
-        let vm_flags = self.get_flags();
+        // let vm_flags = self.get_flags();
         fmt.write_fmt(format_args!(
-            "VMA 0x{:x}~0x{:x}, sz {}, file: {:?}",
+            "VMA 0x{:x}~0x{:x}, sz: {}, file: {:?}",
             self.get_start(),
             self.get_end(),
             self.get_sz(),

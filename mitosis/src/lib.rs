@@ -14,10 +14,15 @@ pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 pub const VERSION: usize = 0;
 
+// pub mod resume;
+pub mod core_syscall_handler;
 pub mod syscalls;
 
 pub mod bindings;
 pub mod kern_wrappers;
+
+pub mod shadow_process;
+pub mod shadow_process_service;
 
 pub mod descriptors;
 
@@ -25,16 +30,29 @@ use alloc::vec::Vec;
 
 // TODO: doc how to use mitosis
 
+pub const MAX_RPC_THREADS_CNT: usize = 10;
+
+pub fn get_calling_cpu_id() -> usize {
+    unsafe { crate::bindings::pmem_get_current_cpu() as _ }
+}
+
+declare_global!(mac_id, usize);
+declare_global!(max_caller_num, usize);
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub(crate) num_nics_used: usize,
+
     pub(crate) rpc_threads_num: usize,
+
     // my machine ID
     pub(crate) machine_id: usize,
     // how many CPU core is available on the machine
     pub(crate) max_core_cnt: usize,
     // gid is RDMA address
     pub(crate) peers_gid: Vec<alloc::string::String>,
+
+    pub(crate) init_dc_targets: usize,
 }
 
 impl Default for Config {
@@ -43,8 +61,9 @@ impl Default for Config {
             num_nics_used: 1,
             rpc_threads_num: 2,
             machine_id: 0,
-            max_core_cnt: 24,
+            max_core_cnt: 48,
             peers_gid: Vec::new(),
+            init_dc_targets: 256,
         }
     }
 }
@@ -56,6 +75,7 @@ impl Config {
     }
 
     pub fn set_rpc_threads(&mut self, num: usize) -> &mut Self {
+        assert!(num <= MAX_RPC_THREADS_CNT);
         self.rpc_threads_num = num;
         self
     }
@@ -65,6 +85,10 @@ impl Config {
         self
     }
 
+    pub fn get_machine_id(&self) -> usize {
+        self.machine_id
+    }
+
     pub fn add_gid(&mut self, gid: alloc::string::String) -> &mut Self {
         self.peers_gid.push(gid);
         self
@@ -72,6 +96,15 @@ impl Config {
 
     pub fn set_max_core_cnt(&mut self, cnt: usize) -> &mut Self {
         self.max_core_cnt = cnt;
+        self
+    }
+
+    pub fn get_max_core_cnt(&self) -> usize {
+        self.max_core_cnt
+    }
+
+    pub fn set_init_dc_targets(&mut self, num: usize) -> &mut Self {
+        self.init_dc_targets = num;
         self
     }
 }
@@ -92,6 +125,7 @@ pub mod rdma_context;
 declare_global!(rdma_driver, alloc::boxed::Box<crate::KRdmaKit::KDriver>);
 declare_global!(rdma_contexts, alloc::vec::Vec<crate::RContext<'static>>);
 
+#[inline]
 pub unsafe fn get_rdma_context_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static crate::RContext<'static>> {
@@ -103,6 +137,7 @@ declare_global!(
     alloc::vec::Vec<core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>>
 );
 
+#[inline]
 pub unsafe fn get_rdma_cm_server_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>> {
@@ -126,6 +161,7 @@ declare_global!(
     alloc::vec::Vec<os_network::datagram::ud::UDFactory<'static>>
 );
 
+#[inline]
 pub unsafe fn get_ud_factory_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static os_network::datagram::ud::UDFactory<'static>> {
@@ -137,12 +173,20 @@ declare_global!(
     alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
 );
 
+#[inline]
 pub unsafe fn get_dc_factory_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
     crate::dc_factories::get_ref().get(nic_idx)
 }
 
+#[inline]
+pub fn random_select_dc_factory_on_core(
+) -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
+    let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
+    let id = unsafe { pool_idx % crate::dc_factories::get_ref().len() };
+    unsafe { crate::dc_factories::get_ref().get(id) }
+}
 
 declare_global!(service_rpc, crate::rpc_service::Service);
 
@@ -153,27 +197,40 @@ declare_global!(
     service_caller_pool,
     crate::rpc_caller_pool::CallerPool<'static>
 );
+#[inline]
 pub unsafe fn get_rpc_caller_pool_ref() -> &'static crate::rpc_caller_pool::CallerPool<'static> {
     crate::service_caller_pool::get_ref()
 }
 
+#[inline]
 pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::CallerPool<'static>
 {
     crate::service_caller_pool::get_mut()
 }
 
-/// A pool of DCQPs 
+/// A pool of DCQPs
 pub mod dc_pool;
+pub mod remote_paging;
 
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
+declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
+
+#[inline]
 pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_ref()
 }
 
+#[inline]
 pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_mut()
 }
 
+#[inline]
+pub unsafe fn get_dc_target_service_mut() -> &'static mut crate::dc_pool::DCTargetPool {
+    crate::dc_target_service::get_mut()
+}
+
+/*
 // Descriptor pool, used for container preparation
 declare_global!(descriptor_pool, crate::descriptors::DescriptorFactoryService);
 
@@ -185,4 +242,19 @@ pub unsafe fn get_descriptor_pool_ref() -> &'static crate::descriptors::Descript
 #[inline]
 pub unsafe fn get_descriptor_pool_mut() -> &'static mut crate::descriptors::DescriptorFactoryService {
     crate::descriptor_pool::get_mut()
+} */
+
+declare_global!(
+    sp_service,
+    crate::shadow_process_service::ShadowProcessService
+);
+
+#[inline]
+pub unsafe fn get_sps_ref() -> &'static crate::shadow_process_service::ShadowProcessService {
+    crate::sp_service::get_ref()
+}
+
+#[inline]
+pub unsafe fn get_sps_mut() -> &'static mut crate::shadow_process_service::ShadowProcessService {
+    crate::sp_service::get_mut()
 }

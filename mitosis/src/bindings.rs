@@ -112,6 +112,7 @@ bitflags::bitflags! {
         const WRITE = PMEM_VM_WRITE;
         const EXEC  = PMEM_VM_EXEC;
         const STACK = PMEM_VM_STACK;
+        const SHARED =  PMEM_VM_SHARED;
         const DONTEXPAND = PMEM_VM_DONTEXPAND;
     }
 }

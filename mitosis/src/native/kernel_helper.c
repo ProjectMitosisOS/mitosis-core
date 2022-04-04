@@ -239,3 +239,20 @@ pmem_put_cpu(void)
   put_cpu();
   return 0;
 }
+
+unsigned int
+pmem_filemap_fault(struct vm_fault *vmf){
+    return filemap_fault(vmf);
+}
+
+
+// file related 
+#include <linux/file.h>
+
+void pmem_get_file(struct file *f) {
+  get_file(f);
+}
+
+void pmem_put_file(struct file *f) {
+  fput(f);
+}

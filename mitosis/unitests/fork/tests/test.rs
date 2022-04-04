@@ -2,7 +2,7 @@ use kernel_module_testlib::{dmesg_contains, with_kernel_module};
 use mitosis_rust_client::*;
 
 #[test]
-fn test_descriptors_serialization() {
+fn test_basic() {
     // a dummy test func
     with_kernel_module(|| {
         let mut client = MClientOptions::new()
@@ -10,9 +10,8 @@ fn test_descriptors_serialization() {
             .open()
             .unwrap();
 
-        client.test(0).unwrap();    // fork_prepare
-        client.test(1).unwrap();    // fork_resume
-        
+        client.test(0).unwrap();    // basic        
+
         assert_eq!(dmesg_contains(&String::from("ERROR")), false);
     });
 }

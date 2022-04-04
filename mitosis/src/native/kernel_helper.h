@@ -89,6 +89,8 @@ pmem_page_to_virt(struct page* page);
 void*
 pmem_phys_to_virt(u64 p);
 
+unsigned int
+pmem_filemap_fault(struct vm_fault *vmf);
 /*
  Page protection flags
  */
@@ -144,5 +146,13 @@ unsigned int pmem_get_cpu_count(void);
 unsigned int pmem_get_current_cpu(void);
 unsigned int pmem_get_cpu(void);
 unsigned int pmem_put_cpu(void);
+
+/*
+ file related
+ */
+
+void pmem_get_file(struct file *f);
+
+void pmem_put_file(struct file *f);
 
 #endif

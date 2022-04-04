@@ -10,8 +10,9 @@ fn test_descriptors_serialization() {
             .open()
             .unwrap();
             
-        client.test(0).unwrap();
+        client.test(0).unwrap();        
         client.test(1).unwrap();
+
         client.test(3).unwrap();
         client.test(4).unwrap();
 

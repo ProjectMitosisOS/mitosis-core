@@ -53,6 +53,14 @@ impl MClient {
         let data: usize = 0;
         unsafe { mitosis_test(self.fd, cmd as _, &data) }
     }
+
+    pub fn test_w_arg<T>(
+        &mut self,
+        cmd: crate::libc::c_int,
+        data: *const T,
+    ) -> crate::nix::Result<crate::libc::c_int> {
+        unsafe { mitosis_test(self.fd, cmd as _, data as _) }
+    }
 }
 
 impl MClient {

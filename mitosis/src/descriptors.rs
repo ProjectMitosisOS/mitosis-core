@@ -6,30 +6,26 @@ use crate::linux_kernel_module;
 
 // sub descriptors
 pub mod reg;
-
 pub use reg::*;
 
 pub mod page_table;
-
 pub use page_table::*;
 
 pub mod rdma;
-
 pub use rdma::*;
 
 pub mod vma;
-
 pub use vma::*;
 
-pub mod factory;
-
-pub use factory::DescriptorFactoryService;
+// pub mod factory;
+// pub use factory::DescriptorFactoryService;
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
+use crate::kern_wrappers::task::Task;
 
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
 #[allow(dead_code)]
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Descriptor {
     pub regs: RegDescriptor,
     pub page_table: FlatPageTable,
@@ -51,6 +47,20 @@ impl Descriptor {
     #[inline]
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
         self.page_table.get(virt)
+    }
+
+    /// Apply the descriptor into current process
+    #[inline]
+    pub fn apply_to(&self, file: *mut crate::bindings::file) {
+        let mut task = Task::new();
+        // 1. Unmap origin vma regions
+        task.unmap_self();
+        // 2. Map new vma regions
+        (&self.vma).into_iter().for_each(|m| {
+            unsafe {task.map_one_region(file, m)}
+        });
+        // 3. Re-set states
+        task.set_mm_reg_states(&self.regs);
     }
 }
 

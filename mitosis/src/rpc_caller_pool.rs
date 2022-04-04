@@ -12,7 +12,7 @@ use os_network::KRdmaKit::device::RContext;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-type UDCaller<'a> = Caller<UDReceiver<'a>, UDSession<'a>>;
+pub(crate) type UDCaller<'a> = Caller<UDReceiver<'a>, UDSession<'a>>;
 
 /// The pool maintains a thread_local_pool of callers
 /// Each CPU core can use the dedicated pool
@@ -40,6 +40,11 @@ impl<'a> CallerPool<'a> {
     }
 
     #[inline(always)]
+    pub fn len(&self) -> usize { 
+        self.pool.len()
+    }
+
+    #[inline(always)]
     pub fn get_caller(&'a mut self, idx: usize) -> core::option::Option<&'a mut UDCaller<'a>> {
         self.pool.get_mut(idx)
     }
@@ -56,6 +61,7 @@ impl<'a> CallerPool<'a> {
         session_id: usize,
         meta: UDHyperMeta,
     ) -> core::option::Option<()> {
+        // fetch by sidr connect
         let meta = self.create_meta_at(idx, meta)?;
         let my_gid =
             os_network::rdma::RawGID::new(self.contexts.get(idx).unwrap().get_gid_as_string())
@@ -99,8 +105,11 @@ impl<'a> CallerPool<'a> {
             .factories
             .get(idx)
             .expect("The idx is out of pool's range.");
-        let meta = factory.create_meta(meta).expect("failed to create meta");
-        Some(meta)
+        if let Ok(meta) = factory.create_meta(meta) {
+            Some(meta)
+        }else {
+            None
+        }
     }
 }
 
