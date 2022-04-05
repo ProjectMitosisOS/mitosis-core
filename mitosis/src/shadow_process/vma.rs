@@ -1,6 +1,9 @@
 use crate::bindings::*;
 use crate::kern_wrappers::vma::VMA;
 
+#[allow(unused_imports)]
+use crate::linux_kernel_module;
+
 use super::{Copy4KPage, GetPhyAddr, COW4KPage};
 
 /// The shadow VMA is just a wrapper over the original process's VMA
@@ -9,6 +12,7 @@ use super::{Copy4KPage, GetPhyAddr, COW4KPage};
 /// of files (if any) mapped by this VMA, similar to a local fork.
 pub struct ShadowVMA<'a> {
     vma_inner: VMA<'a>,
+    shadow_file : *mut file,
     is_cow: bool,
 }
 
@@ -31,21 +35,26 @@ impl<'a> ShadowVMA<'a> {
         Self {
             vma_inner: vma,
             is_cow: is_cow,
+            shadow_file : file,
         }
     }
 
     pub fn backed_by_file(&self) -> bool {
-        !unsafe { self.vma_inner.get_file_ptr().is_null() }
+        !self.shadow_file.is_null()
+    }
+
+    pub fn has_write_permission(&self) -> bool { 
+        self.vma_inner.get_flags().contains(VMFlags::WRITE) 
+        || self.vma_inner.get_flags().contains(VMFlags::MAY_WRITE)
     }
 }
 
 impl Drop for ShadowVMA<'_> {
     fn drop(&mut self) {
-        unsafe {
-            if !self.vma_inner.get_file_ptr().is_null() && self.is_cow {
-                pmem_put_file(self.vma_inner.get_file_ptr());
+            if !self.shadow_file.is_null() && self.is_cow {
+                // crate::log::debug!("In drop shadow file {:?}", self.shadow_file);
+                unsafe { pmem_put_file(self.shadow_file) };
             }
-        }
     }
 }
 
@@ -112,4 +121,51 @@ pub(crate) struct VMACOWPTGenerator<'a, 'b> {
     vma: &'a ShadowVMA<'a>,
     inner: &'b mut COWPageTable,
     inner_flat: &'b mut crate::descriptors::FlatPageTable,
+}
+
+impl<'a, 'b> VMACOWPTGenerator<'a, 'b> {
+    pub fn new(
+        vma: &'a ShadowVMA,
+        inner: &'b mut COWPageTable,
+        inner_flat: &'b mut crate::descriptors::FlatPageTable,
+    ) -> Self {
+        Self {
+            vma: vma,
+            inner: inner,
+            inner_flat: inner_flat,
+        }
+    }
+}
+
+impl VMACOWPTGenerator<'_, '_> {
+    pub fn generate(&self) {
+        let mut walk: mm_walk = Default::default();
+        walk.pte_entry = Some(Self::handle_pte_entry);
+        walk.private = self as *const _ as *mut crate::linux_kernel_module::c_types::c_void;
+
+        let mut engine = VMWalkEngine::new(walk);
+        unsafe { engine.walk(self.vma.vma_inner.get_raw_ptr()) };
+    }
+
+    #[allow(non_upper_case_globals)]
+    #[allow(unused_variables)]
+    pub unsafe extern "C" fn handle_pte_entry(
+        pte: *mut pte_t,
+        addr: crate::linux_kernel_module::c_types::c_ulong,
+        _next: crate::linux_kernel_module::c_types::c_ulong,
+        walk: *mut mm_walk,
+    ) -> crate::linux_kernel_module::c_types::c_int {
+        let my: &mut Self = &mut (*((*walk).private as *mut Self));
+
+        let phy_addr = pmem_get_phy_from_pte(pte);
+        if phy_addr > 0 {
+            if my.vma.has_write_permission() { 
+                // crate::log::debug!("clear write permission for addr: 0x{:x}", addr);
+                my.inner.add_page(COW4KPage::new(pmem_pte_to_page(pte)).unwrap());
+                pmem_clear_pte_write(pte);
+            }
+            my.inner_flat.add_one(addr, phy_addr);
+        }
+        0
+    }
 }

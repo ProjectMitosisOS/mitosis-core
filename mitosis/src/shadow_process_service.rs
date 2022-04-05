@@ -94,6 +94,28 @@ impl ShadowProcessService {
         return Some(());
     }
 
+    pub fn add_myself_cow(&mut self, key: usize) -> core::option::Option<()> {
+        if self.registered_processes.contains_key(&key) {
+            crate::log::warn!(
+                "Failed to prepare: the register key {} has already been taken. ",
+                key
+            );
+            return None;
+        }
+
+        let (target, descriptor) = RDMADescriptor::new_from_dc_target_pool()?;
+
+        self.registered_processes.insert(
+            key,
+            ProcessBundler::new(
+                crate::shadow_process::ShadowProcess::new_cow(descriptor),
+                target,
+            ),
+        );        
+
+        return Some(());
+    }    
+
     pub fn unregister(&mut self, key: usize) {
         self.registered_processes.remove(&key);
     }

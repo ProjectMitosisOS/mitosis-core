@@ -108,6 +108,8 @@ const unsigned long PMEM_VM_WRITE = VM_WRITE;
 const unsigned long PMEM_VM_EXEC = VM_EXEC;
 const unsigned long PMEM_VM_SHARED = VM_SHARED;
 const unsigned long PMEM_VM_DONTEXPAND = VM_DONTEXPAND;
+const unsigned long PMEM_VM_MAYREAD = VM_MAYREAD;
+const unsigned long PMEM_VM_MAYWRITE = VM_MAYWRITE;
 
 /*
  MMap flags
@@ -166,5 +168,10 @@ void pmem_page_dup_rmap(struct page *page, bool compound);
 
 void pmem_page_free_rmap(struct page *page, bool compound);
 
+void
+pmem_clear_pte_write(pte_t* pte);
+
+struct page *
+pmem_pte_to_page(pte_t *pte);
 
 #endif

@@ -18,7 +18,10 @@ pub struct ShadowProcess {
     descriptor: crate::descriptors::Descriptor,
 
     shadow_vmas: Vec<ShadowVMA<'static>>,
-    copy_shadow_pagetable: ShadowPageTable<Copy4KPage>,
+
+    // FIXME: maybe we should use enum for this?
+    copy_shadow_pagetable: core::option::Option<ShadowPageTable<Copy4KPage>>,
+    cow_shadow_pagetable : core::option::Option<ShadowPageTable<COW4KPage>>,
 }
 
 impl ShadowProcess {
@@ -28,8 +31,43 @@ impl ShadowProcess {
 }
 
 impl ShadowProcess {
-    pub fn new_cow(_rdma_descriptor: crate::descriptors::RDMADescriptor) -> Self {
-        unimplemented!();
+    pub fn new_cow(rdma_descriptor: crate::descriptors::RDMADescriptor) -> Self {
+        let mut shadow_pt = ShadowPageTable::<COW4KPage>::new();
+        let mut shadow_vmas: Vec<ShadowVMA<'static>> = Vec::new();
+
+        let mut vma_descriptors = Vec::new();
+        let mut pt: crate::descriptors::FlatPageTable = Default::default();
+
+        // the generation process
+        let task = crate::kern_wrappers::task::Task::new();
+        let mut mm = task.get_memory_descriptor();
+
+        for vma in mm.get_vma_iter() {
+            vma_descriptors.push(vma.generate_descriptor());
+
+            let s_vma = ShadowVMA::new(vma, true);
+            VMACOWPTGenerator::new(&s_vma, &mut shadow_pt, &mut pt).generate();
+
+            shadow_vmas.push(s_vma);
+        }
+        // clear the TLB
+        // FIXME: actually, it is not optimal. 
+        // But seed is less frequently executed, it is fine here.
+        mm.flush_tlb();
+
+        // crate::log::debug!("Check flat page table sz: {}", pt.len());
+        
+        Self {
+            shadow_vmas: shadow_vmas,
+            cow_shadow_pagetable: Some(shadow_pt),
+            copy_shadow_pagetable : None,
+            descriptor: Descriptor {
+                machine_info: rdma_descriptor,
+                regs: task.generate_reg_descriptor(),
+                page_table: pt,
+                vma: vma_descriptors,
+            },
+        }
     }
 
     pub fn new_copy(rdma_descriptor: crate::descriptors::RDMADescriptor) -> Self {
@@ -63,7 +101,8 @@ impl ShadowProcess {
 
         Self {
             shadow_vmas: shadow_vmas,
-            copy_shadow_pagetable: shadow_pt,
+            copy_shadow_pagetable: Some(shadow_pt),
+            cow_shadow_pagetable : None,
             descriptor: Descriptor {
                 machine_info: rdma_descriptor,
                 regs: task.generate_reg_descriptor(),

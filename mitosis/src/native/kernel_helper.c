@@ -283,3 +283,13 @@ void pmem_put_page(struct page *page) {
   return put_page(page);
 }
 
+void pmem_clear_pte_write(pte_t *pte) {
+  pte_t temp_pte;
+  temp_pte = pte_clear_flags(*pte, _PAGE_RW);
+  set_pte(pte, temp_pte);
+}
+
+struct page *
+pmem_pte_to_page(pte_t *pte) {
+  return pte_page(*pte);
+}

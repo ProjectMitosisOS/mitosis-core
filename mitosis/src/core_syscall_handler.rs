@@ -102,7 +102,9 @@ impl MitosisSysCallHandler {
         }
 
         let process_service = unsafe { crate::get_sps_mut() };
-        let res = process_service.add_myself_copy(key as _);
+        
+        // let res = process_service.add_myself_copy(key as _);
+        let res = process_service.add_myself_cow(key as _);        
 
         if res.is_some() {
             self.caller_status.prepared_key = Some(key as _);
