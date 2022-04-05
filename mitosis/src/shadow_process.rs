@@ -19,6 +19,8 @@ pub struct ShadowProcess {
 
     shadow_vmas: Vec<ShadowVMA<'static>>,
 
+    // COW shadow page table is only needed. 
+    // However, for testing purposes, we need to maintain the copy page table.
     // FIXME: maybe we should use enum for this?
     copy_shadow_pagetable: core::option::Option<ShadowPageTable<Copy4KPage>>,
     cow_shadow_pagetable : core::option::Option<ShadowPageTable<COW4KPage>>,
@@ -31,6 +33,8 @@ impl ShadowProcess {
 }
 
 impl ShadowProcess {
+    /// Crate a new shadow processing by marking all the
+    /// memories of the original one to copy-on-write(COW). 
     pub fn new_cow(rdma_descriptor: crate::descriptors::RDMADescriptor) -> Self {
         let mut shadow_pt = ShadowPageTable::<COW4KPage>::new();
         let mut shadow_vmas: Vec<ShadowVMA<'static>> = Vec::new();
@@ -52,6 +56,7 @@ impl ShadowProcess {
         }
         // clear the TLB
         // FIXME: actually, it is not optimal. 
+        // This is because we only need to partially flush the tlb
         // But seed is less frequently executed, it is fine here.
         mm.flush_tlb();
 
