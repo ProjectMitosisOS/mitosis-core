@@ -197,6 +197,14 @@ pmem_free_page(struct page* p)
   return __free_page(p);
 }
 
+int
+pmem_vm_insert_page(struct vm_area_struct *vma, unsigned long addr,
+                    struct page *page)
+{
+    return vm_insert_page(vma, addr, page);
+}
+
+
 u64
 pmem_page_to_phy(struct page* page)
 {

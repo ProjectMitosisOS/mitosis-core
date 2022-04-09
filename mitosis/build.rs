@@ -43,6 +43,7 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     "pmem_page_to_phy",
     "pmem_page_to_virt",
     "pmem_phys_to_virt",
+    "pmem_vm_insert_page",
     "memcpy",
     // mmap related
     "pmem_do_munmap",
@@ -90,6 +91,7 @@ const INCLUDED_VARS: &[&str] = &[
     "PMEM_VM_SHARED",
     "PMEM_VM_STACK",
     "PMEM_VM_DONTEXPAND",
+    "PMEM_VM_MIXEDMAP",
     "PMEM_PROT_READ",
     "PMEM_PROT_WRITE",
     "PMEM_PROT_EXEC",
