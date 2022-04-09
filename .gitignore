@@ -12,3 +12,5 @@ modules.order
 .idea
 scripts/*.sh
 scripts/*.py
+build/
+.vscode/
