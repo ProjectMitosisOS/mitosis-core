@@ -80,6 +80,10 @@ pmem_alloc_page(gfp_t gfp_mask);
 void
 pmem_free_page(struct page* p);
 
+
+int
+pmem_vm_insert_page(struct vm_area_struct *vma, unsigned long addr,
+                    struct page *page);
 u64
 pmem_page_to_phy(struct page* page);
 
@@ -110,6 +114,7 @@ const unsigned long PMEM_VM_SHARED = VM_SHARED;
 const unsigned long PMEM_VM_DONTEXPAND = VM_DONTEXPAND;
 const unsigned long PMEM_VM_MAYREAD = VM_MAYREAD;
 const unsigned long PMEM_VM_MAYWRITE = VM_MAYWRITE;
+const unsigned long PMEM_VM_MIXEDMAP = VM_MIXEDMAP;
 
 /*
  MMap flags

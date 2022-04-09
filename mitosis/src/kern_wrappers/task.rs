@@ -33,7 +33,7 @@ impl Task {
     #[inline]
     pub unsafe fn map_one_region(&self,
                                  file: *mut crate::bindings::file,
-                                 vma_meta: &VMADescriptor) {
+                                 vma_meta: &VMADescriptor) -> Option<&'static mut crate::bindings::vm_area_struct> {
         use crate::bindings::{pmem_vm_mmap, VMFlags};
         let ret = pmem_vm_mmap(
             file,
@@ -44,7 +44,7 @@ impl Task {
             0,
         );
         if ret != vma_meta.get_start() {
-            return;
+            return None;
         }
         let vma = self.get_memory_descriptor().find_vma(vma_meta.get_start()).unwrap();
         if vma_meta.is_stack() {
@@ -54,6 +54,11 @@ impl Task {
             vma.vm_flags =
                 (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::DONTEXPAND).bits();
         }
+        if cfg!(feature = "eager-resume") {
+            vma.vm_flags = (crate::bindings::VMFlags::from_bits_unchecked(vma.vm_flags) |
+                crate::bindings::VMFlags::MIXEDMAP).bits();
+        }
+        return Some(vma);
     }
 
     #[inline]

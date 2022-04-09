@@ -297,7 +297,7 @@ impl MitosisSysCallHandler {
                 crate::log::debug!("connect to nic {}@{} success", nic_idx, gid);
                 0
             }
-            _ => { 
+            _ => {
                 crate::log::error!("failed to connect {}@{} success", nic_idx, gid);
                 -1
             }
@@ -324,51 +324,19 @@ impl MitosisSysCallHandler {
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
         let fault_addr = (*vmf).address;
         // crate::log::debug!("fault addr 0x{:x}", fault_addr);
-
-        let remote_addr = self
-            .caller_status
-            .resume_related
-            .as_ref()
-            .unwrap()
-            .descriptor
-            .lookup_pg_table(fault_addr);
-
-        if remote_addr.is_none() {
-            // TODO: fallback?
-            crate::log::error!("failed to lookup the mapped address 0x{:x}", fault_addr);
-            return crate::bindings::FaultFlags::SIGSEGV.bits()
-                as linux_kernel_module::c_types::c_int;
-        }
-
-        // crate::log::debug!("lookup address {:?}", remote_addr);
-
-        // mapped, do the remote reads:
-        use crate::bindings::{pmem_alloc_page, PMEM_GFP_HIGHUSER};
-
-        // TODO; check whether the allocation is good?
-        let new_page_p = pmem_alloc_page(PMEM_GFP_HIGHUSER);
-        let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
-
-        let res = crate::remote_paging::RemotePagingService::remote_read(
-            new_page_pa,
-            remote_addr.unwrap(),
-            4096,
-            &self
-                .caller_status
-                .resume_related
-                .as_ref()
-                .unwrap()
-                .access_info,
-        );
-
-        match res {
-            Ok(_) => {
+        let resume_related = self
+            .caller_status.resume_related.as_ref().unwrap();
+        let new_page = resume_related.descriptor.read_remote_page(
+            fault_addr, &resume_related.access_info);
+        match new_page {
+            Some(new_page_p) => {
                 (*vmf).page = new_page_p as *mut _;
                 0
             }
-            Err(e) => {
-                crate::log::error!("Failed to read the remote page {:?}", e);
-                crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
+            None => {
+                crate::log::error!("Failed to read the remote page");
+                crate::bindings::FaultFlags::SIGSEGV.bits()
+                    as linux_kernel_module::c_types::c_int
             }
         }
     }
