@@ -34,7 +34,8 @@ pub mod rpc;
 pub mod rdma;
 
 #[allow(unused_imports)]
-use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util as log;
+pub(crate) use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util as log;
+pub(crate) use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 #[allow(unused_imports)]
 pub use KRdmaKit; // expose to others

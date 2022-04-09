@@ -39,6 +39,12 @@ pub fn get_calling_cpu_id() -> usize {
 declare_global!(mac_id, usize);
 declare_global!(max_caller_num, usize);
 
+declare_global!(max_cluster_size, usize);
+
+// FIXME: currently, we assume that all machines in the cluster has the 
+// same number of RNIC attached to it. 
+declare_global!(max_nics_used, usize);
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub(crate) num_nics_used: usize,
@@ -53,6 +59,8 @@ pub struct Config {
     pub(crate) peers_gid: Vec<alloc::string::String>,
 
     pub(crate) init_dc_targets: usize,
+
+    pub(crate) max_cluster_size : usize,
 }
 
 impl Default for Config {
@@ -64,6 +72,7 @@ impl Default for Config {
             max_core_cnt: 48,
             peers_gid: Vec::new(),
             init_dc_targets: 256,
+            max_cluster_size : 128,
         }
     }
 }

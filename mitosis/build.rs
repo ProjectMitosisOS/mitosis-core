@@ -2,7 +2,14 @@ use std::env;
 use std::path::PathBuf;
 
 // types from customized syscalls
-const INCLUDED_TYPES : &[&str] = &[];
+const INCLUDED_ENUMS: &[&str] = &[
+    "LibMITOSISCmd"
+];
+
+const INCLUDED_TYPES: &[&str] = &[
+    "connect_req_t",
+    "resume_remote_req_t"
+];
 
 // types from kernel
 const INCLUDED_KERNEL_TYPES: &[&str] = &[
@@ -155,8 +162,15 @@ fn main() {
         .header("src/native/kernel_helper.h")
         .whitelist_function("pmem_*");
 
+    println!("cargo:rerun-if-changed=../mitosis-user-libs/mitosis-c-client/include/common.h");
+    builder = builder.header("../mitosis-user-libs/mitosis-c-client/include/common.h");
     // non-rust translatable type
     builder = builder.opaque_type("xregs_state");
+
+    for t in INCLUDED_ENUMS {
+        builder = builder.whitelist_type(t);
+        builder = builder.constified_enum_module(t);
+    }
 
     for t in INCLUDED_TYPES {
         builder = builder.whitelist_type(t);

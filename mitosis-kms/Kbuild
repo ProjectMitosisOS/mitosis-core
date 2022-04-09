@@ -1,0 +1,16 @@
+obj-m := $(TEST_NAME).o
+$(TEST_NAME)-objs := $(TEST_NAME).rust.o
+
+CARGO ?= cargo
+TARGET ?= x86_64-unknown-none-linuxkernel
+
+export c_flags
+export UTEST
+
+$(src)/target/$(TARGET)/debug/lib%.a: cargo_will_determine_dependencies
+	cd $(src)/$(TEST_PATH); CARGO_TARGET_DIR=../target $(CARGO) build -Z build-std=core,alloc --target=$(TARGET)
+
+.PHONY: cargo_will_determine_dependencies
+
+%.rust.o: target/$(TARGET)/debug/lib%.a
+	$(LD) -r -o $@ --whole-archive $<
