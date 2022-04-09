@@ -40,7 +40,7 @@ impl<'a> CallerPool<'a> {
     }
 
     #[inline(always)]
-    pub fn len(&self) -> usize { 
+    pub fn len(&self) -> usize {
         self.pool.len()
     }
 
@@ -69,6 +69,10 @@ impl<'a> CallerPool<'a> {
         let (hint, service_id) = self.metas.get(idx).unwrap().clone();
 
         let caller = self.get_caller(idx)?;
+        if caller.session_connected(session_id) {
+            crate::log::warn!("The session {} has already connected.", session_id);
+            return Some(());
+        }
 
         let client_session = caller.get_transport_mut().create(meta).unwrap();
 
@@ -84,7 +88,7 @@ impl<'a> CallerPool<'a> {
                 },
             )
             .unwrap();
-            
+
         // wait for the completion
         let (msg, _reply) = os_network::block_on(caller).expect("should succeed");
 
@@ -107,7 +111,7 @@ impl<'a> CallerPool<'a> {
             .expect("The idx is out of pool's range.");
         if let Ok(meta) = factory.create_meta(meta) {
             Some(meta)
-        }else {
+        } else {
             None
         }
     }

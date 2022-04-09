@@ -27,6 +27,31 @@ pub struct HandlerConnectInfo {
     pub qd_hint: u64,
 }
 
+impl HandlerConnectInfo {
+    /// Create a remote connection information, so as to connect to remote
+    /// # Arguments
+    /// * gid: the remote GID
+    /// * nic_idx: the remote NIC ID used
+    /// * tid: the remote RPC id
+    #[inline]
+    pub fn create(gid: &alloc::string::String, nic_idx: u64, tid: usize) -> Self {
+        let (service_id, qd_hint) = (
+            crate::rdma_context::SERVICE_ID_BASE as u64
+                // FIXME! we assume that the remote machine has the same number of NICs used
+                // as ourself, so we can directly calculate here. 
+                // Otherwise, we need to pass the service_id here, 
+                // but it will expose too much to the upper-layer applications
+                + nic_idx % unsafe { (*crate::max_nics_used::get_ref()) as u64 },
+            Service::calculate_qd_hint(tid) as _,
+        );
+        Self {
+            gid: gid.clone(),
+            service_id,
+            qd_hint,
+        }
+    }
+}
+
 impl Clone for HandlerConnectInfo {
     fn clone(&self) -> HandlerConnectInfo {
         Self {
@@ -139,7 +164,6 @@ impl Service {
     #[allow(non_snake_case)]
     extern "C" fn worker(ctx: *mut c_void) -> c_int {
         let arg = unsafe { Box::from_raw(ctx as *mut ThreadCTX) };
-        crate::log::debug!("MITOSIS RPC thread {} started. ", arg.id);
 
         // init the UD RPC hook
         type UDRPCHook<'a, 'b> =
@@ -147,6 +171,12 @@ impl Service {
 
         let local_context = unsafe { crate::rdma_contexts::get_ref().get(arg.nic_to_use).unwrap() };
         let lkey = unsafe { local_context.get_lkey() };
+
+        crate::log::info!(
+            "MITOSIS RPC thread {} started, listing on gid: {}",
+            arg.id,
+            local_context.get_gid_as_string()
+        );
 
         let server_ud = unsafe {
             crate::ud_factories::get_ref()

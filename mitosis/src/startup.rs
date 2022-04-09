@@ -12,6 +12,8 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     unsafe {
         crate::mac_id::init(config.machine_id);
         crate::max_caller_num::init(config.max_core_cnt);
+        crate::max_nics_used::init(config.num_nics_used); 
+        crate::max_cluster_size::init(config.max_cluster_size);
     };
 
     let timer = KTimer::new();
@@ -81,7 +83,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     // establish an RPC to myself
     for i in 0..config.rpc_threads_num {
         probe_remote_rpc_end(
-            config.machine_id,
+            config.machine_id  + config.max_cluster_size * i,
             unsafe { crate::service_rpc::get_ref() }
                 .get_connect_info(i)
                 .expect("Self RPC handler connection info uninitialized"),
@@ -111,6 +113,7 @@ pub fn end_instance() {
 }
 
 /// calculate the session ID of the remote end handler
+/// FIXME: this calculation is not very precise, need further refinement
 pub fn calculate_session_id(mac_id: usize, thread_id: usize, max_callers: usize) -> usize {
     mac_id * max_callers + thread_id
 }
@@ -140,8 +143,7 @@ pub fn probe_remote_rpc_end(
                     service_id: connect_info.service_id,
                     qd_hint: connect_info.qd_hint,
                 },
-            )
-            .expect("failed to connect the endpoint");
+            )?;
     }
     Some(())
 }

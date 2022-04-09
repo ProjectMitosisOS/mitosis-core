@@ -1,5 +1,8 @@
 use core::panic;
 
+#[allow(unused_imports)]
+use crate::linux_kernel_module;
+
 use crate::{
     bytes::{BytesMut, ToBytes},
     Receiver,
@@ -24,7 +27,8 @@ pub struct Caller<R: Receiver, S: RPCConn> {
 }
 
 impl<R, S: RPCConn> GetTransport for Caller<R, S>
-    where R: Receiver + GetTransport
+where
+    R: Receiver + GetTransport,
 {
     type Transport = R::Transport;
     fn get_transport_mut(&mut self) -> &mut Self::Transport {
@@ -33,10 +37,10 @@ impl<R, S: RPCConn> GetTransport for Caller<R, S>
 }
 
 impl<R, SS> Caller<R, SS>
-    where
-        R: Receiver,
-        SS: RPCConn,
-        SS::ReqPayload: ToBytes,
+where
+    R: Receiver,
+    SS: RPCConn,
+    SS::ReqPayload: ToBytes,
 {
     /// Note, this call should use Future to wait
     pub fn sync_call<Args>(
@@ -45,11 +49,19 @@ impl<R, SS> Caller<R, SS>
         rpc_id: usize,
         arg: Args,
     ) -> Result<(), SS::IOResult> {
-        let (session, msg) = self.connected_sessions.get_mut(&session_id).unwrap();
+        let (session, msg) = self
+            .connected_sessions
+            .get_mut(&session_id)
+            .expect("failed to get session");
         let req_sz = header_factory::CallStubFactory::new(session_id, rpc_id)
             .generate(&arg, msg.get_bytes_mut())
             .unwrap();
         session.post(msg, req_sz, true)
+    }
+
+    pub fn session_connected(&self, session_id: usize) -> bool {
+        // crate::log::info!("check: {:?}", self.connected_sessions.keys());
+        self.connected_sessions.contains_key(&session_id)
     }
 
     /// Note before the connect, one should register_recv_buf for receiving the ack
@@ -67,8 +79,8 @@ impl<R, SS> Caller<R, SS>
         mut s: SS,
         meta: SS::HyperMeta,
     ) -> Result<(), SS::IOResult>
-        where
-            SS::ReqPayload: ToBytes,
+    where
+        SS::ReqPayload: ToBytes,
     {
         let mut msg_buf = SS::ReqPayload::create(R::MTU, 0);
         let req_sz = ConnectStubFactory::new(session_id)
@@ -88,18 +100,15 @@ impl<R, SS> Caller<R, SS>
         Ok(())
     }
 
-    pub fn get_ss(
-        &self,
-        session_id: usize,
-    ) -> Option<&(SS, <SS as RPCConn<SS>>::ReqPayload)> {
+    pub fn get_ss(&self, session_id: usize) -> Option<&(SS, <SS as RPCConn<SS>>::ReqPayload)> {
         self.connected_sessions.get(&session_id)
     }
 }
 
 impl<R, SS> Caller<R, SS>
-    where
-        R: Receiver,
-        SS: RPCConn,
+where
+    R: Receiver,
+    SS: RPCConn,
 {
     pub fn new(inner: R) -> Self {
         Self {
@@ -116,10 +125,10 @@ impl<R, SS> Caller<R, SS>
 use crate::future::*;
 
 impl<R, SS> crate::future::Future for Caller<R, SS>
-    where
-        R: Receiver,
-        SS: RPCConn,
-        R::Output: ToBytes,
+where
+    R: Receiver,
+    SS: RPCConn,
+    R::Output: ToBytes,
 {
     type Output = (R::Output, BytesMut);
     // registered message, the reply

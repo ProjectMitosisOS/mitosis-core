@@ -1,3 +1,4 @@
+use alloc::string::String;
 use core::option::Option;
 
 use crate::descriptors::Descriptor;
@@ -11,10 +12,12 @@ use os_network::timeout::TimeoutWRef;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
+use crate::rpc_service::HandlerConnectInfo;
+use crate::startup::probe_remote_rpc_end;
 
 #[allow(dead_code)]
 struct ResumeDataStruct {
-    key: usize,
+    handler_id: usize,
     descriptor: crate::descriptors::Descriptor,
     access_info: crate::remote_paging::AccessInfo,
 }
@@ -29,14 +32,15 @@ struct CallerData {
 ///  1. handle up parent/child system calls
 ///  2. register the corresponding pagefault handler
 pub struct MitosisSysCallHandler {
-    caller_status: CallerData, // structure to encapsulate caller's status
+    caller_status: CallerData,
+    // structure to encapsulate caller's status
     my_file: *mut crate::bindings::file,
 }
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
         self.caller_status.prepared_key.map(|k| {
-            crate::log::debug!("unregister prepared process {}", k);
+            crate::log::info!("unregister prepared process {}", k);
             let process_service = unsafe { crate::get_sps_mut() };
             process_service.unregister(k);
         });
@@ -65,11 +69,58 @@ impl FileOperations for MitosisSysCallHandler {
     #[allow(non_snake_case)]
     #[inline]
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
+        use crate::bindings::{LibMITOSISCmd, resume_remote_req_t, connect_req_t};
+        use linux_kernel_module::bindings::_copy_from_user;
         match cmd {
-            mitosis_protocol::CALL_NIL => 0, // a nill core do nothing
-            mitosis_protocol::CALL_PREPARE => self.syscall_prepare(arg),
-            mitosis_protocol::CALL_RESUME_LOCAL => self.syscall_local_resume(arg),
-            mitosis_protocol::CALL_RESUME_LOCAL_W_RPC => self.syscall_local_resume_w_rpc(arg),
+            LibMITOSISCmd::Nil => 0, // a nill core do nothing
+            LibMITOSISCmd::Prepare => self.syscall_prepare(arg),
+            LibMITOSISCmd::ResumeLocal => self.syscall_local_resume(arg),
+            LibMITOSISCmd::ResumeRemote => {
+                let mut req: resume_remote_req_t = Default::default();
+                unsafe {
+                    _copy_from_user(
+                        (&mut req as *mut resume_remote_req_t).cast::<c_void>(),
+                        arg as *mut c_void,
+                        core::mem::size_of_val(&req) as u64,
+                    )
+                };
+                let (mac_id, handler_id) = (req.machine_id, req.handler_id);
+                if cfg!(feature = "resume-profile") {
+                    let mut profile = crate::KRdmaKit::Profile::new();
+                    let res = self.syscall_local_resume_w_rpc(mac_id as _, handler_id as _);
+                    profile.tick_record(0);
+                    profile.increase_op(1);
+                    profile.report(1);
+                    res
+                } else {
+                    self.syscall_local_resume_w_rpc(mac_id as _, handler_id as _)
+                }
+            }
+            LibMITOSISCmd::Connect => {
+                let mut req: connect_req_t = Default::default();
+                unsafe {
+                    _copy_from_user(
+                        (&mut req as *mut connect_req_t).cast::<c_void>(),
+                        arg as *mut c_void,
+                        core::mem::size_of_val(&req) as u64,
+                    )
+                };
+
+                let mut addr_buf: [u8; 39] = [0; 39];
+                let addr = {
+                    unsafe {
+                        _copy_from_user(
+                            addr_buf.as_mut_ptr().cast::<c_void>(),
+                            req.gid as *mut c_void,
+                            39,
+                        )
+                    };
+                    // now get addr of GID format
+                    core::str::from_utf8(&addr_buf).unwrap()
+                };
+                let (machine_id, gid, nic_id) = (req.machine_id, String::from(addr), req.nic_id);
+                self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
+            }
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -102,9 +153,11 @@ impl MitosisSysCallHandler {
         }
 
         let process_service = unsafe { crate::get_sps_mut() };
-        
-        // let res = process_service.add_myself_copy(key as _);
-        let res = process_service.add_myself_cow(key as _);        
+        let res = if cfg!(feature = "cow") {
+            process_service.add_myself_cow(key as _)
+        } else {
+            process_service.add_myself_copy(key as _)
+        };
 
         if res.is_some() {
             self.caller_status.prepared_key = Some(key as _);
@@ -114,18 +167,18 @@ impl MitosisSysCallHandler {
     }
 
     #[inline]
-    fn syscall_local_resume(&mut self, key: c_ulong) -> c_long {
+    fn syscall_local_resume(&mut self, handler_id: c_ulong) -> c_long {
         if self.caller_status.resume_related.is_some() {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
         }
 
         let process_service = unsafe { crate::get_sps_mut() };
-        let descriptor = process_service.query_descriptor(key as _);
+        let descriptor = process_service.query_descriptor(handler_id as _);
 
         if descriptor.is_some() {
             self.caller_status.resume_related = Some(ResumeDataStruct {
-                key: key as _,
+                handler_id: handler_id as _,
                 descriptor: descriptor.unwrap().clone(),
                 // access info cannot failed to create
                 access_info: AccessInfo::new(&descriptor.unwrap().machine_info).unwrap(),
@@ -138,34 +191,35 @@ impl MitosisSysCallHandler {
 
     /// This is just a sample test function
     #[inline]
-    fn syscall_local_resume_w_rpc(&mut self, key: c_ulong) -> c_long {
+    fn syscall_local_resume_w_rpc(&mut self,
+                                  machine_id: c_ulong,
+                                  handler_id: c_ulong) -> c_long {
         if self.caller_status.resume_related.is_some() {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
         }
-
+        let cpu_id = crate::get_calling_cpu_id();
         // send an RPC to the remote to query the descriptor address
         let caller = unsafe {
-            crate::rpc_caller_pool::CallerPool::get_global_caller(crate::get_calling_cpu_id())
+            crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
                 .expect("the caller should be properly initialized")
         };
 
         // ourself must have been connected in the startup process
         let remote_session_id = unsafe {
             crate::startup::calculate_session_id(
-                *crate::mac_id::get_ref(),
-                crate::get_calling_cpu_id(),
+                machine_id as _,
+                cpu_id,
                 *crate::max_caller_num::get_ref(),
             )
         };
 
-        let key: usize = key as _;
 
         caller
             .sync_call::<usize>(
                 remote_session_id,
                 crate::rpc_handlers::RPCId::Query as _,
-                key,
+                handler_id as _,
             )
             .unwrap();
 
@@ -206,7 +260,7 @@ impl MitosisSysCallHandler {
                         crate::log::debug!("sanity check: {:?}", des.machine_info);
 
                         let access_info = AccessInfo::new(&des.machine_info);
-                        if access_info.is_none() { 
+                        if access_info.is_none() {
                             crate::log::error!("failed to create access info");
                             return -1;
                         }
@@ -214,7 +268,7 @@ impl MitosisSysCallHandler {
                         des.apply_to(self.my_file);
 
                         self.caller_status.resume_related = Some(ResumeDataStruct {
-                            key: key as _,
+                            handler_id: handler_id as _,
                             descriptor: des,
                             // access info cannot failed to create
                             access_info: access_info.unwrap(),
@@ -231,6 +285,23 @@ impl MitosisSysCallHandler {
                 return -1;
             }
         };
+    }
+
+    #[inline]
+    fn syscall_connect_session(&mut self, machine_id: usize,
+                               gid: &alloc::string::String,
+                               nic_idx: usize) -> c_long {
+        let info = HandlerConnectInfo::create(gid, nic_idx as _, nic_idx as _);
+        match probe_remote_rpc_end(machine_id, info) {
+            Some(_) => {
+                crate::log::debug!("connect to nic {}@{} success", nic_idx, gid);
+                0
+            }
+            _ => { 
+                crate::log::error!("failed to connect {}@{} success", nic_idx, gid);
+                -1
+            }
+        }
     }
 }
 

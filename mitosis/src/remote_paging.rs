@@ -9,7 +9,7 @@ use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-const TIMEOUT_USEC: i64 = 1000; // 1ms
+const TIMEOUT_USEC: i64 = 5000; // 5ms
 
 #[derive(Debug)]
 pub struct AccessInfo {
@@ -129,9 +129,13 @@ impl RemotePagingService {
             Err(e) => {
                 if e.is_elapsed() {
                     // The fallback path? DC cannot distinguish from failures
-                    unimplemented!();
+                    // unimplemented!();
+                    crate::log::error!("fatal, timeout on reading the DC QP"); 
+                    Err(os_network::rdma::Err::Timeout)
+                    //Ok(())
+                } else {
+                    Err(e.into_inner().unwrap())
                 }
-                Err(e.into_inner().unwrap())
             }
         }
     }
