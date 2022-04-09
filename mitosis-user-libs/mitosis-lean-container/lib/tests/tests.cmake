@@ -1,0 +1,1 @@
+add_executable(test_lean_container_template tests/test_lean_container_template.c core/lean_container.c)
