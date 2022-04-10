@@ -105,11 +105,14 @@ impl VMACopyPTGenerator<'_, '_> {
 
         let phy_addr = pmem_get_phy_from_pte(pte);
         if phy_addr > 0 {
-            let copied_page = Copy4KPage::new(addr as _).expect("Fail to copy from user space");
+            // let copied_page = Copy4KPage::new(addr as _).expect("Fail to copy from user space");
             // my.inner_flat.add_one(addr, copied_page.get_physical_addr());
 
+            let copied_page = Copy4KPage::new_as_null();
+            my.inner_flat.add_one(addr, 0);
+            crate::log::debug("add page: {:?} total: {}",copied_page, my.inner_flat.len());
             // the page table is present
-            my.inner.add_page(copied_page);
+            // my.inner.add_page(copied_page);
         }
         0
     }

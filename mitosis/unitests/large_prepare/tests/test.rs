@@ -16,6 +16,7 @@ fn test_large_prepare() {
         let mut vec = Vec::new();
         let MB = 1024 * 1024;
         let prepared_sz = MB * 1024;
+        // let prepared_sz = 8 * MB;
         let entries = prepared_sz / std::mem::size_of::<u64>();
         
         for i in 0..entries { 
