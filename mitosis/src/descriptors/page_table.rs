@@ -22,7 +22,7 @@ unsafe impl hashbrown::raw::Allocator for PageMapAllocator {
                 let raw_ptr = unsafe { crate::bindings::vmalloc(size as u64) } as *mut u8;
                 let ptr = NonNull::new(raw_ptr).expect("vmalloc should not fail");
 
-                crate::log::debug!("check allocate: {:?}, ptr: {:?}", layout,ptr); 
+                // crate::log::debug!("check allocate: {:?}, ptr: {:?}", layout,ptr); 
                 Ok(ptr)
             }
         }

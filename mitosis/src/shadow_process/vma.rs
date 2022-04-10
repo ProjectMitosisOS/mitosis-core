@@ -91,6 +91,8 @@ impl VMACopyPTGenerator<'_, '_> {
 
         let mut engine = VMWalkEngine::new(walk);
         unsafe { engine.walk(self.vma.vma_inner.get_raw_ptr()) };
+
+        // crate::log::debug!("walk done");
     }
 
     #[allow(non_upper_case_globals)]
@@ -105,14 +107,15 @@ impl VMACopyPTGenerator<'_, '_> {
 
         let phy_addr = pmem_get_phy_from_pte(pte);
         if phy_addr > 0 {
-            // let copied_page = Copy4KPage::new(addr as _).expect("Fail to copy from user space");
-            // my.inner_flat.add_one(addr, copied_page.get_physical_addr());
+            let copied_page = Copy4KPage::new(addr as _).expect("Fail to copy from user space");
+            my.inner_flat.add_one(addr, copied_page.get_physical_addr());
 
-            let copied_page = Copy4KPage::new_as_null();
-            my.inner_flat.add_one(addr, 0);
-            crate::log::debug("add page: {:?} total: {}",copied_page, my.inner_flat.len());
+            //let copied_page = Copy4KPage::new_as_null();
+            //my.inner_flat.add_one(addr, 0);
+            // crate::log::debug!("add page: {:?} total: {}",copied_page, my.inner_flat.len());
+
             // the page table is present
-            // my.inner.add_page(copied_page);
+            my.inner.add_page(copied_page);
         }
         0
     }
@@ -163,7 +166,6 @@ impl VMACOWPTGenerator<'_, '_> {
         let phy_addr = pmem_get_phy_from_pte(pte);
         if phy_addr > 0 {
             if my.vma.has_write_permission() { 
-                // crate::log::debug!("clear write permission for addr: 0x{:x}", addr);
                 my.inner.add_page(COW4KPage::new(pmem_pte_to_page(pte)).unwrap());
                 pmem_clear_pte_write(pte);
             }

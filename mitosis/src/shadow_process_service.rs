@@ -24,7 +24,13 @@ struct ProcessBundler {
 
 impl ProcessBundler {
     fn new(process: ShadowProcess, targets: Arc<DCTarget>) -> Self {
+        crate::log::debug!(
+            "before alloc serialization buf sz {}KB",
+            process.get_descriptor_ref().serialization_buf_len() / 1024
+        );
         let mut buf = RMemory::new(process.get_descriptor_ref().serialization_buf_len(), 0);
+        crate::log::debug!("serialization buf allocation done!");
+
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
 
         /*
