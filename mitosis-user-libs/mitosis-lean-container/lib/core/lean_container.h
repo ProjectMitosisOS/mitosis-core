@@ -4,7 +4,7 @@
 struct ContainerSpec {
     // negative value or zero indicates unlimited resources
     int cpu_count;
-    int memory_in_mb;
+    long memory_in_mb;
     int numa_count;
 };
 
@@ -20,7 +20,7 @@ int deinit_cgroup();
 int add_lean_container_template(char* name, struct ContainerSpec* spec);
 int remove_lean_container_template(char* name);
 
-// setup lean container
+// setup lean container, with template name and the rootfs path
 // returns the pid of the containered process in the parent process
 // returns 0 in the containered process
 // return negative value on failure

@@ -33,6 +33,7 @@ char* cgroup_directory_prefix[] = {
 };
 
 char* cpuset_cgroup_directory_prefix = "/sys/fs/cgroup/cpuset/mitosis/%s";
+char* memory_cgroup_directory_prefix = "/sys/fs/cgroup/memory/mitosis/%s";
 
 // ============================== begin utility functions ==============================
 
@@ -168,6 +169,51 @@ int set_cpuset_cgroup(char* name, int cpu_count, int numa_count) {
     return 0;
 }
 
+// a wrapper to write the memory parameter the memory cgroupfs
+int write_memory_limit(char* memory_cgroup_root, long memory_in_bytes) {
+    char buf[BUF_SIZE];
+    char path_buf[BUF_SIZE];
+    size_t len;
+
+    sprintf(buf, "%ld", memory_in_bytes);
+    len = strlen(buf);
+
+    sprintf(path_buf, "%s%s", memory_cgroup_root, "/memory.limit_in_bytes");
+
+    // the following code does these things:
+    // echo 134217728 > /sys/fs/cgroup/.../memory.limit_in_bytes # process is allowed to use 128MB memory
+    int fd = open(path_buf, O_WRONLY);
+    if (fd < 0) {
+        perror("open");
+        return -1;
+    }
+
+    ssize_t ret = write(fd, buf, len);
+    if (ret != len) {
+        fprintf(stderr, "write memory limit %s to %s returns %ld, expected %ld\n", buf, path_buf, ret, len);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+    
+}
+
+// set the memory paramter for the corresponding container template
+int set_memory_cgroup(char* name, long memory_in_mb) {
+    if (memory_in_mb <= 0) {
+        // the default memory settings is the whole available memory
+        return 0;
+    }
+
+    char memory_cgroup_path[BUF_SIZE];
+    sprintf(memory_cgroup_path, memory_cgroup_directory_prefix, name);
+
+    long memory_in_bytes = memory_in_mb * 1024 * 1024;
+    return write_memory_limit(memory_cgroup_path, memory_in_bytes);
+}
+
 // ============================== end utility functions ==============================
 
 int init_cgroup() {
@@ -212,6 +258,7 @@ int add_lean_container_template(char* name, struct ContainerSpec* spec) {
     }
     // TODO: add memory here
     set_cpuset_cgroup(name, spec->cpu_count, spec->numa_count);
+    set_memory_cgroup(name, spec->memory_in_mb);
     return 0;
 }
 

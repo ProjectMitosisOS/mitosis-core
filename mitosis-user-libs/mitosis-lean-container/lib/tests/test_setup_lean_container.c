@@ -12,9 +12,9 @@ int main() {
     int ret;
     pid_t pid;
     
-    // unlimited resources
+    // limit memory to 128MB
     spec.cpu_count = -1;
-    spec.memory_in_mb = -1;
+    spec.memory_in_mb = 128;
     spec.numa_count = -1;
     
     ret = init_cgroup();
@@ -23,6 +23,8 @@ int main() {
     ret = add_lean_container_template(name, &spec);
     assert(ret == 0);
 
+    // setup the lean container of `name`
+    // and the rootfs of the lean container is specified by second parameter
     pid = setup_lean_container(name, ".");
     if (pid < 0) {
         printf("set lean container failed!");
