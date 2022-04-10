@@ -12,4 +12,6 @@ int deinit_cgroup();
 int add_lean_container_template(char* name, struct ContainerSpec* spec);
 int remove_lean_container_template(char* name);
 
+int setup_lean_container(char* name, char* rootfs_path);
+
 #endif
