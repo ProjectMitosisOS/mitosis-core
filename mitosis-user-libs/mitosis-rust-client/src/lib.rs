@@ -41,8 +41,8 @@ impl MClient {
     ///
     /// Return
     /// * the handler ID
-    pub fn prepare(&mut self, _key: u64) -> crate::nix::Result<crate::libc::c_int> {
-        unimplemented!();
+    pub fn prepare(&mut self, key: u64) -> crate::nix::Result<crate::libc::c_int> {
+        unsafe { mitosis_syscall_prepare(self.fd, key as _) }
     }
 
     /// Connect the local MITOSIS daemon to a host

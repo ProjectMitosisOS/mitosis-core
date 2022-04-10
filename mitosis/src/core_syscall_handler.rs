@@ -161,6 +161,7 @@ impl MitosisSysCallHandler {
 
         if res.is_some() {
             self.caller_status.prepared_key = Some(key as _);
+            crate::log::info!("prepared buf sz {}KB", res.unwrap() / 1024);
             return 0;
         }
         return -1;

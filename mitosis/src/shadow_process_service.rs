@@ -33,7 +33,7 @@ impl ProcessBundler {
         crate::log::debug!("post-check desc info {:?}", desc.machine_info);
         */
 
-        crate::log::debug!("Process bundle descriptor len: {}", buf.len());
+        // crate::log::debug!("Process bundle descriptor len: {}", buf.len());
 
         let mut bound_targets = Vec::new();
         bound_targets.push(targets);
@@ -43,6 +43,10 @@ impl ProcessBundler {
             serialized_buf: buf,
             bound_dc_targets: bound_targets,
         }
+    }
+
+    fn get_serialize_buf_sz(&self) -> usize {
+        self.serialized_buf.len()
     }
 }
 
@@ -72,7 +76,9 @@ impl ShadowProcessService {
             .map(|s| s.process.get_descriptor_ref())
     }
 
-    pub fn add_myself_copy(&mut self, key: usize) -> core::option::Option<()> {
+    /// # Return
+    /// * The size of the serialization buffer
+    pub fn add_myself_copy(&mut self, key: usize) -> core::option::Option<usize> {
         if self.registered_processes.contains_key(&key) {
             crate::log::warn!(
                 "Failed to prepare: the register key {} has already been taken. ",
@@ -83,18 +89,20 @@ impl ShadowProcessService {
 
         let (target, descriptor) = RDMADescriptor::new_from_dc_target_pool()?;
 
-        self.registered_processes.insert(
-            key,
-            ProcessBundler::new(
-                crate::shadow_process::ShadowProcess::new_copy(descriptor),
-                target,
-            ),
+        let bundler = ProcessBundler::new(
+            crate::shadow_process::ShadowProcess::new_copy(descriptor),
+            target,
         );
+        let ret = bundler.get_serialize_buf_sz();
 
-        return Some(());
+        self.registered_processes.insert(key, bundler);
+
+        return Some(ret);
     }
 
-    pub fn add_myself_cow(&mut self, key: usize) -> core::option::Option<()> {
+    /// # Return
+    /// * The size of the serialization buffer    
+    pub fn add_myself_cow(&mut self, key: usize) -> core::option::Option<usize> {
         if self.registered_processes.contains_key(&key) {
             crate::log::warn!(
                 "Failed to prepare: the register key {} has already been taken. ",
@@ -105,16 +113,16 @@ impl ShadowProcessService {
 
         let (target, descriptor) = RDMADescriptor::new_from_dc_target_pool()?;
 
-        self.registered_processes.insert(
-            key,
-            ProcessBundler::new(
-                crate::shadow_process::ShadowProcess::new_cow(descriptor),
-                target,
-            ),
-        );        
+        let bundler = ProcessBundler::new(
+            crate::shadow_process::ShadowProcess::new_cow(descriptor),
+            target,
+        );
+        let ret = bundler.get_serialize_buf_sz();
 
-        return Some(());
-    }    
+        self.registered_processes.insert(key, bundler);
+
+        return Some(ret);
+    }
 
     pub fn unregister(&mut self, key: usize) {
         self.registered_processes.remove(&key);
