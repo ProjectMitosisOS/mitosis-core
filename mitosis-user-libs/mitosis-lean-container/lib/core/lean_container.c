@@ -203,7 +203,7 @@ int write_memory_limit(char* memory_cgroup_root, long memory_in_bytes) {
 // set the memory paramter for the corresponding container template
 int set_memory_cgroup(char* name, long memory_in_mb) {
     if (memory_in_mb <= 0) {
-        // the default memory settings is the whole available memory
+        // the default memory setting is the whole available memory
         return 0;
     }
 
@@ -248,6 +248,7 @@ int deinit_cgroup() {
 int add_lean_container_template(char* name, struct ContainerSpec* spec) {
     char buf[BUF_SIZE];
     int ret;
+
     for (char** cgroup = cgroup_directory_prefix; *cgroup != NULL; cgroup++) {
         sprintf(buf, *cgroup, name);
         ret = mkdir(buf, DEFAULT_PERMISSION);
@@ -256,7 +257,7 @@ int add_lean_container_template(char* name, struct ContainerSpec* spec) {
             return -1;
         }
     }
-    // TODO: add memory here
+
     set_cpuset_cgroup(name, spec->cpu_count, spec->numa_count);
     set_memory_cgroup(name, spec->memory_in_mb);
     return 0;
@@ -311,12 +312,13 @@ int setup_lean_container(char* name, char* rootfs_path) {
         }
         
         // write a sign to the pipe fd to inform the child process to run
+        // the child process must not run before the cgroup has been setup
         write(pipefd[1], &sign, sizeof(sign));
         close(pipefd[0]);
         close(pipefd[1]);
         return pid;
     } else {
-        // child process
+        // child process must wait for the parent to setup cgroup
         char sign;
         read(pipefd[0], &sign, sizeof(sign));
         close(pipefd[0]);
