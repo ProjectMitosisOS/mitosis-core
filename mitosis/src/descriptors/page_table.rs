@@ -1,19 +1,46 @@
+use core::ptr::NonNull;
+use core::alloc::Layout;
+
 use crate::{
-    kern_wrappers::mm::{PhyAddrType, VirtAddrType},
+    kern_wrappers::{mm::{PhyAddrType, VirtAddrType}, page::Page},
     linux_kernel_module,
 };
 
-use hashbrown::HashMap;
+use hashbrown::{hash_map::DefaultHashBuilder, HashMap};
 
 use os_network::bytes::BytesMut;
 
+#[derive(Clone, Default)]
+pub struct PageMapAllocator;
+
+unsafe impl hashbrown::raw::Allocator for PageMapAllocator {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<u8>, ()> {
+        match layout.size() {
+            0 => Ok(layout.dangling()),
+            // SAFETY: `layout` is non-zero in size,
+            size => {
+                let raw_ptr = unsafe { crate::bindings::vmalloc(size as u64) } as *mut u8;
+                let ptr = NonNull::new(raw_ptr).expect("vmalloc should not fail");
+                Ok(ptr)
+            }
+        }
+    }
+
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, _layout: Layout) {
+        crate::bindings::vfree(ptr.as_ptr() as *const linux_kernel_module::c_types::c_void);
+    }
+}
+
+type PageMap = HashMap<VirtAddrType, PhyAddrType, DefaultHashBuilder, PageMapAllocator>;
+
 /// Record the mapping between the va and remote pa of a process
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
-pub struct FlatPageTable(pub HashMap<VirtAddrType, PhyAddrType>);
+pub struct FlatPageTable(pub PageMap);
 
 impl FlatPageTable {
     pub fn new() -> Self {
-        Self(HashMap::new())
+        let res : PageMap = Default::default();
+        Self(res)
     }
 
     pub fn add_one(&mut self, v: VirtAddrType, p: PhyAddrType) -> &mut Self {
@@ -55,7 +82,7 @@ impl os_network::serialize::Serialize for FlatPageTable {
     }
 
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
-        let mut res = HashMap::new();
+        let mut res : PageMap = Default::default();
         let mut count: usize = 0;
         let off = unsafe { bytes.memcpy_deserialize(&mut count)? };
 
