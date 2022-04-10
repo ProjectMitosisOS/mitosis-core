@@ -40,6 +40,16 @@ int main() {
         return 0;
     }
 
+    ret = pause_container(name);
+    if (ret != 0) {
+        printf("unable to pause container");
+    }
+
+    ret = unpause_container(name);
+    if (ret != 0) {
+        printf("unable to unpause container");
+    }
+
     pid_t child = waitpid(-1, NULL, 0);
     if (child != pid) {
         printf("child pid: %d, expected: %d\n", child, pid);

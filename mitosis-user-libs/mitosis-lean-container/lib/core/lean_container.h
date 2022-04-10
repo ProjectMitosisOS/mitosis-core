@@ -26,4 +26,9 @@ int remove_lean_container_template(char* name);
 // return negative value on failure
 int setup_lean_container(char* name, char* rootfs_path);
 
+// pause/unpause the corresponding container
+// returns 0 on success
+int pause_container(char* name);
+int unpause_container(char* name);
+
 #endif

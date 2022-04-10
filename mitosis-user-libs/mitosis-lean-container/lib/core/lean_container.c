@@ -34,6 +34,7 @@ char* cgroup_directory_prefix[] = {
 
 char* cpuset_cgroup_directory_prefix = "/sys/fs/cgroup/cpuset/mitosis/%s";
 char* memory_cgroup_directory_prefix = "/sys/fs/cgroup/memory/mitosis/%s";
+char* freezer_cgroup_directory_prefix = "/sys/fs/cgroup/freezer/mitosis/%s";
 
 // ============================== begin utility functions ==============================
 
@@ -330,4 +331,58 @@ err:
     close(pipefd[0]);
     close(pipefd[1]);
     return -1;
+}
+
+int pause_container(char* name) {
+    char buf[BUF_SIZE];
+    char freezer_state[BUF_SIZE];
+    char* frozen = "FROZEN";
+    size_t len = strlen(frozen);
+
+    sprintf(buf, freezer_cgroup_directory_prefix, name);
+    sprintf(freezer_state, "%s%s", buf, "/freezer.state");
+
+    int fd = open(freezer_state, O_WRONLY);
+    if (fd < 0) {
+        perror("open");
+        return -1;
+    }
+
+    // freeze the container
+    ssize_t ret = write(fd, frozen, len);
+    if (ret != len) {
+        printf("fail to write %s to %s: return %ld, expected %ld\n", frozen, freezer_state, ret, len);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
+
+int unpause_container(char* name) {
+    char buf[BUF_SIZE];
+    char freezer_state[BUF_SIZE];
+    char* thawed = "THAWED";
+    size_t len = strlen(thawed);
+
+    sprintf(buf, freezer_cgroup_directory_prefix, name);
+    sprintf(freezer_state, "%s%s", buf, "/freezer.state");
+
+    int fd = open(freezer_state, O_WRONLY);
+    if (fd < 0) {
+        perror("open");
+        return -1;
+    }
+
+    // unfreeze the container
+    ssize_t ret = write(fd, thawed, len);
+    if (ret != len) {
+        printf("fail to write %s to %s: return %ld, expected %ld\n", thawed, freezer_state, ret, len);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
 }
