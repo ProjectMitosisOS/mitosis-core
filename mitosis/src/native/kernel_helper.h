@@ -80,6 +80,10 @@ pmem_alloc_page(gfp_t gfp_mask);
 void
 pmem_free_page(struct page* p);
 
+
+int
+pmem_vm_insert_page(struct vm_area_struct *vma, unsigned long addr,
+                    struct page *page);
 u64
 pmem_page_to_phy(struct page* page);
 
@@ -89,6 +93,8 @@ pmem_page_to_virt(struct page* page);
 void*
 pmem_phys_to_virt(u64 p);
 
+unsigned int
+pmem_filemap_fault(struct vm_fault *vmf);
 /*
  Page protection flags
  */
@@ -106,6 +112,9 @@ const unsigned long PMEM_VM_WRITE = VM_WRITE;
 const unsigned long PMEM_VM_EXEC = VM_EXEC;
 const unsigned long PMEM_VM_SHARED = VM_SHARED;
 const unsigned long PMEM_VM_DONTEXPAND = VM_DONTEXPAND;
+const unsigned long PMEM_VM_MAYREAD = VM_MAYREAD;
+const unsigned long PMEM_VM_MAYWRITE = VM_MAYWRITE;
+const unsigned long PMEM_VM_MIXEDMAP = VM_MIXEDMAP;
 
 /*
  MMap flags
@@ -144,5 +153,30 @@ unsigned int pmem_get_cpu_count(void);
 unsigned int pmem_get_current_cpu(void);
 unsigned int pmem_get_cpu(void);
 unsigned int pmem_put_cpu(void);
+
+/*
+ file related
+ */
+
+void pmem_get_file(struct file *f);
+
+void pmem_put_file(struct file *f);
+
+
+/*
+ page related 
+ */
+void pmem_get_page(struct page *page);
+void pmem_put_page(struct page *page);
+
+void pmem_page_dup_rmap(struct page *page, bool compound);
+
+void pmem_page_free_rmap(struct page *page, bool compound);
+
+void
+pmem_clear_pte_write(pte_t* pte);
+
+struct page *
+pmem_pte_to_page(pte_t *pte);
 
 #endif

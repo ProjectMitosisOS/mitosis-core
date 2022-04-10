@@ -96,14 +96,13 @@ impl MemoryDescriptor {
 ///     ... s
 /// }
 /// ```
-pub struct VMAIter<'a> {
-    _outer: &'a MemoryDescriptor,
+pub struct VMAIter {
     cur: *mut vm_area_struct,
 }
 
 // uses an iterator to simplfiy memory range traversal
-impl<'a> Iterator for VMAIter<'a> {
-    type Item = VMA<'a>;
+impl Iterator for VMAIter {
+    type Item = VMA<'static>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.cur == core::ptr::null_mut() {
@@ -111,15 +110,14 @@ impl<'a> Iterator for VMAIter<'a> {
         } else {
             let res = self.cur;
             self.cur = unsafe { (*res).vm_next };
-            unsafe { Some(VMA::new(&(*res))) }
+            unsafe { Some(VMA::new(&mut (*res))) }
         }
     }
 }
 
-impl<'a> VMAIter<'a> {
-    pub fn new(m: &'a MemoryDescriptor) -> Self {
+impl VMAIter {
+    pub fn new(m: &MemoryDescriptor) -> Self {
         Self {
-            _outer: m,
             cur: m.mm_inner.mmap,
         }
     }

@@ -44,4 +44,10 @@ fn test_timeout() {
 
     let delay = timeout_dummy.get_cur_delay_usec();
     assert!(delay >= 1000000);
+
+    // test timeout with reference 
+    let mut dummy = timeout_dummy.into_inner();
+    let mut dummy_timeout = TimeoutWRef::new(&mut dummy, 400);
+    let res = block_on(&mut dummy_timeout);
+    log::info!("check result again: {:?}", res);    
 }

@@ -2,7 +2,14 @@ use std::env;
 use std::path::PathBuf;
 
 // types from customized syscalls
-const INCLUDED_TYPES : &[&str] = &[];
+const INCLUDED_ENUMS: &[&str] = &[
+    "LibMITOSISCmd"
+];
+
+const INCLUDED_TYPES: &[&str] = &[
+    "connect_req_t",
+    "resume_remote_req_t"
+];
 
 // types from kernel
 const INCLUDED_KERNEL_TYPES: &[&str] = &[
@@ -28,12 +35,15 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     "pmem_flush_tlb_mm",
     "pmem_flush_tlb_all",
     "pmem_clear_pte_present",
+    "pmem_clear_pte_write",
+    "pmem_pte_to_page",
     "find_vma",
     "pmem_alloc_page",
     "pmem_free_page",
     "pmem_page_to_phy",
     "pmem_page_to_virt",
     "pmem_phys_to_virt",
+    "pmem_vm_insert_page",
     "memcpy",
     // mmap related
     "pmem_do_munmap",
@@ -51,10 +61,19 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     "pmem_get_current_cpu",
     "pmem_get_cpu",
     "pmem_put_cpu",
+    "pmem_filemap_fault",
+    "pmem_get_file",
+    "pmem_put_file",
     "schedule",
     // vmalloc, vfree
     "vmalloc",
     "vfree",
+
+    // page related
+    "pmem_get_page",
+    "pmem_put_page",
+    "pmem_page_dup_rmap",
+    "pmem_page_free_rmap",
 ];
 
 const INCLUDED_VARS: &[&str] = &[
@@ -66,10 +85,13 @@ const INCLUDED_VARS: &[&str] = &[
     "PMEM_VM_STACK",
     "PMEM_VM_READ",
     "PMEM_VM_WRITE",
+    "PMEM_VM_MAYREAD",
+    "PMEM_VM_MAYWRITE",
     "PMEM_VM_EXEC",
     "PMEM_VM_SHARED",
     "PMEM_VM_STACK",
     "PMEM_VM_DONTEXPAND",
+    "PMEM_VM_MIXEDMAP",
     "PMEM_PROT_READ",
     "PMEM_PROT_WRITE",
     "PMEM_PROT_EXEC",
@@ -142,8 +164,15 @@ fn main() {
         .header("src/native/kernel_helper.h")
         .whitelist_function("pmem_*");
 
+    println!("cargo:rerun-if-changed=../mitosis-user-libs/mitosis-c-client/include/common.h");
+    builder = builder.header("../mitosis-user-libs/mitosis-c-client/include/common.h");
     // non-rust translatable type
     builder = builder.opaque_type("xregs_state");
+
+    for t in INCLUDED_ENUMS {
+        builder = builder.whitelist_type(t);
+        builder = builder.constified_enum_module(t);
+    }
 
     for t in INCLUDED_TYPES {
         builder = builder.whitelist_type(t);

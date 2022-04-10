@@ -197,6 +197,14 @@ pmem_free_page(struct page* p)
   return __free_page(p);
 }
 
+int
+pmem_vm_insert_page(struct vm_area_struct *vma, unsigned long addr,
+                    struct page *page)
+{
+    return vm_insert_page(vma, addr, page);
+}
+
+
 u64
 pmem_page_to_phy(struct page* page)
 {
@@ -238,4 +246,58 @@ pmem_put_cpu(void)
 {
   put_cpu();
   return 0;
+}
+
+unsigned int
+pmem_filemap_fault(struct vm_fault *vmf){
+    return filemap_fault(vmf);
+}
+
+
+// file related 
+#include <linux/file.h>
+
+void pmem_get_file(struct file *f) {
+  get_file(f);
+}
+
+void pmem_put_file(struct file *f) {
+  fput(f);
+}
+
+static inline void page_free_rmap(struct page *page, bool compound)
+{
+    atomic_dec(compound ? compound_mapcount_ptr(page) : &page->_mapcount);
+}
+
+static inline void page_dup_rmap(struct page *page, bool compound)
+{
+    atomic_inc(compound ? compound_mapcount_ptr(page) : &page->_mapcount);
+}
+
+void pmem_page_dup_rmap(struct page *page, bool compound) {
+  page_dup_rmap(page, compound);
+}
+
+void pmem_page_free_rmap(struct page *page, bool compound) {
+  page_free_rmap(page, compound);
+}
+
+void pmem_get_page(struct page *page) {
+  return get_page(page);
+}
+
+void pmem_put_page(struct page *page) {
+  return put_page(page);
+}
+
+void pmem_clear_pte_write(pte_t *pte) {
+  pte_t temp_pte;
+  temp_pte = pte_clear_flags(*pte, _PAGE_RW);
+  set_pte(pte, temp_pte);
+}
+
+struct page *
+pmem_pte_to_page(pte_t *pte) {
+  return pte_page(*pte);
 }

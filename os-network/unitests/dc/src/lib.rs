@@ -19,7 +19,7 @@ use rust_kernel_linux_util as log;
 use os_network::block_on;
 use os_network::bytes::BytesMut;
 use os_network::conn::Factory;
-use os_network::rdma::payload;
+use os_network::rdma::{payload, IBAddressHandlerMeta};
 use os_network::timeout::Timeout;
 use os_network::{rdma, Conn};
 
@@ -102,7 +102,7 @@ fn test_dc_one_sided() {
     // Initialize the remote memory
     write!(&mut remote_bytes, "hello world from remote").unwrap();
 
-    // Perform a remote read
+    // Perform a remote write
     let mut payload = DCReqPayload::default()
         .set_laddr(local.get_pa(0))
         .set_raddr(remote.get_pa(0))
@@ -141,7 +141,133 @@ fn test_dc_one_sided() {
     }
 }
 
-#[krdma_test(test_dc_factory, test_dc_one_sided)]
+fn test_dc_target() {
+    let timeout_usec = 5000000;
+    let driver = unsafe { KDRIVER::get_ref() };
+
+    // Prepare for server side RCtrl
+    let server_ctx = driver
+        .devices()
+        .into_iter()
+        .next()
+        .expect("no rdma device available")
+        .open()
+        .unwrap();
+
+    // create the target
+    let server_factory = rdma::dc::DCFactory::new(&server_ctx);
+    let target = server_factory
+        .create_target(0xdeadbeaf)
+        .expect("failed to create DC target");
+
+    // Create the dc qp
+    let client_ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    let client_factory = rdma::dc::DCFactory::new(&client_ctx);
+
+    let ah_meta = IBAddressHandlerMeta::new(&server_ctx);
+    log::debug!("check ah meta: {:?}", ah_meta);
+
+    let ah0 = IBAddressHandlerMeta::create_ah(&client_ctx, ah_meta)
+        .expect("failed to create the ah using client ctx");
+    log::debug!("check created ah {:?}", ah0);
+
+    let ah1 = IBAddressHandlerMeta::create_ah(&server_ctx, ah_meta)
+        .expect("failed to create the ah using server ctx");    
+
+    // Prepare memory regions
+    let mut local = RMemPhy::new(MEM_SIZE);
+    let local_bytes = unsafe { BytesMut::from_raw(local.get_ptr() as _, local.get_sz() as usize) };
+    let mut remote = RMemPhy::new(MEM_SIZE);
+    let mut remote_bytes =
+        unsafe { BytesMut::from_raw(remote.get_ptr() as _, remote.get_sz() as usize) };
+
+    // Initialize the remote memory
+    write!(&mut remote_bytes, "hello world from remote").unwrap();
+
+    // now check the send
+    let mut dc = client_factory.create(()).unwrap();
+
+    // Perform a remote read
+    let mut payload = unsafe {
+        DCReqPayload::default()
+            .set_laddr(local.get_pa(0))
+            .set_raddr(remote.get_pa(0))
+            .set_sz(MEM_SIZE)
+            .set_lkey(client_ctx.get_lkey())
+            .set_rkey(server_ctx.get_rkey())
+            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
+            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
+            .set_ah_ptr(ah0.get_inner())
+            .set_dc_access_key(target.get_dc_key() as _)
+            .set_dc_num(target.get_dct_num())
+    };
+
+    // pin the payload to set the sge_ptr properly.
+    let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
+    os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+
+    let res = dc.post(&payload.as_ref());
+    if res.is_err() {
+        log::error!("unable to post read qp");
+        return;
+    }
+
+    let mut timeout = Timeout::new(dc, timeout_usec);
+    let result = block_on(&mut timeout);
+    if result.is_err() {
+        log::error!("polling dc qp with error");
+        return;
+    }
+    compiler_fence(SeqCst);
+
+    // Memory regions should be the same after the operations
+    if local_bytes == remote_bytes {
+        log::info!("equal after dc read operation with target!");
+    } else {
+        log::error!("not equal after dc read operation!");
+        log::info!("local {:?}", local_bytes);
+        log::info!("remote {:?}", remote_bytes);
+    }
+
+
+    // test using another ah
+   // now check the send
+    let mut dc = timeout.into_inner();
+
+    // Perform a remote read
+    let mut payload = unsafe {
+        DCReqPayload::default()
+            .set_laddr(local.get_pa(0))
+            .set_raddr(remote.get_pa(0))
+            .set_sz(MEM_SIZE)
+            .set_lkey(client_ctx.get_lkey())
+            .set_rkey(server_ctx.get_rkey())
+            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
+            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
+            .set_ah_ptr(ah1.get_inner())
+            .set_dc_access_key(target.get_dc_key() as _)
+            .set_dc_num(target.get_dct_num())
+    };
+
+    // pin the payload to set the sge_ptr properly.
+    let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
+    os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+
+    let res = dc.post(&payload.as_ref());
+    if res.is_err() {
+        log::error!("unable to post read qp");
+        return;
+    }
+
+    let mut timeout = Timeout::new(dc, timeout_usec);
+    let result = block_on(&mut timeout);
+    if result.is_err() {
+        log::error!("polling dc qp with error");
+        return;
+    }    
+}
+
+#[krdma_test(test_dc_factory, test_dc_one_sided, test_dc_target)]
 fn ctx_init() {
     unsafe {
         KDRIVER::init(KDriver::create().unwrap());

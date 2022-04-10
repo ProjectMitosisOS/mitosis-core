@@ -21,15 +21,16 @@ pub mod vma;
 
 pub use vma::*;
 
-pub mod factory;
-
-pub use factory::DescriptorFactoryService;
+// pub mod factory;
+// pub use factory::DescriptorFactoryService;
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
+use crate::kern_wrappers::task::Task;
+use crate::remote_paging::AccessInfo;
 
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
 #[allow(dead_code)]
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Descriptor {
     pub regs: RegDescriptor,
     pub page_table: FlatPageTable,
@@ -52,6 +53,70 @@ impl Descriptor {
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
         self.page_table.get(virt)
     }
+
+    /// Apply the descriptor into current process
+    #[inline]
+    pub fn apply_to(&self, file: *mut crate::bindings::file) {
+        let mut task = Task::new();
+        // 1. Unmap origin vma regions
+        task.unmap_self();
+        let access_info = AccessInfo::new(&self.machine_info).unwrap();
+
+        // 2. Map new vma regions
+        (&self.vma).into_iter().for_each(|m| {
+            let vma = unsafe { task.map_one_region(file, m) };
+            if cfg!(feature = "eager-resume") && vma.is_some() {
+                let vma = vma.unwrap();
+                let (size, start) = (m.get_sz(), m.get_start());
+                for addr in (start..start + size).step_by(4096) {
+                    if let Some(new_page_p) =
+                        unsafe { self.read_remote_page(addr, &access_info) }
+                    {
+                        // FIXME: 52 is hard-coded
+                        vma.vm_page_prot.pgprot =
+                            vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
+                        let _ =
+                            unsafe { crate::bindings::pmem_vm_insert_page(vma, addr, new_page_p) };
+                    }
+                }
+            }
+        });
+        // 3. Re-set states
+        task.set_mm_reg_states(&self.regs);
+    }
+}
+
+impl Descriptor {
+    /// Resume one page at remote side
+    ///
+    /// @param remote_va: remote virt-addr
+    /// @param access_info: remote network meta info
+    #[inline]
+    pub unsafe fn read_remote_page(
+        &self,
+        remote_va: VirtAddrType,
+        access_info: &AccessInfo,
+    ) -> Option<*mut crate::bindings::page> {
+        let remote_pa = self.lookup_pg_table(remote_va);
+        if remote_pa.is_none() {
+            return None;
+        }
+        let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
+        let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
+        let res = crate::remote_paging::RemotePagingService::remote_read(
+            new_page_pa,
+            remote_pa.unwrap(),
+            4096,
+            access_info,
+        );
+        return match res {
+            Ok(_) => Some(new_page_p),
+            Err(e) => {
+                crate::log::error!("Failed to read the remote page {:?}", e);
+                None
+            }
+        };
+    }
 }
 
 impl os_network::serialize::Serialize for Descriptor {
@@ -62,8 +127,11 @@ impl os_network::serialize::Serialize for Descriptor {
     /// ```
     fn serialize(&self, bytes: &mut BytesMut) -> bool {
         if bytes.len() < self.serialization_buf_len() {
-            crate::log::error!("failed to serialize: buffer space not enough. Need {}, actual {}",
-                self.serialization_buf_len(), bytes.len());
+            crate::log::error!(
+                "failed to serialize: buffer space not enough. Need {}, actual {}",
+                self.serialization_buf_len(),
+                bytes.len()
+            );
             return false;
         }
 

@@ -54,10 +54,13 @@ impl<'a> VMADumpIter<'a> {
             crate::log::warn!("Duplicated page table entry for addr {:x}", addr);
         }
 
-        // TODO: if the physical address is 0, do we need to serialize it?
-        engine
-            .flat_page_table
-            .add_one(addr, pmem_get_phy_from_pte(pte));
+        let phy_addr = pmem_get_phy_from_pte(pte);
+        // Filter out empty PTEs
+        if core::intrinsics::likely(phy_addr > 0) {
+            engine
+                .flat_page_table
+                .add_one(addr, phy_addr);
+        }
         engine.count += 1;
         0
     }
@@ -136,7 +139,7 @@ impl VMATraverseIter {
 
 /// A simple wrapper for helping walking through the page tables
 #[derive(Debug)]
-struct VMWalkEngine {
+pub(crate) struct VMWalkEngine {
     walk_callbacks: mm_walk,
 }
 

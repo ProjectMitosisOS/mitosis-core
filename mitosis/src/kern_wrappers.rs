@@ -9,6 +9,7 @@ pub mod mm;
 pub mod task;
 pub mod vma;
 pub mod vma_iters;
+pub mod page;
 
 /// TODO: still don't know how this struct is used for
 pub struct Process {
@@ -38,11 +39,13 @@ impl Process {
     }
 }
 
-impl Process { 
+impl Process {
+    #[inline]
     pub fn get_memory_descriptor(&self) -> &mm::MemoryDescriptor { 
         &self.memory
     }
 
+    #[inline]
     pub fn get_task(&self) -> &task::Task { 
         &self.task
     }

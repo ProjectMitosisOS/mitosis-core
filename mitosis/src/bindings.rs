@@ -110,9 +110,12 @@ bitflags::bitflags! {
     pub struct VMFlags: crate::linux_kernel_module::c_types::c_ulong {
         const READ = PMEM_VM_READ;
         const WRITE = PMEM_VM_WRITE;
+        const MAY_WRITE = PMEM_VM_MAYWRITE;
         const EXEC  = PMEM_VM_EXEC;
         const STACK = PMEM_VM_STACK;
+        const SHARED =  PMEM_VM_SHARED;
         const DONTEXPAND = PMEM_VM_DONTEXPAND;
+        const MIXEDMAP = PMEM_VM_MIXEDMAP;
     }
 }
 

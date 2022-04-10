@@ -12,19 +12,29 @@ use my_syscall::MySyscallHandler;
 
 #[allow(dead_code)]
 struct Module {
-    service : SysCallsService<MySyscallHandler>,
+    service: SysCallsService<MySyscallHandler>,
 }
 
 impl linux_kernel_module::KernelModule for Module {
     fn init() -> linux_kernel_module::KernelResult<Self> {
-        Ok(Self { 
-            service : SysCallsService::<MySyscallHandler>::new()?
+        let mut config: mitosis::Config = Default::default();
+        config
+            .set_num_nics_used(1)
+            .set_rpc_threads(1)
+            .set_max_core_cnt(1)
+            .set_init_dc_targets(2);
+            
+        mitosis::startup::start_instance(config);
+
+        Ok(Self {
+            service: SysCallsService::<MySyscallHandler>::new()?,
         })
     }
 }
 
 impl Drop for Module {
     fn drop(&mut self) {
+        mitosis::startup::end_instance();
         log::info!("drop System call modules")
     }
 }
