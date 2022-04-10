@@ -7,8 +7,11 @@ int main() {
     char* name = "test";
     struct ContainerSpec spec;
     int ret;
+
+    // unlimited resources
     spec.cpu_count = -1;
     spec.memory_in_mb = -1;
+    spec.numa_count = -1;
     
     ret = init_cgroup();
     assert(ret == 0);

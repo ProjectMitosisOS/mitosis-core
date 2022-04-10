@@ -13,6 +13,10 @@
 #define BUF_SIZE 256
 #define DEFAULT_PERMISSION S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH
 
+// TODO: dynamicly assign these values
+#define DEFAULT_NUMA_COUNT 2
+#define DEFAULT_CPU_COUNT 48
+
 char* cgroup_directory_prefix[] = {
     "/sys/fs/cgroup/hugetlb/mitosis/%s",
     "/sys/fs/cgroup/perf_event/mitosis/%s",
@@ -28,12 +32,18 @@ char* cgroup_directory_prefix[] = {
     NULL,
 };
 
+char* cpuset_cgroup_directory_prefix = "/sys/fs/cgroup/cpuset/mitosis/%s";
+
+// ============================== begin utility functions ==============================
+
+// writing pid to cgroup.procs under the cgroup directory will add the process to a cgroup
 void cgroup_file_name(char* buf, const char* prefix, const char* name) {
     char path_buf[BUF_SIZE];
     sprintf(path_buf, prefix, name);
     sprintf(buf, "%s%s", path_buf, "/cgroup.procs");
 }
 
+// a wrapper to write pid to cgroupfs
 int write_pid(pid_t pid, const char* cgroupfs_path) {
     char buf[BUF_SIZE];
     sprintf(buf, "%d", pid);
@@ -56,6 +66,110 @@ int write_pid(pid_t pid, const char* cgroupfs_path) {
     return 0;
 }
 
+// allow the process to run on numa node(s)
+int set_numa_cpuset(char* cpuset_root, int numa_count) {
+    char path_buf[BUF_SIZE];
+    sprintf(path_buf, "%s%s", cpuset_root, "/cpuset.mems");
+    
+    // the following code does these things:
+    // echo 0-0 > /sys/fs/cgroup/.../cpuset.mems # process is allowed to run on numa node 0
+    // echo 0-1 > /sys/fs/cgroup/.../cpuset.mems # process is allowed to run on numa node 0 and 1
+    int fd = open(path_buf, O_WRONLY);
+    if (fd < 0) {
+        perror("open");
+        return -1;
+    }
+
+    // TODO: how to choose the numa node?
+    // TODO: error handling
+    char numa_buf[BUF_SIZE];
+    sprintf(numa_buf, "0-%d", numa_count-1);
+    size_t len = strlen(numa_buf);
+    ssize_t ret = write(fd, numa_buf, len);
+    if (ret != len) {
+        fprintf(stderr, "write numa id %s to %s returns %ld, expected %ld\n", numa_buf, path_buf, ret, len);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
+
+// allow the process to run on cpu(s)
+int set_cpu_number_cpuset(char* cpuset_root, int cpu_count) {
+    char path_buf[BUF_SIZE];
+    sprintf(path_buf, "%s%s", cpuset_root, "/cpuset.cpus");
+
+    // the following code does these things:
+    // echo 0-0 > /sys/fs/cgroup/.../cpuset.cpus # process is allowed to run on cpu 0
+    // echo 0-1 > /sys/fs/cgroup/.../cpuset.cpus # process is allowed to run on cpu 0 and 1
+    int fd = open(path_buf, O_WRONLY);
+    if (fd < 0) {
+        perror("open");
+        return -1;
+    }
+
+    // TODO: how to choose the cpu?
+    // TODO: error handling
+    char cpuset_buf[BUF_SIZE];
+    sprintf(cpuset_buf, "0-%d", cpu_count-1);
+    size_t len = strlen(cpuset_buf);
+    ssize_t ret = write(fd, cpuset_buf, len);
+    if (ret != len) {
+        fprintf(stderr, "write cpu id %s to %s returns %ld, expected %ld\n", cpuset_buf, path_buf, ret, len);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
+
+// set the root cpuset, allocate all the resources
+int set_mitosis_root_cpuset() {
+    int ret;
+    char mitosis_root_cpuset_path[BUF_SIZE];
+    sprintf(mitosis_root_cpuset_path, cpuset_cgroup_directory_prefix, "");
+
+    ret = set_numa_cpuset(mitosis_root_cpuset_path, DEFAULT_NUMA_COUNT);
+    if (ret < 0)
+        return ret;
+    
+    ret = set_cpu_number_cpuset(mitosis_root_cpuset_path, DEFAULT_CPU_COUNT);
+    if (ret < 0)
+        return ret;
+    
+    return 0;
+}
+
+// set cpuset parameters (cpu count and numa node count)
+int set_cpuset_cgroup(char* name, int cpu_count, int numa_count) {
+    char cpuset_root[BUF_SIZE];
+    int ret;
+    sprintf(cpuset_root, cpuset_cgroup_directory_prefix, name);
+
+    if (cpu_count <= 0) {
+        cpu_count = DEFAULT_CPU_COUNT;
+    }
+
+    if (numa_count <= 0) {
+        numa_count = DEFAULT_NUMA_COUNT;
+    }
+
+    ret = set_cpu_number_cpuset(cpuset_root, cpu_count);
+    if (ret < 0)
+        return ret;
+    
+    ret = set_numa_cpuset(cpuset_root, numa_count);
+    if (ret < 0)
+        return ret;
+
+    return 0;
+}
+
+// ============================== end utility functions ==============================
+
 int init_cgroup() {
     int ret;
     char buf[BUF_SIZE];
@@ -67,6 +181,7 @@ int init_cgroup() {
             return -1;
         }
     }
+    set_mitosis_root_cpuset();
     return 0;
 }
 
@@ -95,7 +210,8 @@ int add_lean_container_template(char* name, struct ContainerSpec* spec) {
             return -1;
         }
     }
-    // TODO: add memory and cpu configurations here
+    // TODO: add memory here
+    set_cpuset_cgroup(name, spec->cpu_count, spec->numa_count);
     return 0;
 }
 
