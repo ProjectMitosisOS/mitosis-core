@@ -321,6 +321,21 @@ int setup_lean_container(char* name, char* rootfs_path) {
     } else {
         // child process must wait for the parent to setup cgroup
         char sign;
+        int ret;
+
+        // we first change directory to the target path and then chroot to "."
+        ret = chdir(rootfs_path);
+        if (ret != 0) {
+            fprintf(stderr, "chdir to %s failed\n", rootfs_path);
+            goto err;
+        }
+
+        ret = chroot(".");
+        if (ret != 0) {
+            fprintf(stderr, "chroot failed\n");
+            goto err;
+        }
+
         read(pipefd[0], &sign, sizeof(sign));
         close(pipefd[0]);
         close(pipefd[1]);
@@ -351,7 +366,7 @@ int pause_container(char* name) {
     // freeze the container
     ssize_t ret = write(fd, frozen, len);
     if (ret != len) {
-        printf("fail to write %s to %s: return %ld, expected %ld\n", frozen, freezer_state, ret, len);
+        fprintf(stderr, "fail to write %s to %s: return %ld, expected %ld\n", frozen, freezer_state, ret, len);
         close(fd);
         return -1;
     }
@@ -378,7 +393,7 @@ int unpause_container(char* name) {
     // unfreeze the container
     ssize_t ret = write(fd, thawed, len);
     if (ret != len) {
-        printf("fail to write %s to %s: return %ld, expected %ld\n", thawed, freezer_state, ret, len);
+        fprintf(stderr, "fail to write %s to %s: return %ld, expected %ld\n", thawed, freezer_state, ret, len);
         close(fd);
         return -1;
     }
