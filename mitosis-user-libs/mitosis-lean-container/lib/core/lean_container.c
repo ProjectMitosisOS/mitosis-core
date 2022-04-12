@@ -69,7 +69,7 @@ int write_pid(pid_t pid, const char* cgroupfs_path) {
 }
 
 // allow the process to run on numa node(s)
-int set_numa_cpuset(char* cpuset_root, int numa_count) {
+int set_numa_cpuset(char* cpuset_root, int numa_start, int numa_end) {
     char path_buf[BUF_SIZE];
     sprintf(path_buf, "%s%s", cpuset_root, "/cpuset.mems");
     
@@ -85,7 +85,7 @@ int set_numa_cpuset(char* cpuset_root, int numa_count) {
     // TODO: how to choose the numa node?
     // TODO: error handling
     char numa_buf[BUF_SIZE];
-    sprintf(numa_buf, "0-%d", numa_count-1);
+    sprintf(numa_buf, "%d-%d", numa_start, numa_end);
     size_t len = strlen(numa_buf);
     ssize_t ret = write(fd, numa_buf, len);
     if (ret != len) {
@@ -99,7 +99,7 @@ int set_numa_cpuset(char* cpuset_root, int numa_count) {
 }
 
 // allow the process to run on cpu(s)
-int set_cpu_number_cpuset(char* cpuset_root, int cpu_count) {
+int set_cpu_number_cpuset(char* cpuset_root, int cpu_start, int cpu_end) {
     char path_buf[BUF_SIZE];
     sprintf(path_buf, "%s%s", cpuset_root, "/cpuset.cpus");
 
@@ -115,7 +115,7 @@ int set_cpu_number_cpuset(char* cpuset_root, int cpu_count) {
     // TODO: how to choose the cpu?
     // TODO: error handling
     char cpuset_buf[BUF_SIZE];
-    sprintf(cpuset_buf, "0-%d", cpu_count-1);
+    sprintf(cpuset_buf, "%d-%d", cpu_start, cpu_end);
     size_t len = strlen(cpuset_buf);
     ssize_t ret = write(fd, cpuset_buf, len);
     if (ret != len) {
@@ -134,11 +134,11 @@ int set_mitosis_root_cpuset() {
     char mitosis_root_cpuset_path[BUF_SIZE];
     sprintf(mitosis_root_cpuset_path, cpuset_cgroup_directory_prefix, "");
 
-    ret = set_numa_cpuset(mitosis_root_cpuset_path, DEFAULT_NUMA_COUNT);
+    ret = set_numa_cpuset(mitosis_root_cpuset_path, 0, DEFAULT_NUMA_COUNT-1);
     if (ret < 0)
         return ret;
     
-    ret = set_cpu_number_cpuset(mitosis_root_cpuset_path, DEFAULT_CPU_COUNT);
+    ret = set_cpu_number_cpuset(mitosis_root_cpuset_path, 0, DEFAULT_CPU_COUNT-1);
     if (ret < 0)
         return ret;
     
@@ -146,24 +146,26 @@ int set_mitosis_root_cpuset() {
 }
 
 // set cpuset parameters (cpu count and numa node count)
-int set_cpuset_cgroup(char* name, int cpu_count, int numa_count) {
+int set_cpuset_cgroup(char* name, int cpu_start, int cpu_end, int numa_start, int numa_end) {
     char cpuset_root[BUF_SIZE];
     int ret;
     sprintf(cpuset_root, cpuset_cgroup_directory_prefix, name);
 
-    if (cpu_count <= 0) {
-        cpu_count = DEFAULT_CPU_COUNT;
+    if (cpu_start < 0 || cpu_end < 0 || cpu_start > cpu_end) {
+        cpu_start = 0;
+        cpu_end = DEFAULT_CPU_COUNT-1;
     }
 
-    if (numa_count <= 0) {
-        numa_count = DEFAULT_NUMA_COUNT;
+    if (numa_start < 0 || numa_end < 0 || numa_end > numa_start) {
+        numa_start = 0;
+        numa_end = DEFAULT_NUMA_COUNT-1;
     }
 
-    ret = set_cpu_number_cpuset(cpuset_root, cpu_count);
+    ret = set_cpu_number_cpuset(cpuset_root, cpu_start, cpu_end);
     if (ret < 0)
         return ret;
     
-    ret = set_numa_cpuset(cpuset_root, numa_count);
+    ret = set_numa_cpuset(cpuset_root, numa_start, numa_end);
     if (ret < 0)
         return ret;
 
@@ -259,7 +261,7 @@ int add_lean_container_template(char* name, struct ContainerSpec* spec) {
         }
     }
 
-    set_cpuset_cgroup(name, spec->cpu_count, spec->numa_count);
+    set_cpuset_cgroup(name, spec->cpu_start, spec->cpu_end, spec->numa_start, spec->numa_end);
     set_memory_cgroup(name, spec->memory_in_mb);
     return 0;
 }

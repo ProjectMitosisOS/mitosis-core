@@ -2,10 +2,16 @@
 #define LEAN_CONTAINER_H
 
 struct ContainerSpec {
-    // negative value or zero indicates unlimited resources
-    int cpu_count;
+    // the process can run on cpu cores [cpu_start, cpu_end]
+    // negative value indicates unlimited cpu resources
+    int cpu_start;
+    int cpu_end;
+    // negative value or zero indicates unlimited memory resources
     long memory_in_mb;
-    int numa_count;
+    // the process can run on numa nodes [numa_start, numa_end]
+    // negative value indicates unlimited numa resources
+    int numa_start;
+    int numa_end;
 };
 
 // (de)initiate the mitosis cgroupfs

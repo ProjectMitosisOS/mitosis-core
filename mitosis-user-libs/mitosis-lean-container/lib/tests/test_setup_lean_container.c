@@ -13,9 +13,11 @@ int main() {
     pid_t pid;
     
     // limit memory to 128MB
-    spec.cpu_count = -1;
+    spec.cpu_start = -1;
+    spec.cpu_end = -1;
     spec.memory_in_mb = 128;
-    spec.numa_count = -1;
+    spec.numa_start = -1;
+    spec.numa_end = -1;
     
     ret = init_cgroup();
     assert(ret == 0);
