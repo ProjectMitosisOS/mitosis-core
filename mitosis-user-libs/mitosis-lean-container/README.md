@@ -2,7 +2,7 @@
 
 ## Rootfs Preparation
 
-Place your app in `app/`.
+Suppose you have a directory named `app` and the application python code has put in it with the following structure: 
 
 ```
 app
