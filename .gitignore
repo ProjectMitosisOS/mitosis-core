@@ -12,5 +12,7 @@ modules.order
 .idea
 scripts/*.sh
 scripts/*.py
+build/
+.vscode/
 scripts/*.toml
 scripts/exp
