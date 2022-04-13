@@ -161,11 +161,12 @@ impl VMACOWPTGenerator<'_, '_> {
         _next: crate::linux_kernel_module::c_types::c_ulong,
         walk: *mut mm_walk,
     ) -> crate::linux_kernel_module::c_types::c_int {
+        use core::intrinsics::{likely, unlikely};
         let my: &mut Self = &mut (*((*walk).private as *mut Self));
 
         let phy_addr = pmem_get_phy_from_pte(pte);
-        if phy_addr > 0 {
-            if my.vma.has_write_permission() { 
+        if likely(phy_addr > 0) {
+            if unlikely(my.vma.has_write_permission()) {
                 my.inner.add_page(COW4KPage::new(pmem_pte_to_page(pte)).unwrap());
                 pmem_clear_pte_write(pte);
             }

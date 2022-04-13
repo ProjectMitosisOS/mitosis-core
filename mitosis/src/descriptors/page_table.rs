@@ -2,7 +2,7 @@ use core::ptr::NonNull;
 use core::alloc::Layout;
 
 use crate::{
-    kern_wrappers::{mm::{PhyAddrType, VirtAddrType}, page::Page},
+    kern_wrappers::{mm::{PhyAddrType, VirtAddrType}},
     linux_kernel_module,
 };
 

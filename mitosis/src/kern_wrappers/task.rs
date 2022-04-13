@@ -63,7 +63,7 @@ impl Task {
 
     #[inline]
     pub fn set_mm_reg_states(&mut self, regs: &RegDescriptor) {
-        self.get_memory_descriptor().flush_tlb();
+        self.get_memory_descriptor().flush_tlb_all();
         self.set_stack_registers(&regs.others);
         self.set_tls_fs(regs.fs);
         self.set_tls_gs(regs.gs);

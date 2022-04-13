@@ -34,6 +34,7 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     "pmem_get_pte",
     "pmem_flush_tlb_mm",
     "pmem_flush_tlb_all",
+    "pmem_flush_tlb_range",
     "pmem_clear_pte_present",
     "pmem_clear_pte_write",
     "pmem_pte_to_page",

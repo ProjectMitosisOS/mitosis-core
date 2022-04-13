@@ -15,6 +15,15 @@ impl<'a> VMA<'a> {
             prot: self.get_prot(),
         }
     }
+
+
+    #[inline]
+    pub fn flush_self_tlb(&mut self) {
+        use crate::bindings::{pmem_flush_tlb_range};
+        unsafe {
+            pmem_flush_tlb_range(self.vma_inner as *mut _, self.get_start(), self.get_end());
+        }
+    }
 }
 
 use alloc::string::String;
@@ -54,9 +63,9 @@ impl<'a> VMA<'a> {
         unsafe { crate::bindings::VMFlags::from_bits_unchecked(self.vma_inner.vm_flags) }
     }
 
-    pub fn set_raw_flags(&mut self, flags : crate::linux_kernel_module::c_types::c_ulong) {
+    pub fn set_raw_flags(&mut self, flags: crate::linux_kernel_module::c_types::c_ulong) {
         self.vma_inner.vm_flags = flags;
-    }    
+    }
 
     pub fn get_raw_flags(&self) -> crate::linux_kernel_module::c_types::c_ulong {
         self.vma_inner.vm_flags
@@ -83,7 +92,7 @@ impl<'a> VMA<'a> {
         self.vma_inner as *const vm_area_struct as _
     }
 
-    pub unsafe fn get_file_ptr(&self) -> *mut file { 
+    pub unsafe fn get_file_ptr(&self) -> *mut file {
         self.vma_inner.vm_file
     }
 

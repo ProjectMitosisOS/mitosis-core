@@ -9,17 +9,17 @@ fn test_large_prepare() {
             .set_device_name(DEFAULT_SYSCALL_PATH.to_string())
             .open()
             .unwrap();
-        
+
         client.nil().unwrap();
 
         // prepare a very large image
         let mut vec = Vec::new();
-        let MB = 1024 * 1024;
+        const MB: usize = 1024 * 1024;
         //let prepared_sz = MB * 1024;
         let prepared_sz = 8 * MB;
         let entries = prepared_sz / std::mem::size_of::<u64>();
-        
-        for i in 0..entries { 
+
+        for i in 0..entries {
             vec.push(i);
         }
 

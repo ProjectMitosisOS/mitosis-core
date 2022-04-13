@@ -60,6 +60,12 @@ impl FileOperations for MitosisSysCallHandler {
             MY_VM_OP.access = None;
         };
 
+        // Tricky: Walk can be accelerated here!
+        {
+            let task = crate::kern_wrappers::task::Task::new();
+            task.generate_mm();
+        }
+
         Ok(Self {
             my_file: file as *mut _,
             caller_status: Default::default(),

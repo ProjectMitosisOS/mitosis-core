@@ -1,10 +1,13 @@
 pub mod vma;
+
 pub use vma::*;
 
 pub mod page_table;
+
 pub use page_table::*;
 
 pub mod page;
+
 pub use page::*;
 
 use alloc::vec::Vec;
@@ -23,7 +26,7 @@ pub struct ShadowProcess {
     // However, for testing purposes, we need to maintain the copy page table.
     // FIXME: maybe we should use enum for this?
     copy_shadow_pagetable: core::option::Option<ShadowPageTable<Copy4KPage>>,
-    cow_shadow_pagetable : core::option::Option<ShadowPageTable<COW4KPage>>,
+    cow_shadow_pagetable: core::option::Option<ShadowPageTable<COW4KPage>>,
 }
 
 impl ShadowProcess {
@@ -49,23 +52,20 @@ impl ShadowProcess {
         for vma in mm.get_vma_iter() {
             vma_descriptors.push(vma.generate_descriptor());
 
-            let s_vma = ShadowVMA::new(vma, true);
+            let mut s_vma = ShadowVMA::new(vma, true);
             VMACOWPTGenerator::new(&s_vma, &mut shadow_pt, &mut pt).generate();
 
             shadow_vmas.push(s_vma);
         }
         // clear the TLB
-        // FIXME: actually, it is not optimal. 
-        // This is because we only need to partially flush the tlb
-        // But seed is less frequently executed, it is fine here.
-        mm.flush_tlb();
+
+        mm.flush_tlb_mm();
 
         // crate::log::debug!("Check flat page table sz: {}", pt.len());
-        
         Self {
-            shadow_vmas: shadow_vmas,
+            shadow_vmas,
             cow_shadow_pagetable: Some(shadow_pt),
-            copy_shadow_pagetable : None,
+            copy_shadow_pagetable: None,
             descriptor: Descriptor {
                 machine_info: rdma_descriptor,
                 regs: task.generate_reg_descriptor(),
@@ -107,7 +107,7 @@ impl ShadowProcess {
         Self {
             shadow_vmas: shadow_vmas,
             copy_shadow_pagetable: Some(shadow_pt),
-            cow_shadow_pagetable : None,
+            cow_shadow_pagetable: None,
             descriptor: Descriptor {
                 machine_info: rdma_descriptor,
                 regs: task.generate_reg_descriptor(),
