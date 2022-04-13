@@ -22,7 +22,7 @@ python3 make_app_rootfs.py --app $PATH_TO_APP$/app/hello/ --name hello --export 
 We can skip the build process of docker image, and only export the docker image.
 
 ```bash
-python3 make_app_rootfs.py --name hello --only-export .base/hello/rootfs
+python3 make_app_rootfs.py --name hello --only-export $OUTPUT_DIR$/$NAME$
 ```
 
 ## Running the lean container
