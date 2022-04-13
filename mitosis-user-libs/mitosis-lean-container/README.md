@@ -15,8 +15,9 @@ app
 We can build a docker image from `app/hello/`. The name of docker image is `hello`. The rootfs is exported to `.base/hello/rootfs`.
 
 ```bash
-python3 make_app_rootfs.py --app app/hello/ --name hello --export .base/hello/rootfs
+python3 make_app_rootfs.py --app $PATH_TO_APP$/app/hello/ --name hello --export $OUTPUT_DIR$/$NAME$
 ```
+
 
 We can skip the build process of docker image, and only export the docker image.
 
@@ -39,5 +40,5 @@ make
 Run the python code in the lean container.
 
 ```bash
-sudo ./lib/build/test_start_app ./.base/hello/rootfs/ hello.py
+sudo ./lib/build/test_start_app $OUTPUT_DIR$/$NAME$ hello.py
 ```
