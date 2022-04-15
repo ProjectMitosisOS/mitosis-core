@@ -37,4 +37,8 @@ int setup_lean_container(char* name, char* rootfs_path);
 int pause_container(char* name);
 int unpause_container(char* name);
 
+// setup lean container, with an additional call to fork (a.k.a: double fork)
+// so that the process is created in a new pid namespace
+int setup_lean_container_w_double_fork(char* name, char* rootfs_path);
+
 #endif

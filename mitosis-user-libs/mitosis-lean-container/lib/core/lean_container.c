@@ -4,9 +4,11 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "lean_container.h"
 
@@ -273,7 +275,7 @@ int remove_lean_container_template(char* name) {
         sprintf(buf, *cgroup, name);
         ret = rmdir(buf);
         if (ret < 0 && errno != ENOENT) {
-            perror("rmdir: ");
+            perror("rmdir");
             return -1;
         }
     }
@@ -348,6 +350,55 @@ err:
     close(pipefd[0]);
     close(pipefd[1]);
     return -1;
+}
+
+int setup_lean_container_w_double_fork(char* name, char* rootfs_path) {
+    pid_t pid;
+    int pipefd[2];
+
+    if (pipe(pipefd) < 0) {
+        perror("pipe");
+        return -1;
+    }
+
+    pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return -1;
+    }
+
+    if (pid) {
+        pid_t child;
+        read(pipefd[0], &child, sizeof(child));
+        pid_t ret = waitpid(pid, NULL, 0);
+        if (ret != pid) {
+            perror("waitpid");
+            return -1;
+        }
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return child;
+    } else {
+        // close the read end of the pipe
+        close(pipefd[0]);
+
+        // setup lean container
+        pid = setup_lean_container(name, rootfs_path);
+        if (pid < 0) {
+            return -1;
+        }
+
+        if (pid) {
+            // report the pid to the parent
+            write(pipefd[1], &pid, sizeof(pid));
+            close(pipefd[1]);
+            _exit(0);
+        } else {
+            // close write end of the pipe in the containered process
+            close(pipefd[1]);
+            return 0;
+        }
+    }
 }
 
 int pause_container(char* name) {
