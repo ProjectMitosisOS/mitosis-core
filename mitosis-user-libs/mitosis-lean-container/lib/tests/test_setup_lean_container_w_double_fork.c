@@ -31,6 +31,7 @@ int main() {
     ret = add_lean_container_template(name, &spec);
     assert(ret == 0);
 
+    // consecutive fork 2 times
     for (int i = 0; i < 2; i++) {
         // setup the lean container of `name`
         // and the rootfs of the lean container is specified by second parameter
