@@ -3,7 +3,8 @@
     core_intrinsics,
     allocator_api,
     nonnull_slice_from_raw_parts,
-    alloc_layout_extra
+    alloc_layout_extra,
+    get_mut_unchecked
 )]
 
 extern crate alloc;

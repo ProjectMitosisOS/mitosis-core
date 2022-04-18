@@ -1,14 +1,14 @@
+use crate::descriptors::{Descriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
+use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use alloc::vec::Vec;
-use rust_kernel_linux_util::LevelFilter::Debug;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
-use crate::descriptors::{Descriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
-use crate::kern_wrappers::mm::VirtAddrType;
+use rust_kernel_linux_util::LevelFilter::Debug;
 // use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::linux_kernel_module;
 
-type Offset = u32;
-type Value = u32;
+type Offset = VirtAddrType;
+type Value = PhyAddrType;
 type PageEntry = (Offset, Value); // record the (offset, phy_addr) pair
 
 #[derive(Default, Clone)]
@@ -16,6 +16,12 @@ pub struct VMAPageTable {
     pub inner_pg_table: Vec<PageEntry>,
 }
 
+impl VMAPageTable {
+    #[inline(always)]
+    pub fn add_one(&mut self, offset: Offset, val: Value) {
+        self.inner_pg_table.push((offset, val))
+    }
+}
 
 #[allow(dead_code)]
 #[derive(Default, Clone)]
@@ -37,8 +43,7 @@ impl FastDescriptor {
         for vma_pg_table in &self.page_table {
             let start = self.vma[vma_idx].get_start();
             for (offset, phy_addr) in &vma_pg_table.inner_pg_table {
-                page_table.add_one((*offset as VirtAddrType + start) as _,
-                                   *phy_addr as _);
+                page_table.add_one((*offset as VirtAddrType + start) as _, *phy_addr as _);
             }
             vma_idx += 1;
         }
@@ -79,7 +84,10 @@ impl os_network::serialize::Serialize for VMAPageTable {
             return false;
         }
         let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
-        let sz = unsafe { cur.memcpy_serialize_at(0, &self.inner_pg_table.len()).unwrap() };
+        let sz = unsafe {
+            cur.memcpy_serialize_at(0, &self.inner_pg_table.len())
+                .unwrap()
+        };
         let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
 
         for (offset, paddr) in self.inner_pg_table.iter() {
@@ -107,12 +115,15 @@ impl os_network::serialize::Serialize for VMAPageTable {
 
             cur = unsafe { cur.truncate_header(sz0 + sz1)? };
         }
-        Some(VMAPageTable { inner_pg_table: res })
+        Some(VMAPageTable {
+            inner_pg_table: res,
+        })
     }
 
     fn serialization_buf_len(&self) -> usize {
         core::mem::size_of::<usize>()
-            + self.inner_pg_table.len() * core::mem::size_of::<PageEntry>()
+            + self.inner_pg_table.len()
+                * (core::mem::size_of::<Offset>() + core::mem::size_of::<Value>())
     }
 }
 
@@ -137,7 +148,8 @@ impl os_network::serialize::Serialize for FastDescriptor {
         // 1. Reg
         let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
         self.regs.serialize(&mut cur);
-        let mut cur = unsafe { // update cursor
+        let mut cur = unsafe {
+            // update cursor
             cur.truncate_header(self.regs.serialization_buf_len())
                 .unwrap()
         };
@@ -147,10 +159,16 @@ impl os_network::serialize::Serialize for FastDescriptor {
         let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
         //   page table (vec)
         for vma_pg_table in &self.page_table {
-            vma_pg_table.serialize(&mut cur);
-            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len()).unwrap() };
-        }
+            // size of each VMA page table.
+            // let sz = unsafe { cur.memcpy_serialize_at(0, &vma_pg_table.inner_pg_table.len()).unwrap() };
+            // cur = unsafe { cur.truncate_header(sz).unwrap() };
 
+            vma_pg_table.serialize(&mut cur);
+            cur = unsafe {
+                cur.truncate_header(vma_pg_table.serialization_buf_len())
+                    .unwrap()
+            };
+        }
 
         // 3. vmas
         let sz = unsafe { cur.memcpy_serialize_at(0, &self.vma.len()).unwrap() };
@@ -167,37 +185,33 @@ impl os_network::serialize::Serialize for FastDescriptor {
     }
 
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
-        let cur = unsafe { bytes.truncate_header(0).unwrap() };
+        let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
         // regs
         let regs = RegDescriptor::deserialize(&cur)?;
-        let cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
-
+        cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
 
         // vma pt
         let mut pt = Vec::new();
-        {
-            let mut count: usize = 0;
-            let off = unsafe { cur.memcpy_deserialize(&mut count)? };
-            let mut cur = unsafe { cur.truncate_header(off)? };
+        // VMA page table count
+        let mut count: usize = 0;
+        let off = unsafe { cur.memcpy_deserialize(&mut count)? };
+        cur = unsafe { cur.truncate_header(off)? };
 
-            for _ in 0..count {
-                let vma_pg_table = VMAPageTable::deserialize(&cur)?;
-                cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
-                pt.push(vma_pg_table);
-            }
+        for _ in 0..count {
+            let vma_pg_table = VMAPageTable::deserialize(&cur)?;
+            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
+            pt.push(vma_pg_table);
         }
         // vmas
         let mut vmas = Vec::new();
-        {
-            let mut count: usize = 0;
-            let off = unsafe { cur.memcpy_deserialize(&mut count)? };
-            let mut cur = unsafe { cur.truncate_header(off)? };
+        let mut count: usize = 0;
+        let off = unsafe { cur.memcpy_deserialize(&mut count)? };
+        cur = unsafe { cur.truncate_header(off)? };
 
-            for _ in 0..count {
-                let vma = VMADescriptor::deserialize(&cur)?;
-                cur = unsafe { cur.truncate_header(vma.serialization_buf_len())? };
-                vmas.push(vma);
-            }
+        for _ in 0..count {
+            let vma = VMADescriptor::deserialize(&cur)?;
+            cur = unsafe { cur.truncate_header(vma.serialization_buf_len())? };
+            vmas.push(vma);
         }
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
@@ -217,4 +231,3 @@ impl os_network::serialize::Serialize for FastDescriptor {
             + self.machine_info.serialization_buf_len()
     }
 }
-

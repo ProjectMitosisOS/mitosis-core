@@ -1,7 +1,7 @@
 use alloc::string::String;
 use core::option::Option;
 
-use crate::descriptors::Descriptor;
+use crate::descriptors::{Descriptor, FastDescriptor};
 use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
@@ -75,7 +75,7 @@ impl FileOperations for MitosisSysCallHandler {
     #[allow(non_snake_case)]
     #[inline]
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
-        use crate::bindings::{LibMITOSISCmd, resume_remote_req_t, connect_req_t};
+        use crate::bindings::{connect_req_t, resume_remote_req_t, LibMITOSISCmd};
         use linux_kernel_module::bindings::_copy_from_user;
         match cmd {
             LibMITOSISCmd::Nil => 0, // a nill core do nothing
@@ -175,32 +175,30 @@ impl MitosisSysCallHandler {
 
     #[inline]
     fn syscall_local_resume(&mut self, handler_id: c_ulong) -> c_long {
-        if self.caller_status.resume_related.is_some() {
-            crate::log::error!("We don't support multiple resume yet. ");
-            return -1;
-        }
-
-        let process_service = unsafe { crate::get_sps_mut() };
-        let descriptor = process_service.query_descriptor(handler_id as _);
-
-        if descriptor.is_some() {
-            self.caller_status.resume_related = Some(ResumeDataStruct {
-                handler_id: handler_id as _,
-                descriptor: descriptor.unwrap().clone(),
-                // access info cannot failed to create
-                access_info: AccessInfo::new(&descriptor.unwrap().machine_info).unwrap(),
-            });
-            descriptor.unwrap().apply_to(self.my_file);
-            return 0;
-        }
+        // if self.caller_status.resume_related.is_some() {
+        //     crate::log::error!("We don't support multiple resume yet. ");
+        //     return -1;
+        // }
+        //
+        // let process_service = unsafe { crate::get_sps_mut() };
+        // let descriptor = process_service.query_descriptor(handler_id as _);
+        //
+        // if descriptor.is_some() {
+        //     self.caller_status.resume_related = Some(ResumeDataStruct {
+        //         handler_id: handler_id as _,
+        //         descriptor: descriptor.unwrap().clone(),
+        //         // access info cannot failed to create
+        //         access_info: AccessInfo::new(&descriptor.unwrap().machine_info).unwrap(),
+        //     });
+        //     descriptor.unwrap().apply_to(self.my_file);
+        //     return 0;
+        // }
         return -1;
     }
 
     /// This is just a sample test function
     #[inline]
-    fn syscall_local_resume_w_rpc(&mut self,
-                                  machine_id: c_ulong,
-                                  handler_id: c_ulong) -> c_long {
+    fn syscall_local_resume_w_rpc(&mut self, machine_id: c_ulong, handler_id: c_ulong) -> c_long {
         if self.caller_status.resume_related.is_some() {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
@@ -220,7 +218,6 @@ impl MitosisSysCallHandler {
                 *crate::max_caller_num::get_ref(),
             )
         };
-
 
         caller
             .sync_call::<usize>(
@@ -258,6 +255,9 @@ impl MitosisSysCallHandler {
                         }
 
                         // deserialize
+                        #[cfg(feature = "fast-descriptors")]
+                        let des = FastDescriptor::deserialize(desc_buf.unwrap().get_bytes());
+                        #[cfg(not(feature = "fast-descriptors"))]
                         let des = Descriptor::deserialize(desc_buf.unwrap().get_bytes());
                         if des.is_none() {
                             crate::log::error!("failed to deserialize descriptor");
@@ -265,7 +265,7 @@ impl MitosisSysCallHandler {
                         }
                         let des = des.unwrap();
                         crate::log::debug!("sanity check: {:?}", des.machine_info);
-
+                        let des = des.to_descriptor();
                         let access_info = AccessInfo::new(&des.machine_info);
                         if access_info.is_none() {
                             crate::log::error!("failed to create access info");
@@ -295,9 +295,12 @@ impl MitosisSysCallHandler {
     }
 
     #[inline]
-    fn syscall_connect_session(&mut self, machine_id: usize,
-                               gid: &alloc::string::String,
-                               nic_idx: usize) -> c_long {
+    fn syscall_connect_session(
+        &mut self,
+        machine_id: usize,
+        gid: &alloc::string::String,
+        nic_idx: usize,
+    ) -> c_long {
         let info = HandlerConnectInfo::create(gid, nic_idx as _, nic_idx as _);
         match probe_remote_rpc_end(machine_id, info) {
             Some(_) => {
@@ -331,10 +334,10 @@ impl MitosisSysCallHandler {
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
         let fault_addr = (*vmf).address;
         // crate::log::debug!("fault addr 0x{:x}", fault_addr);
-        let resume_related = self
-            .caller_status.resume_related.as_ref().unwrap();
-        let new_page = resume_related.descriptor.read_remote_page(
-            fault_addr, &resume_related.access_info);
+        let resume_related = self.caller_status.resume_related.as_ref().unwrap();
+        let new_page = resume_related
+            .descriptor
+            .read_remote_page(fault_addr, &resume_related.access_info);
         match new_page {
             Some(new_page_p) => {
                 (*vmf).page = new_page_p as *mut _;
@@ -342,8 +345,7 @@ impl MitosisSysCallHandler {
             }
             None => {
                 crate::log::error!("Failed to read the remote page");
-                crate::bindings::FaultFlags::SIGSEGV.bits()
-                    as linux_kernel_module::c_types::c_int
+                crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
             }
         }
     }

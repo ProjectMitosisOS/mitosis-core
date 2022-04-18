@@ -13,6 +13,7 @@ use crate::linux_kernel_module;
 
 use os_network::bytes::ToBytes;
 use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
+use crate::descriptors::FastDescriptor;
 
 struct ProcessBundler {
     process: ShadowProcess,
@@ -33,13 +34,11 @@ impl ProcessBundler {
 
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
 
-        /*
         crate::log::debug!("pre-check desc info {:?}", process.get_descriptor_ref().machine_info);
-        let desc = Descriptor::deserialize(buf.get_bytes_mut()).unwrap();
+        let desc = FastDescriptor::deserialize(buf.get_bytes_mut()).unwrap();
         crate::log::debug!("post-check desc info {:?}", desc.machine_info);
-        */
 
-        // crate::log::debug!("Process bundle descriptor len: {}", buf.len());
+        crate::log::debug!("Process bundle descriptor len: {}", buf.len());
 
         let mut bound_targets = Vec::new();
         bound_targets.push(targets);
@@ -73,14 +72,14 @@ impl ShadowProcessService {
             .map(|s| &s.serialized_buf)
     }
 
-    pub fn query_descriptor(
-        &self,
-        key: usize,
-    ) -> core::option::Option<&crate::descriptors::Descriptor> {
-        self.registered_processes
-            .get(&key)
-            .map(|s| s.process.get_descriptor_ref())
-    }
+    // pub fn query_descriptor(
+    //     &self,
+    //     key: usize,
+    // ) -> core::option::Option<&crate::descriptors::Descriptor> {
+    //     self.registered_processes
+    //         .get(&key)
+    //         .map(|s| s.process.get_descriptor_ref())
+    // }
 
     /// # Return
     /// * The size of the serialization buffer

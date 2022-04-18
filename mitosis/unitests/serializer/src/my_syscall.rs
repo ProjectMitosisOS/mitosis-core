@@ -33,7 +33,8 @@ impl FileOperations for MySyscallHandler {
             1 => self.test_page_table(arg),
             3 => self.test_rdma_descriptor(arg),
             4 => self.test_mitosis_descriptor(arg),
-            5 => self.test_mitosis_fast_descriptor(arg),
+            5 => self.test_vma_page_table(arg),
+            6 => self.test_mitosis_fast_descriptor(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -190,8 +191,9 @@ impl MySyscallHandler {
             crate::log::error!("de-serialize fail on {:?}", result);
         }
 
-        // make a complex tests 
-        let (_target, descriptor) = RDMADescriptor::new_from_dc_target_pool().expect("failed to get RDMA descriptor");
+        // make a complex tests
+        let (_target, descriptor) =
+            RDMADescriptor::new_from_dc_target_pool().expect("failed to get RDMA descriptor");
         log::debug!("sanity check RDMA descriptor content {:?}", descriptor);
 
         let result = descriptor.serialize(&mut bytes);
@@ -267,6 +269,33 @@ impl MySyscallHandler {
         0
     }
 
+    fn test_vma_page_table(&self, _arg: c_ulong) -> c_long {
+        let mut pg_table = VMAPageTable::default();
+        for i in 0..100{
+            pg_table.add_one(i,i * 2);
+        }
+        let mut memory = vec![0; pg_table.serialization_buf_len()];
+        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
+
+        // serialize
+        let result = pg_table.serialize(&mut bytes);
+        if !result {
+            crate::log::error!("fail to serialize process descriptor");
+            return 0;
+        }
+        // deserialize
+        let result = VMAPageTable::deserialize(&bytes);
+        if result.is_none() {
+            crate::log::error!("fail to deserialize process descriptor");
+            return 0;
+        }
+
+        if pg_table.inner_pg_table.len() != result.unwrap().inner_pg_table.len() {
+            crate::log::error!("vector len mismatch");
+        }
+        0
+    }
+
     fn test_mitosis_fast_descriptor(&self, _arg: c_ulong) -> c_long {
         crate::log::info!("test mitosis fast descriptor");
         let mut mac_info: RDMADescriptor = Default::default();
@@ -316,10 +345,10 @@ impl MySyscallHandler {
             );
         }
         log::debug!(
-                "page table,des len {}, origin len {}",
-                result.page_table.len(),
-                descriptor.page_table.len(),
-            );
+            "page table,des len {}, origin len {}",
+            result.page_table.len(),
+            descriptor.page_table.len(),
+        );
         crate::log::debug!(
             "check mac_info {:?}\n {:?}",
             result.machine_info,
