@@ -12,13 +12,18 @@ pub use page::*;
 
 use alloc::vec::Vec;
 
-use crate::descriptors::Descriptor;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
+#[cfg(feature = "fast-descriptors")]
+type Descriptor = crate::descriptors::FastDescriptor;
+#[cfg(not(feature = "fast-descriptors"))]
+type Descriptor = crate::descriptors::Descriptor;
+
+
 #[allow(dead_code)]
 pub struct ShadowProcess {
-    descriptor: crate::descriptors::Descriptor,
+    descriptor: Descriptor,
 
     shadow_vmas: Vec<ShadowVMA<'static>>,
 
@@ -30,7 +35,7 @@ pub struct ShadowProcess {
 }
 
 impl ShadowProcess {
-    pub fn get_descriptor_ref(&self) -> &crate::descriptors::Descriptor {
+    pub fn get_descriptor_ref(&self) -> &Descriptor {
         &self.descriptor
     }
 }

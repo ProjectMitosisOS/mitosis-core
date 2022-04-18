@@ -1,4 +1,6 @@
 use alloc::vec;
+use alloc::vec::Vec;
+use rust_kernel_linux_util::LevelFilter::Debug;
 
 use crate::linux_kernel_module::bindings::vm_area_struct;
 use crate::linux_kernel_module::c_types::*;
@@ -31,6 +33,7 @@ impl FileOperations for MySyscallHandler {
             1 => self.test_page_table(arg),
             3 => self.test_rdma_descriptor(arg),
             4 => self.test_mitosis_descriptor(arg),
+            5 => self.test_mitosis_fast_descriptor(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -188,25 +191,25 @@ impl MySyscallHandler {
         }
 
         // make a complex tests 
-        let (_target,descriptor) = RDMADescriptor::new_from_dc_target_pool().expect("failed to get RDMA descriptor");
+        let (_target, descriptor) = RDMADescriptor::new_from_dc_target_pool().expect("failed to get RDMA descriptor");
         log::debug!("sanity check RDMA descriptor content {:?}", descriptor);
 
         let result = descriptor.serialize(&mut bytes);
         if !result {
             crate::log::error!("fail to serialize RDMADescriptor");
             return 0;
-        }        
+        }
 
         let result = RDMADescriptor::deserialize(&bytes);
         if result.is_none() {
             crate::log::error!("fail to deserialize RemoteRDMADescriptor");
             return 0;
-        }        
+        }
 
         let result = result.unwrap();
         if result != descriptor {
             crate::log::error!("de-serialize fail on {:?} for target content", result);
-        }        
+        }
 
         crate::log::info!("pass RDMADescriptor (de)serialization test\n");
         0
@@ -260,6 +263,70 @@ impl MySyscallHandler {
         assert_eq!(result.regs, descriptor.regs);
 
         crate::log::info!("pass process Descriptor (de)serialization test\n");
+
+        0
+    }
+
+    fn test_mitosis_fast_descriptor(&self, _arg: c_ulong) -> c_long {
+        crate::log::info!("test mitosis fast descriptor");
+        let mut mac_info: RDMADescriptor = Default::default();
+        mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
+
+        let task = Task::new();
+        let (vma, pt) = task.generate_mm();
+        let mut pg_table = Vec::new();
+        for vm in vma.iter() {
+            let mut vma_pg_table = VMAPageTable { inner_pg_table: Vec::new() };
+            {
+                vma_pg_table.inner_pg_table.push(((0x10 + vm.get_start()) as _, 4));
+            }
+            pg_table.push(vma_pg_table);
+        }
+        let descriptor = FastDescriptor {
+            regs: task.generate_reg_descriptor(),
+            page_table: pg_table,
+            vma,
+            machine_info: mac_info.clone(),
+        };
+        log::debug!(
+            "sanity check fast-descriptor serialization sz: {}",
+            descriptor.serialization_buf_len()
+        );
+        let mut memory = vec![0; descriptor.serialization_buf_len()];
+        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
+
+        // serialize
+        let result = descriptor.serialize(&mut bytes);
+        if !result {
+            crate::log::error!("fail to serialize process descriptor");
+            return 0;
+        }
+        // deserialize
+        let result = FastDescriptor::deserialize(&bytes);
+        if result.is_none() {
+            crate::log::error!("fail to deserialize process descriptor");
+            return 0;
+        }
+        let result = result.unwrap();
+        if result.page_table.len() != descriptor.page_table.len() {
+            log::error!(
+                "failed to deserialize page table, {}, {}",
+                result.page_table.len(),
+                descriptor.page_table.len(),
+            );
+        }
+        log::debug!(
+                "page table,des len {}, origin len {}",
+                result.page_table.len(),
+                descriptor.page_table.len(),
+            );
+        crate::log::debug!(
+            "check mac_info {:?}\n {:?}",
+            result.machine_info,
+            descriptor.machine_info
+        );
+
+        crate::log::info!("pass process FastDescriptor (de)serialization test\n");
 
         0
     }
