@@ -35,7 +35,7 @@ int main() {
     for (int i = 0; i < 2; i++) {
         // setup the lean container of `name`
         // and the rootfs of the lean container is specified by second parameter
-        pid = setup_lean_container_w_double_fork(name, ".");
+        pid = setup_lean_container_w_double_fork(name, ".", -1);
         if (pid < 0) {
             printf("set lean container failed!");
             goto clean;

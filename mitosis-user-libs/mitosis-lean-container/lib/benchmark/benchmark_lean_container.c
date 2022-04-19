@@ -34,14 +34,21 @@ static long get_passed_nanosecond(struct timespec* start, struct timespec* end) 
     return 1e9*(end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
 }
 
-int test_setup_lean_container(char* name) {
-    pid_t pid = setup_lean_container_w_double_fork(name, ".");
+int test_setup_lean_container(char* name, int namespace) {
+    struct timespec start, now;
+    clock_gettime(CLOCK_REALTIME, &start);
+
+    pid_t pid = setup_lean_container_w_double_fork(name, ".", namespace);
     if (pid < 0) {
         debug_printf("set lean container failed!");
         return -1;
     }
 
+
     if (pid) {
+        clock_gettime(CLOCK_REALTIME, &now);
+        long time = get_passed_nanosecond(&start, &now);
+        printf("setup_lean_container_w_double_fork time %ldns\n", time);
         debug_printf("this is the lean container launcher process!\n");
     } else {
         // we are now running in the lean container!
@@ -50,7 +57,11 @@ int test_setup_lean_container(char* name) {
     }
 
     // pid_t child = waitpid(pid, NULL, 0);
+    clock_gettime(CLOCK_REALTIME, &start);
     pid_t child = wait_pid(pid);
+    clock_gettime(CLOCK_REALTIME, &now);
+    long time = get_passed_nanosecond(&start, &now);
+    printf("wait_pid after setup_lean_container_w_double_fork time %ldns\n", time);
     if (child != pid) {
         printf("child pid: %d, expected: %d\n", child, pid);
         return -1;
@@ -64,7 +75,7 @@ int main() {
     struct timespec start, now;
     int ret;
     pid_t pid;
-    int loop = 100;
+    int loop = 10;
     
     spec.cpu_start = -1;
     spec.cpu_end = -1;
@@ -76,6 +87,8 @@ int main() {
     // so that the process can reap the grandchild process
     // ret = prctl(PR_SET_CHILD_SUBREAPER, 1);
     // assert(ret == 0);
+
+    pid = setup_cached_namespace();
     
     ret = init_cgroup();
     assert(ret == 0);
@@ -83,18 +96,18 @@ int main() {
     ret = add_lean_container_template(name, &spec);
     assert(ret == 0);
 
-    clock_gettime(CLOCK_REALTIME, &start);
 
     for (int i = 0; i < loop; i++) {
-        test_setup_lean_container(name);
+        clock_gettime(CLOCK_REALTIME, &start);
+        test_setup_lean_container(name, pid);
+        clock_gettime(CLOCK_REALTIME, &now);
+        long time = get_passed_nanosecond(&start, &now);
+        printf("generate %dth lean container: %ldns\n", i, time);
     }
 
-    clock_gettime(CLOCK_REALTIME, &now);
 
-    long time = get_passed_nanosecond(&start, &now);
 
-    printf("generate %d lean container: %ldns\n", loop, time);
-    printf("average %fms\n", time/loop/1e6);
+    // printf("average %fms\n", time/loop/1e6);
     
     printf("pass lean container unit test!\n");
 clean:
@@ -102,6 +115,9 @@ clean:
     assert(ret == 0);
 
     ret = deinit_cgroup();
+    assert(ret == 0);
+
+    ret = remove_cached_namespace(pid);
     assert(ret == 0);
 
     printf("clean resources!\n");

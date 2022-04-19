@@ -1,7 +1,9 @@
 #define _GNU_SOURCE
 #include <sched.h>
+#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <time.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -18,6 +20,10 @@
 // TODO: dynamicly assign these values
 #define DEFAULT_NUMA_COUNT 2
 #define DEFAULT_CPU_COUNT 48
+
+static long get_passed_nanosecond(struct timespec* start, struct timespec* end) {
+    return 1e9*(end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
+}
 
 char* cgroup_directory_prefix[] = {
     "/sys/fs/cgroup/hugetlb/mitosis/%s",
@@ -38,7 +44,38 @@ char* cpuset_cgroup_directory_prefix = "/sys/fs/cgroup/cpuset/mitosis/%s";
 char* memory_cgroup_directory_prefix = "/sys/fs/cgroup/memory/mitosis/%s";
 char* freezer_cgroup_directory_prefix = "/sys/fs/cgroup/freezer/mitosis/%s";
 
+char* namespaces[] = {
+    "/proc/%d/ns/uts",
+    "/proc/%d/ns/pid",
+    "/proc/%d/ns/ipc",
+    "/proc/%d/ns/mnt",
+    NULL,
+};
+
 // ============================== begin utility functions ==============================
+
+int set_namespace(int namespace) {
+    char buf[BUF_SIZE];
+    int fd, ret;
+    for (char** namespace_path = namespaces; *namespace_path != NULL; namespace_path++) {
+        sprintf(buf, *namespace_path, namespace);
+
+        fd = open(buf, O_RDONLY);
+        if (fd < 0) {
+            perror("open");
+            return -1;
+        }
+
+        ret = setns(fd, 0);
+        if (ret < 0) {
+            perror("setns");
+            return -1;
+        }
+
+        close(fd);
+    }
+    return 0;
+}
 
 // writing pid to cgroup.procs under the cgroup directory will add the process to a cgroup
 void cgroup_file_name(char* buf, const char* prefix, const char* name) {
@@ -219,7 +256,69 @@ int set_memory_cgroup(char* name, long memory_in_mb) {
     return write_memory_limit(memory_cgroup_path, memory_in_bytes);
 }
 
+void unshare_and_fork(int* pipefd) {
+    // close the read end of pipe
+    close(pipefd[0]);
+    pid_t pid = -1;
+
+    if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
+        perror("unshare");
+        goto end;
+    }
+
+    pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        goto end;
+    }
+
+    if (pid) {
+        goto end;
+    } else {
+        close(pipefd[1]);
+        while (1) {
+            pause();
+        }
+    }
+end:
+    write(pipefd[1], &pid, sizeof(pid));
+    close(pipefd[1]);
+    _exit(0);
+}
+
 // ============================== end utility functions ==============================
+
+int setup_cached_namespace() {
+    pid_t pid;
+    int pipefd[2];
+
+    if (pipe(pipefd) < 0) {
+        perror("pipe");
+        return -1;
+    }
+
+    pid = fork();
+    if (pid) {
+        // grand-parent waits for the pid from the parent process
+        // close the write end of pipe
+        pid_t target;
+        close(pipefd[1]);
+        read(pipefd[0], &target, sizeof(target));
+        waitpid(pid, NULL, 0);
+        close(pipefd[0]);
+        return target;
+    } else {
+        // parent calls unshare and forks a child
+        // write the child pid to the parent process's pipe
+        unshare_and_fork(pipefd);
+        // should never reach here
+        assert(0);
+    }
+}
+
+int remove_cached_namespace(int namespace) {
+    return kill(namespace, SIGKILL);
+}
 
 int init_cgroup() {
     int ret;
@@ -282,7 +381,7 @@ int remove_lean_container_template(char* name) {
     return 0;
 }
 
-int setup_lean_container(char* name, char* rootfs_path) {
+int setup_lean_container(char* name, char* rootfs_path, int namespace) {
     int ret;
     int pipefd[2];
     pid_t pid;
@@ -292,11 +391,17 @@ int setup_lean_container(char* name, char* rootfs_path) {
         return -1;
     }
 
-    if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
-        perror("unshare");
-        goto err;
+    if (namespace < 0) {
+        if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
+            perror("unshare");
+            goto err;
+        }
+    } else {
+        if (set_namespace(namespace) < 0) {
+            goto err;
+        }
     }
-
+    
     pid = fork();
     if (pid < 0) {
         perror("fork");
@@ -352,7 +457,7 @@ err:
     return -1;
 }
 
-int setup_lean_container_w_double_fork(char* name, char* rootfs_path) {
+int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int namespace) {
     pid_t pid;
     int pipefd[2];
 
@@ -370,11 +475,16 @@ int setup_lean_container_w_double_fork(char* name, char* rootfs_path) {
     if (pid) {
         pid_t child;
         read(pipefd[0], &child, sizeof(child));
+        struct timespec start, now;
+        clock_gettime(CLOCK_REALTIME, &start);
         pid_t ret = waitpid(pid, NULL, 0);
         if (ret != pid) {
             perror("waitpid");
             return -1;
         }
+        clock_gettime(CLOCK_REALTIME, &now);
+        long time = get_passed_nanosecond(&start, &now);
+        printf("waitpid in setup_lean_container_w_double_fork time %ldns\n", time);
         close(pipefd[0]);
         close(pipefd[1]);
         return child;
@@ -383,7 +493,7 @@ int setup_lean_container_w_double_fork(char* name, char* rootfs_path) {
         close(pipefd[0]);
 
         // setup lean container
-        pid = setup_lean_container(name, rootfs_path);
+        pid = setup_lean_container(name, rootfs_path, namespace);
         if (pid < 0) {
             return -1;
         }
