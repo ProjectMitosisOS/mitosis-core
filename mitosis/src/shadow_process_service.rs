@@ -30,7 +30,7 @@ impl ProcessBundler {
             "before alloc serialization buf sz {}KB",
             process.get_descriptor_ref().serialization_buf_len() / 1024
         );
-        let mut buf = unsafe { get_mem_pool_mut() }.fetch_one_mut();
+        let mut buf = unsafe { get_mem_pool_mut() }.pop_one();
         crate::log::debug!("serialization buf allocation done!");
 
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());

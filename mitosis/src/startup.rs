@@ -89,7 +89,10 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 
     // Global shadow process service
     unsafe { crate::sp_service::init(crate::shadow_process_service::ShadowProcessService::new()) };
+
+    //  Memory pool for the shadow process service
     unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size)) };
+
     // TODO: other services
 
     crate::log::info!("Start waiting for the RPC servers to start...");
