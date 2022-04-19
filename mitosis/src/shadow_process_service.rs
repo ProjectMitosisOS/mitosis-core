@@ -1,5 +1,7 @@
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use core::sync::atomic::Ordering::SeqCst;
+use core::sync::atomic::{compiler_fence, fence};
 
 use hashbrown::HashMap;
 use os_network::rdma::dc::DCTarget;
@@ -34,7 +36,7 @@ impl ProcessBundler {
         crate::log::debug!("serialization buf allocation done!");
 
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
-
+        compiler_fence(SeqCst);
         /*
         crate::log::debug!("pre-check desc info {:?}", process.get_descriptor_ref().machine_info);
         let _desc = FastDescriptor::deserialize(buf.get_bytes_mut()).unwrap();
