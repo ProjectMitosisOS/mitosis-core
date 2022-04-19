@@ -65,14 +65,14 @@ type COWPageTable = super::page_table::ShadowPageTable<COW4KPage>;
 pub(crate) struct VMACopyPTGenerator<'a, 'b> {
     vma: &'a ShadowVMA<'a>,
     inner: &'b mut CopyPageTable,
-    inner_flat: &'b mut crate::descriptors::FlatPageTable,
+    inner_flat: &'b mut crate::descriptors::VMAPageTable,
 }
 
 impl<'a, 'b> VMACopyPTGenerator<'a, 'b> {
     pub fn new(
         vma: &'a ShadowVMA,
         inner: &'b mut CopyPageTable,
-        inner_flat: &'b mut crate::descriptors::FlatPageTable,
+        inner_flat: &'b mut crate::descriptors::VMAPageTable,
     ) -> Self {
         Self {
             vma: vma,
@@ -109,12 +109,12 @@ impl VMACopyPTGenerator<'_, '_> {
         let phy_addr = pmem_get_phy_from_pte(pte);
         if phy_addr > 0 {
             let copied_page = Copy4KPage::new(addr as _).expect("Fail to copy from user space");
-            my.inner_flat.add_one(addr, copied_page.get_physical_addr());
-
-            //let copied_page = Copy4KPage::new_as_null();
-            //my.inner_flat.add_one(addr, 0);
-            // crate::log::debug!("add page: {:?} total: {}",copied_page, my.inner_flat.len());
-
+            // my.inner_flat.add_one(addr, copied_page.get_physical_addr());
+            {
+                let start = my.vma.vma_inner.get_start();
+                my.inner_flat
+                    .add_one((addr as VirtAddrType - start) as _, copied_page.get_physical_addr() as _);
+            }
             // the page table is present
             my.inner.add_page(copied_page);
         }
@@ -127,9 +127,6 @@ impl VMACopyPTGenerator<'_, '_> {
 pub(crate) struct VMACOWPTGenerator<'a, 'b> {
     vma: &'a ShadowVMA<'a>,
     inner: &'b mut COWPageTable,
-    #[cfg(not(feature = "fast-descriptors"))]
-    inner_flat: &'b mut crate::descriptors::FlatPageTable,
-    #[cfg(feature = "fast-descriptors")]
     inner_flat: &'b mut crate::descriptors::VMAPageTable,
 }
 
@@ -137,9 +134,7 @@ impl<'a, 'b> VMACOWPTGenerator<'a, 'b> {
     pub fn new(
         vma: &'a ShadowVMA,
         inner: &'b mut COWPageTable,
-        #[cfg(not(feature = "fast-descriptors"))]
-        inner_flat: &'b mut crate::descriptors::FlatPageTable,
-        #[cfg(feature = "fast-descriptors")] inner_flat: &'b mut crate::descriptors::VMAPageTable,
+        inner_flat: &'b mut crate::descriptors::VMAPageTable,
     ) -> Self {
         Self {
             vma,
@@ -177,9 +172,9 @@ impl VMACOWPTGenerator<'_, '_> {
                     .add_page(COW4KPage::new(pmem_pte_to_page(pte)).unwrap());
                 pmem_clear_pte_write(pte);
             }
-            #[cfg(not(feature = "fast-descriptors"))]
-            my.inner_flat.add_one(addr, phy_addr);
-            #[cfg(feature = "fast-descriptors")]
+            // #[cfg(not(feature = "fast-descriptors"))]
+            // my.inner_flat.add_one(addr, phy_addr);
+            // #[cfg(feature = "fast-descriptors")]
             {
                 let start = my.vma.vma_inner.get_start();
                 my.inner_flat

@@ -11,11 +11,12 @@ use crate::shadow_process::*;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
+use crate::descriptors::FastDescriptor;
 use os_network::bytes::ToBytes;
 use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
-use crate::descriptors::FastDescriptor;
 
 struct ProcessBundler {
+    #[allow(dead_code)]
     process: ShadowProcess,
     serialized_buf: RMemory,
 
@@ -34,9 +35,9 @@ impl ProcessBundler {
 
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
 
-        crate::log::debug!("pre-check desc info {:?}", process.get_descriptor_ref().machine_info);
-        let desc = FastDescriptor::deserialize(buf.get_bytes_mut()).unwrap();
-        crate::log::debug!("post-check desc info {:?}", desc.machine_info);
+        // crate::log::debug!("pre-check desc info {:?}", process.get_descriptor_ref().machine_info);
+        let _desc = FastDescriptor::deserialize(buf.get_bytes_mut()).unwrap();
+        // crate::log::debug!("post-check desc info {:?}", desc.machine_info);
 
         crate::log::debug!("Process bundle descriptor len: {}", buf.len());
 

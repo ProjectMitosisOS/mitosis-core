@@ -271,8 +271,8 @@ impl MySyscallHandler {
 
     fn test_vma_page_table(&self, _arg: c_ulong) -> c_long {
         let mut pg_table = VMAPageTable::default();
-        for i in 0..100{
-            pg_table.add_one(i,i * 2);
+        for i in 0..100 {
+            pg_table.add_one(i, i * 2);
         }
         let mut memory = vec![0; pg_table.serialization_buf_len()];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
@@ -290,7 +290,7 @@ impl MySyscallHandler {
             return 0;
         }
 
-        if pg_table.inner_pg_table.len() != result.unwrap().inner_pg_table.len() {
+        if pg_table.table_len() != result.unwrap().table_len() {
             crate::log::error!("vector len mismatch");
         }
         0
@@ -305,9 +305,9 @@ impl MySyscallHandler {
         let (vma, pt) = task.generate_mm();
         let mut pg_table = Vec::new();
         for vm in vma.iter() {
-            let mut vma_pg_table = VMAPageTable { inner_pg_table: Vec::new() };
+            let mut vma_pg_table = VMAPageTable::default();
             {
-                vma_pg_table.inner_pg_table.push(((0x10 + vm.get_start()) as _, 4));
+                vma_pg_table.add_one((0x10 + vm.get_start()) as _, 4);
             }
             pg_table.push(vma_pg_table);
         }

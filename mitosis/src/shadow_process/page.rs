@@ -16,6 +16,7 @@ pub struct Copy4KPage {
 
 impl Copy4KPage {
     /// Note: this function is just used for testing!
+    #[allow(dead_code)]
     pub(crate) unsafe fn new_as_null() -> Self {
         Self {
             inner: core::ptr::null_mut(),

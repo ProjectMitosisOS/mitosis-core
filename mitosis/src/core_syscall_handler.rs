@@ -1,7 +1,7 @@
 use alloc::string::String;
 use core::option::Option;
 
-use crate::descriptors::{Descriptor, FastDescriptor};
+use crate::descriptors::FastDescriptor;
 use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
@@ -174,7 +174,7 @@ impl MitosisSysCallHandler {
     }
 
     #[inline]
-    fn syscall_local_resume(&mut self, handler_id: c_ulong) -> c_long {
+    fn syscall_local_resume(&mut self, _handler_id: c_ulong) -> c_long {
         // if self.caller_status.resume_related.is_some() {
         //     crate::log::error!("We don't support multiple resume yet. ");
         //     return -1;
@@ -255,17 +255,15 @@ impl MitosisSysCallHandler {
                         }
 
                         // deserialize
-                        #[cfg(feature = "fast-descriptors")]
-                        let des = FastDescriptor::deserialize(desc_buf.unwrap().get_bytes());
-                        #[cfg(not(feature = "fast-descriptors"))]
-                        let des = Descriptor::deserialize(desc_buf.unwrap().get_bytes());
-                        if des.is_none() {
-                            crate::log::error!("failed to deserialize descriptor");
-                            return -1;
-                        }
-                        let des = des.unwrap();
-                        crate::log::debug!("sanity check: {:?}", des.machine_info);
-                        let des = des.to_descriptor();
+                        let des = {
+                            let des = FastDescriptor::deserialize(desc_buf.unwrap().get_bytes());
+                            if des.is_none() {
+                                crate::log::error!("failed to deserialize descriptor");
+                                return -1;
+                            }
+                            des.unwrap().to_descriptor()
+                        };
+
                         let access_info = AccessInfo::new(&des.machine_info);
                         if access_info.is_none() {
                             crate::log::error!("failed to create access info");

@@ -65,7 +65,7 @@ impl MemoryDescriptor {
     pub fn flush_tlb_mm(&mut self) {
         use crate::bindings::pmem_flush_tlb_mm;
         unsafe {
-            unsafe { pmem_flush_tlb_mm(self.mm_inner as *mut _) };
+            pmem_flush_tlb_mm(self.mm_inner as *mut _);
         }
     }
 }

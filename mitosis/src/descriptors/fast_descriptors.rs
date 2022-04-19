@@ -1,11 +1,9 @@
 use crate::descriptors::{Descriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
+use crate::linux_kernel_module;
 use alloc::vec::Vec;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
-use rust_kernel_linux_util::LevelFilter::Debug;
-// use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
-use crate::linux_kernel_module;
 
 type Offset = VirtAddrType;
 type Value = PhyAddrType;
@@ -13,13 +11,18 @@ type PageEntry = (Offset, Value); // record the (offset, phy_addr) pair
 
 #[derive(Default, Clone)]
 pub struct VMAPageTable {
-    pub inner_pg_table: Vec<PageEntry>,
+    inner_pg_table: Vec<PageEntry>,
 }
 
 impl VMAPageTable {
     #[inline(always)]
     pub fn add_one(&mut self, offset: Offset, val: Value) {
         self.inner_pg_table.push((offset, val))
+    }
+
+    #[inline(always)]
+    pub fn table_len(&self) -> usize {
+        self.inner_pg_table.len()
     }
 }
 
@@ -39,13 +42,11 @@ impl FastDescriptor {
     pub fn to_descriptor(&self) -> Descriptor {
         let mut page_table = FlatPageTable::new();
 
-        let mut vma_idx = 0;
-        for vma_pg_table in &self.page_table {
+        for (vma_idx, vma_pg_table) in self.page_table.iter().enumerate() {
             let start = self.vma[vma_idx].get_start();
             for (offset, phy_addr) in &vma_pg_table.inner_pg_table {
                 page_table.add_one((*offset as VirtAddrType + start) as _, *phy_addr as _);
             }
-            vma_idx += 1;
         }
 
         Descriptor {

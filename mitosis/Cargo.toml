@@ -14,11 +14,10 @@ cc = "1.0"
 shlex = "0.1"
 
 [features]
-default = ["os-network", "rust-kernel-linux-util", "fast-descriptors"]
+default = ["os-network", "rust-kernel-linux-util"]
 cow = []           # use CoW strategy when prepare parent VMA ; or else copying user pages into kernel.
 eager-resume = [] # use eager page-fetching strategy instead of fetching while page fault
 resume-profile = [] # peak resume running profile
-fast-descriptors = []
 
 [dependencies]
 mitosis-protocol = { path = "../mitosis-user-libs/mitosis-protocol" }
