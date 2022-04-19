@@ -11,14 +11,14 @@ use crate::shadow_process::*;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-use crate::descriptors::FastDescriptor;
+use crate::get_mem_pool_mut;
 use os_network::bytes::ToBytes;
 use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
 
 struct ProcessBundler {
     #[allow(dead_code)]
     process: ShadowProcess,
-    serialized_buf: RMemory,
+    serialized_buf: &'static RMemory,
 
     #[allow(dead_code)] // place holder to prevent NIC release the resources
     bound_dc_targets: Vec<Arc<DCTarget>>,
@@ -30,7 +30,7 @@ impl ProcessBundler {
             "before alloc serialization buf sz {}KB",
             process.get_descriptor_ref().serialization_buf_len() / 1024
         );
-        let mut buf = RMemory::new(process.get_descriptor_ref().serialization_buf_len(), 0);
+        let buf = unsafe { get_mem_pool_mut() }.fetch_one_mut();
         crate::log::debug!("serialization buf allocation done!");
 
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
@@ -71,7 +71,7 @@ impl ShadowProcessService {
     pub fn query_descriptor_buf(&self, key: usize) -> core::option::Option<&RMemory> {
         self.registered_processes
             .get(&key)
-            .map(|s| &s.serialized_buf)
+            .map(|s| s.serialized_buf)
     }
 
     pub fn query_descriptor(

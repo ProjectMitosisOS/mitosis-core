@@ -1,5 +1,6 @@
 use alloc::vec;
 use alloc::vec::Vec;
+use KRdmaKit::rust_kernel_rdma_base::VmallocAllocator;
 use rust_kernel_linux_util::LevelFilter::Debug;
 
 use crate::linux_kernel_module::bindings::vm_area_struct;
@@ -303,7 +304,7 @@ impl MySyscallHandler {
 
         let task = Task::new();
         let (vma, pt) = task.generate_mm();
-        let mut pg_table = Vec::new();
+        let mut pg_table = Vec::new_in(VmallocAllocator);
         for vm in vma.iter() {
             let mut vma_pg_table = VMAPageTable::default();
             {

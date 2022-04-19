@@ -25,6 +25,9 @@ pub use fast_descriptors::*;
 
 pub use vma::*;
 
+pub mod pair;
+
+pub use pair::*;
 // pub mod factory;
 // pub use factory::DescriptorFactoryService;
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};

@@ -282,6 +282,7 @@ impl MitosisSysCallHandler {
                         return 0;
                     }
                     None => {
+                        crate::log::error!("Deserialize error");
                         return -1;
                     }
                 }
