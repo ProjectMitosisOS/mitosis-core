@@ -1,17 +1,27 @@
-use crate::descriptors::{Descriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
+use crate::descriptors::{
+    Descriptor, FlatPageTable, PageMapAllocator, RDMADescriptor, RegDescriptor, VMADescriptor,
+};
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
-use crate::linux_kernel_module;
+use crate::{linux_kernel_module, VmallocAllocator};
 use alloc::vec::Vec;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
 
-type Offset = VirtAddrType;
+type Offset = u32;
 type Value = PhyAddrType;
 type PageEntry = (Offset, Value); // record the (offset, phy_addr) pair
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct VMAPageTable {
-    inner_pg_table: Vec<PageEntry>,
+    inner_pg_table: Vec<PageEntry, VmallocAllocator>,
+}
+
+impl Default for VMAPageTable {
+    fn default() -> Self {
+        Self {
+            inner_pg_table: Vec::new_in(VmallocAllocator),
+        }
+    }
 }
 
 impl VMAPageTable {
@@ -27,13 +37,24 @@ impl VMAPageTable {
 }
 
 #[allow(dead_code)]
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct FastDescriptor {
     pub regs: RegDescriptor,
     // 2-dimension matrix, each row means one page-table according to one VMA
-    pub page_table: Vec<VMAPageTable>,
+    pub page_table: Vec<VMAPageTable, VmallocAllocator>,
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
+}
+
+impl Default for FastDescriptor {
+    fn default() -> Self {
+        Self {
+            regs: Default::default(),
+            page_table: Vec::new_in(VmallocAllocator),
+            vma: Vec::new(),
+            machine_info: Default::default(),
+        }
+    }
 }
 
 impl FastDescriptor {
@@ -89,42 +110,71 @@ impl os_network::serialize::Serialize for VMAPageTable {
             cur.memcpy_serialize_at(0, &self.inner_pg_table.len())
                 .unwrap()
         };
-        let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
+        cur = unsafe { cur.truncate_header(sz).unwrap() };
+        if core::mem::size_of::<Offset>() < core::mem::size_of::<VirtAddrType>()
+            && self.table_len() % 2 == 1
+        {
+            let pad: u32 = 0;
+            let sz = unsafe { cur.memcpy_serialize_at(0, &pad).unwrap() };
+            cur = unsafe { cur.truncate_header(sz).unwrap() };
+        }
 
-        for (offset, paddr) in self.inner_pg_table.iter() {
+        for (offset, _) in self.inner_pg_table.iter() {
             let sz0 = unsafe { cur.memcpy_serialize_at(0, offset).unwrap() };
-            let sz1 = unsafe { cur.memcpy_serialize_at(sz0, paddr).unwrap() };
-            cur = unsafe { cur.truncate_header(sz0 + sz1).unwrap() };
+            cur = unsafe { cur.truncate_header(sz0).unwrap() };
+        }
+
+        for (_, paddr) in self.inner_pg_table.iter() {
+            let sz1 = unsafe { cur.memcpy_serialize_at(0, paddr).unwrap() };
+            cur = unsafe { cur.truncate_header(sz1).unwrap() };
         }
         true
     }
 
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
-        let mut res: Vec<PageEntry> = Default::default();
+        let mut res: Vec<PageEntry, VmallocAllocator> = Vec::new_in(VmallocAllocator);
         let mut count: usize = 0;
-        let off = unsafe { bytes.memcpy_deserialize(&mut count)? };
+        let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
 
-        let mut cur = unsafe { bytes.truncate_header(off)? };
+        let off = unsafe { cur.memcpy_deserialize(&mut count)? };
+
+        cur = unsafe { cur.truncate_header(off)? };
+
+        if core::mem::size_of::<Offset>() < core::mem::size_of::<VirtAddrType>() && count % 2 == 1 {
+            let mut pad: u32 = 0;
+            let off = unsafe { cur.memcpy_deserialize(&mut pad)? };
+            cur = unsafe { cur.truncate_header(off)? };
+        }
+
         for _ in 0..count {
             let mut virt: Offset = 0;
-            let mut phy: Value = 0;
-
             let sz0 = unsafe { cur.memcpy_deserialize_at(0, &mut virt)? };
-            let sz1 = unsafe { cur.memcpy_deserialize_at(sz0, &mut phy)? };
-
-            res.push((virt, phy));
-
-            cur = unsafe { cur.truncate_header(sz0 + sz1)? };
+            res.push((virt, 0));
+            cur = unsafe { cur.truncate_header(sz0)? };
         }
+
+        for i in 0..count {
+            let mut phy: Value = 0;
+            let sz1 = unsafe { cur.memcpy_deserialize_at(0, &mut phy)? };
+            res[i].1 = phy;
+            cur = unsafe { cur.truncate_header(sz1)? };
+        }
+
         Some(VMAPageTable {
             inner_pg_table: res,
         })
     }
 
     fn serialization_buf_len(&self) -> usize {
-        core::mem::size_of::<usize>()
+        let mut base = core::mem::size_of::<usize>()
             + self.inner_pg_table.len()
-                * (core::mem::size_of::<Offset>() + core::mem::size_of::<Value>())
+                * (core::mem::size_of::<Offset>() + core::mem::size_of::<Value>());
+        if core::mem::size_of::<Offset>() < core::mem::size_of::<VirtAddrType>()
+            && self.table_len() % 2 == 1
+        {
+            base += core::mem::size_of::<u32>();
+        }
+        base
     }
 }
 
@@ -192,7 +242,7 @@ impl os_network::serialize::Serialize for FastDescriptor {
         cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
 
         // vma pt
-        let mut pt = Vec::new();
+        let mut pt = Vec::new_in(VmallocAllocator);
         // VMA page table count
         let mut count: usize = 0;
         let off = unsafe { cur.memcpy_deserialize(&mut count)? };

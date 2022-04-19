@@ -174,25 +174,26 @@ impl MitosisSysCallHandler {
     }
 
     #[inline]
-    fn syscall_local_resume(&mut self, _handler_id: c_ulong) -> c_long {
-        // if self.caller_status.resume_related.is_some() {
-        //     crate::log::error!("We don't support multiple resume yet. ");
-        //     return -1;
-        // }
-        //
-        // let process_service = unsafe { crate::get_sps_mut() };
-        // let descriptor = process_service.query_descriptor(handler_id as _);
-        //
-        // if descriptor.is_some() {
-        //     self.caller_status.resume_related = Some(ResumeDataStruct {
-        //         handler_id: handler_id as _,
-        //         descriptor: descriptor.unwrap().clone(),
-        //         // access info cannot failed to create
-        //         access_info: AccessInfo::new(&descriptor.unwrap().machine_info).unwrap(),
-        //     });
-        //     descriptor.unwrap().apply_to(self.my_file);
-        //     return 0;
-        // }
+    fn syscall_local_resume(&mut self, handler_id: c_ulong) -> c_long {
+        if self.caller_status.resume_related.is_some() {
+            crate::log::error!("We don't support multiple resume yet. ");
+            return -1;
+        }
+
+        let process_service = unsafe { crate::get_sps_mut() };
+        let descriptor = process_service.query_descriptor(handler_id as _);
+
+        if descriptor.is_some() {
+            let descriptor = descriptor.unwrap().to_descriptor();
+            self.caller_status.resume_related = Some(ResumeDataStruct {
+                handler_id: handler_id as _,
+                descriptor: descriptor.clone(),
+                // access info cannot failed to create
+                access_info: AccessInfo::new(&descriptor.machine_info).unwrap(),
+            });
+            descriptor.apply_to(self.my_file);
+            return 0;
+        }
         return -1;
     }
 

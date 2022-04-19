@@ -272,7 +272,7 @@ impl MySyscallHandler {
     fn test_vma_page_table(&self, _arg: c_ulong) -> c_long {
         let mut pg_table = VMAPageTable::default();
         for i in 0..100 {
-            pg_table.add_one(i, i * 2);
+            pg_table.add_one(i, (i * 2) as _);
         }
         let mut memory = vec![0; pg_table.serialization_buf_len()];
         let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };

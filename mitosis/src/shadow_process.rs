@@ -12,10 +12,10 @@ pub use page::*;
 
 use crate::descriptors::{FastDescriptor, VMAPageTable};
 use alloc::vec::Vec;
+use os_network::KRdmaKit::rust_kernel_rdma_base::VmallocAllocator;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
-
 
 #[allow(dead_code)]
 pub struct ShadowProcess {
@@ -44,7 +44,7 @@ impl ShadowProcess {
         let mut shadow_vmas: Vec<ShadowVMA<'static>> = Vec::new();
 
         let mut vma_descriptors = Vec::new();
-        let mut vma_page_table: Vec<VMAPageTable> = Vec::new();
+        let mut vma_page_table: Vec<VMAPageTable, VmallocAllocator> = Vec::new_in(VmallocAllocator);
         // the generation process
         let task = crate::kern_wrappers::task::Task::new();
         let mut mm = task.get_memory_descriptor();
@@ -62,6 +62,7 @@ impl ShadowProcess {
         }
         // clear the TLB
         mm.flush_tlb_mm();
+
         Self {
             shadow_vmas,
             cow_shadow_pagetable: Some(shadow_pt),
@@ -69,8 +70,7 @@ impl ShadowProcess {
             descriptor: FastDescriptor {
                 machine_info: rdma_descriptor,
                 regs: task.generate_reg_descriptor(),
-                // page_table: Vec::default(),
-                page_table: vma_page_table, // FIXME: why this latency is so high ?
+                page_table: vma_page_table,
                 vma: vma_descriptors,
             },
         }
@@ -81,7 +81,7 @@ impl ShadowProcess {
         let mut shadow_vmas: Vec<ShadowVMA<'static>> = Vec::new();
 
         let mut vma_descriptors = Vec::new();
-        let mut vma_page_table: Vec<VMAPageTable> = Vec::new();
+        let mut vma_page_table = Vec::new_in(VmallocAllocator);
         // the generation process
         let task = crate::kern_wrappers::task::Task::new();
         let mm = task.get_memory_descriptor();
