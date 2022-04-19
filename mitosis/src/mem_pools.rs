@@ -7,29 +7,40 @@ use os_network::msg::UDMsg as RMemory;
 /// T means each pool entry's memory size
 pub struct MemPool {
     pool: Vec<RMemory>,
-    cursor: usize,
-    capacity: usize,
+    fill_step: usize
 }
 
 impl MemPool {
     pub fn new(pool_len: usize) -> Self {
-        let mut pool = Vec::with_capacity(pool_len);
-        for _ in 0..pool_len {
-            pool.push(RMemory::new(MAX_KMALLOC_SZ, 0));
-        }
-        Self {
-            pool,
-            cursor: 0,
-            capacity: pool_len,
-        }
+        let mut res = Self {pool:Default::default(), fill_step:pool_len};
+        res.fill_up(pool_len);
+        res
     }
 }
 
 impl MemPool {
     #[inline]
-    pub fn fetch_one_mut(&mut self) -> &mut RMemory {
-        let res = self.pool.get_mut(self.cursor);
-        self.cursor = (self.cursor + 1) % self.capacity;
-        res.unwrap()
+    pub fn fetch_one_mut(&mut self) -> RMemory {
+        if self.is_empty() {
+            self.fill_up(self.fill_step);
+        }
+        self.pool.pop().unwrap()
+    }
+
+    #[inline]
+    fn fill_up(&mut self, len: usize) {
+        for _ in 0..len {
+            self.pool.push(RMemory::new(MAX_KMALLOC_SZ, 0));
+        }
+    }
+
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.capacity() == 0
+    }
+
+    #[inline]
+    fn capacity(&self) -> usize {
+        self.pool.len()
     }
 }

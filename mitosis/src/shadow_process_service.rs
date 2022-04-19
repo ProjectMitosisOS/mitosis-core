@@ -18,7 +18,7 @@ use os_network::{msg::UDMsg as RMemory, serialize::Serialize};
 struct ProcessBundler {
     #[allow(dead_code)]
     process: ShadowProcess,
-    serialized_buf: &'static RMemory,
+    serialized_buf: RMemory,
 
     #[allow(dead_code)] // place holder to prevent NIC release the resources
     bound_dc_targets: Vec<Arc<DCTarget>>,
@@ -30,7 +30,7 @@ impl ProcessBundler {
             "before alloc serialization buf sz {}KB",
             process.get_descriptor_ref().serialization_buf_len() / 1024
         );
-        let buf = unsafe { get_mem_pool_mut() }.fetch_one_mut();
+        let mut buf = unsafe { get_mem_pool_mut() }.fetch_one_mut();
         crate::log::debug!("serialization buf allocation done!");
 
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
@@ -71,7 +71,7 @@ impl ShadowProcessService {
     pub fn query_descriptor_buf(&self, key: usize) -> core::option::Option<&RMemory> {
         self.registered_processes
             .get(&key)
-            .map(|s| s.serialized_buf)
+            .map(|s| &s.serialized_buf)
     }
 
     pub fn query_descriptor(
