@@ -6,7 +6,7 @@ KMODULE_NAME=fork
 km:
 	cd ${KMS_DIR} ; python build.py ${KMODULE_NAME}
 
-insmod: km
+insmod:
 	sudo rmmod ${KMODULE_NAME} ; sudo insmod ${KMS_DIR}/${KMODULE_NAME}.ko
 
 rmmod:

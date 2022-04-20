@@ -1,3 +1,4 @@
+use crate::KRdmaKit::rust_kernel_rdma_base::VmallocAllocator;
 use alloc::vec::Vec;
 
 pub trait GetPhyAddr {
@@ -5,7 +6,7 @@ pub trait GetPhyAddr {
 }
 
 pub struct ShadowPageTable<P: GetPhyAddr> {
-    table: Vec<P>,
+    table: Vec<P, VmallocAllocator>,
 }
 
 impl<P> ShadowPageTable<P>
@@ -13,16 +14,18 @@ where
     P: GetPhyAddr,
 {
     pub fn new() -> Self {
-        Self { table: Vec::new() }
+        Self {
+            table: Vec::<P, VmallocAllocator>::with_capacity_in(32, VmallocAllocator),
+        }
     }
 
     #[inline]
-    pub fn add_page(&mut self, p : P) -> &mut Self { 
+    pub fn add_page(&mut self, p: P) -> &mut Self {
         self.table.push(p);
         self
     }
 
-    pub fn len(&self) -> usize { 
+    pub fn len(&self) -> usize {
         self.table.len()
     }
 }

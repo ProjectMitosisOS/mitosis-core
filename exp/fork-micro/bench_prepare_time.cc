@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <string>
 
-#include "../../mitosis-user-libs/mitosis-c-client//include/syscall.h"
+#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
 
 #define K 1024
 #define M 1024*(K)

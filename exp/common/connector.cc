@@ -2,7 +2,7 @@
 #include <iostream>
 #include <gflags/gflags.h>
 
-#include "../../mitosis-user-libs/mitosis-c-client//include/syscall.h"
+#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
 
 
 DEFINE_string(gid, "fe80:0000:0000:0000:248a:0703:009c:7c94", "connect gid");

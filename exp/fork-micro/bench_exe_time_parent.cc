@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #include <string>
-#include "../../mitosis-user-libs/mitosis-c-client//include/syscall.h"
+#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
 
 #define K 1024
 #define M 1024*(K)
@@ -52,12 +52,8 @@ main(int argc, char **argv) {
     free(buffer);
     buffer = (char *) malloc(FLAGS_working_set * sizeof(char));
     touch_working_set(FLAGS_working_set);
-    {
-        start = clock();
-        fork_prepare(sd, FLAGS_handler_id);
-        end = clock();
-        report("prepare");
-    }
+    fork_prepare(sd, FLAGS_handler_id);
+
     touch_working_set(FLAGS_working_set);
     while (cnt < FLAGS_run_sec) {
         printf("counter %d\n", cnt++);

@@ -55,8 +55,18 @@ impl MemoryDescriptor {
 
     // According to:  https://www.kernel.org/doc/html/latest/core-api/cachetlb.html
     #[allow(dead_code)]
-    pub fn flush_tlb(&mut self) {
+    #[inline]
+    pub fn flush_tlb_all(&mut self) {
         unsafe { pmem_flush_tlb_all() };
+    }
+
+    #[allow(dead_code)]
+    #[inline]
+    pub fn flush_tlb_mm(&mut self) {
+        use crate::bindings::pmem_flush_tlb_mm;
+        unsafe {
+            pmem_flush_tlb_mm(self.mm_inner as *mut _);
+        }
     }
 }
 

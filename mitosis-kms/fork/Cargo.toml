@@ -19,7 +19,9 @@ KRdmaKit = {path = "../../deps/rust-kernel-rdma/KRdmaKit", optional = true, feat
 os-network = {path = "../../os-network", optional = true, features = ["dct"]}
 rust-kernel-linux-util = {path = "../../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_info"]}
 krdma-test = {path="../../deps/rust-kernel-rdma/krdma-test",optional = true}
-mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["eager-resume"]}
+#mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = []}
+mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow"]}
+#mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow", "resume-profile"]}
 
 [dev-dependencies]
 mitosis-rust-client = { path = "../../mitosis-user-libs/mitosis-rust-client" }
