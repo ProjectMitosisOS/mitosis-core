@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <gflags/gflags.h>
 #include <unistd.h>
-#include "../../mitosis-user-libs/mitosis-c-client//include/syscall.h"
+#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
 
 DEFINE_int64(mac_id, 0, "machine id");
 DEFINE_int64(handler_id, 73, "rfork handler id");

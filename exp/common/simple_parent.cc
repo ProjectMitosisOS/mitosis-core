@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <gflags/gflags.h>
 
-#include "../../mitosis-user-libs/mitosis-c-client//include/syscall.h"
+#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
 
 DEFINE_int64(handler_id, 73, "rfork handler id");
 
