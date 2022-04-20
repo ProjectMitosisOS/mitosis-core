@@ -20,6 +20,7 @@
 #endif
 
 #define NANOSECONDS_IN_SECOND 1e9
+#define NANOSECONDS_IN_MILLISECOND 1e6
 #define REPORT_INTERVAL_IN_SECOND 1
 
 static long count = 0;
@@ -50,7 +51,7 @@ void report(struct timespec* start, struct timespec* end) {
     long elapsed_time = get_passed_nanosecond(start, end);
     long elapsed_time_since_last_report = elapsed_time - last_timestamp;
     if (elapsed_time_since_last_report > interval) {
-        printf("start %ld lean containers in %f second(s)\n", count-last_count, elapsed_time_since_last_report/NANOSECONDS_IN_SECOND);
+        printf("start %ld lean containers in %f second(s), latency per container %fms\n", count-last_count, elapsed_time_since_last_report/NANOSECONDS_IN_SECOND, (elapsed_time_since_last_report/NANOSECONDS_IN_MILLISECOND)/(count-last_count));
         last_timestamp = elapsed_time;
         last_count = count;
     }
@@ -73,6 +74,7 @@ int test_setup_lean_container(char* name, int namespace) {
         _exit(0);
     }
 
+    // wait for the containered process to exit
     pid_t child = wait_pid(pid);
     if (child != pid) {
         printf("child pid: %d, expected: %d\n", child, pid);
