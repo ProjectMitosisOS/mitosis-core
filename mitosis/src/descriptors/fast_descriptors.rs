@@ -1,6 +1,4 @@
-use crate::descriptors::{
-    Descriptor, FlatPageTable, PageMapAllocator, RDMADescriptor, RegDescriptor, VMADescriptor,
-};
+use crate::descriptors::{Descriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::{linux_kernel_module, VmallocAllocator};
 use alloc::vec::Vec;
@@ -168,7 +166,7 @@ impl os_network::serialize::Serialize for VMAPageTable {
     fn serialization_buf_len(&self) -> usize {
         let mut base = core::mem::size_of::<usize>()
             + self.inner_pg_table.len()
-            * (core::mem::size_of::<Offset>() + core::mem::size_of::<Value>());
+                * (core::mem::size_of::<Offset>() + core::mem::size_of::<Value>());
         if core::mem::size_of::<Offset>() < core::mem::size_of::<VirtAddrType>()
             && self.table_len() % 2 == 1
         {
