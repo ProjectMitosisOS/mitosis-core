@@ -84,17 +84,17 @@ int test_setup_lean_container(char* name, int namespace) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        printf("Usage: %s [time in seconds to run the benchmark]\n", argv[0]);
+    if (argc < 2) {
+        printf("Usage: %s [time in seconds to run the benchmark] [lean container name (default: test)]\n", argv[0]);
         return 0;
     }
 
     long benchmark_time = atol(argv[1]);
     long benchmark_time_nanoseconds = benchmark_time * NANOSECONDS_IN_SECOND;
+    char* name = argc >= 3 ? argv[2] : "test";
 
-    printf("Running for %ld seconds\n", benchmark_time);
+    printf("Running for %ld seconds, lean container name %s\n", benchmark_time, name);
 
-    char* name = "test";
     struct ContainerSpec spec;
     struct timespec start, now;
     int ret;
@@ -133,9 +133,6 @@ int main(int argc, char** argv) {
     printf("pass lean container unit test!\n");
 clean:
     ret = remove_lean_container_template(name);
-    assert(ret == 0);
-
-    ret = deinit_cgroup();
     assert(ret == 0);
 
     ret = remove_cached_namespace(pid);
