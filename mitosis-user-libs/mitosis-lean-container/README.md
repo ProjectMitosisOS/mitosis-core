@@ -46,6 +46,21 @@ sudo ./lib/build/test_start_app $OUTPUT_DIR$/$NAME$ hello.py
 
 The single thread microbenchmark measures the latency of lean container creation.
 
+The pseudo code of the critical path is shown below:
+
+```plain
+int critical_path() {
+    int is_container = setup_container();
+    if (is_container) {
+        exit(0); # Exit immediately to avoid performance overhead
+    } else {
+        wait_container_exit();
+    }
+}
+```
+
+We will benchmark this critical path in the main process.
+
 Build the lean container.
 
 ```bash
@@ -62,7 +77,7 @@ Run the single thread benchmark of lean container.
 sudo ./lib/build/benchmark_lean_container 10 # Running for 10 seconds
 ```
 
-Output:
+Reference output:
 
 ```plain
 start 1016 lean containers in 1.000291 second(s), latency per container 0.984539ms
@@ -76,3 +91,5 @@ start 1002 lean containers in 1.000394 second(s), latency per container 0.998397
 start 1015 lean containers in 1.001096 second(s), latency per container 0.986301ms
 total: start 9996 lean containers in 10.000178 second(s)
 ```
+
+Reference performace: 1ms latency on val01.
