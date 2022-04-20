@@ -1,7 +1,7 @@
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::sync::atomic::Ordering::SeqCst;
-use core::sync::atomic::{compiler_fence, fence};
+use core::sync::atomic::{compiler_fence};
 
 use hashbrown::HashMap;
 use os_network::rdma::dc::DCTarget;

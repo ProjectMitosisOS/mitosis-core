@@ -5,7 +5,7 @@ use os_network::bytes::BytesMut;
 pub trait IntValue = PartialEq + Eq + Sized + Default + Copy + Clone;
 
 #[derive(Debug, PartialEq, Eq, Default, Copy, Clone)]
-#[repr(packed, C)]
+// #[repr(packed, C)]
 pub struct Pair<K: IntValue, V: IntValue> {
     k: K,
     v: V,
