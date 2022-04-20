@@ -41,3 +41,38 @@ Run the python code in the lean container.
 ```bash
 sudo ./lib/build/test_start_app $OUTPUT_DIR$/$NAME$ hello.py
 ```
+
+## Running the single thread microbenchmark
+
+The single thread microbenchmark measures the latency of lean container creation.
+
+Build the lean container.
+
+```bash
+cd lib
+mkdir build
+cd build
+cmake ..
+make
+```
+
+Run the single thread benchmark of lean container.
+
+```bash
+sudo ./lib/build/benchmark_lean_container 10 # Running for 10 seconds
+```
+
+Output:
+
+```plain
+start 1016 lean containers in 1.000291 second(s), latency per container 0.984539ms
+start 988 lean containers in 1.000358 second(s), latency per container 1.012508ms
+start 999 lean containers in 1.000496 second(s), latency per container 1.001497ms
+start 996 lean containers in 1.000042 second(s), latency per container 1.004058ms
+start 1005 lean containers in 1.000414 second(s), latency per container 0.995437ms
+start 993 lean containers in 1.000375 second(s), latency per container 1.007427ms
+start 1004 lean containers in 1.000173 second(s), latency per container 0.996188ms
+start 1002 lean containers in 1.000394 second(s), latency per container 0.998397ms
+start 1015 lean containers in 1.001096 second(s), latency per container 0.986301ms
+total: start 9996 lean containers in 10.000178 second(s)
+```
