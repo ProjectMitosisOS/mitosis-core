@@ -7,9 +7,9 @@ cmd =  'make insmod'
 [[pass]]
 host = 'val08'
 path = '/home/lfm/projects/mos/exp/fork-micro'
-cmd = 'python ./bench_exe_time_parent.py -working_set=268435456 -run_sec=5'
+cmd = 'python ./bench_exe_time_parent.py -working_set=536870912 -run_sec=15'
 
 [[pass]]
 host = 'val08'
 path = '/home/lfm/projects/mos/exp/fork-micro'
-cmd = './simple_child -mac_id=0'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=3'

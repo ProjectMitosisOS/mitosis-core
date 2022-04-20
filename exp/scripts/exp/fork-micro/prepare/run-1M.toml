@@ -6,4 +6,4 @@ cmd = 'make insmod'
 [[pass]]
 host = 'val08'
 path = '/home/lfm/projects/mos/exp/fork-micro'
-cmd = './bench_prepare_time -working_set=1048576'
+cmd = 'python ./bench_prepare_time.py -working_set=1048576'

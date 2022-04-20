@@ -1,3 +1,5 @@
+import sys
+
 import syscall_lib
 import argparse
 import time
