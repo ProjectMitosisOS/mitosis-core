@@ -40,13 +40,15 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     let addr = process_service.query_descriptor_buf(key);
 
     if addr.is_none() {
+        crate::log::error!("empty addr!");
         return 0; // a null reply indicate that the we don't have the key
     }
-    
-    let reply = DescriptorLookupReply { 
-        pa : addr.unwrap().get_pa(), 
+
+    let reply = DescriptorLookupReply {
+        pa : addr.unwrap().get_pa(),
         sz : addr.unwrap().len(),
     };
+    crate::log::debug!("send reply:{:?}", reply);
     reply.serialize(output);
     reply.serialization_buf_len()
 }

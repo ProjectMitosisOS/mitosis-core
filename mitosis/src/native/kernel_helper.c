@@ -47,8 +47,42 @@ pmem_flush_tlb_all(void)
 {
   static void (*k_flush_tlb_all)(void) = NULL;
   if (!k_flush_tlb_all)
-    k_flush_tlb_all = (void*)kallsyms_lookup_name("flush_tlb_all");
+      k_flush_tlb_all = (void*)kallsyms_lookup_name("flush_tlb_all");
+  if (!k_flush_tlb_all) {
+      printk(KERN_ERR "kernel-helper error: "
+                      "can't find kernel function flush_tlb_all\n");
+      return;
+  }
   (*k_flush_tlb_all)();
+}
+
+void
+pmem_flush_tlb_range(struct vm_area_struct *vma, unsigned long start, unsigned long end)
+{
+    static void (*k_flush_tlb_mm_range)(struct mm_struct *mm, unsigned long start,
+                                        unsigned long end, unsigned long vmflag) =  NULL;
+    if (!k_flush_tlb_mm_range)
+        k_flush_tlb_mm_range = (void*)kallsyms_lookup_name("flush_tlb_mm_range");
+    if (!k_flush_tlb_mm_range) {
+        printk(KERN_ERR "kernel-helper error: "
+                        "can't find kernel function flush_tlb_mm_range\n");
+        return;
+    }
+    (*k_flush_tlb_mm_range)(vma->vm_mm, start, end, vma->vm_flags);
+}
+
+void
+pmem_flush_tlb_mm(struct mm_struct *mm){
+    static void (*k_flush_tlb_mm_range)(struct mm_struct *mm, unsigned long start,
+                                        unsigned long end, unsigned long vmflag) =  NULL;
+    if (!k_flush_tlb_mm_range)
+        k_flush_tlb_mm_range = (void*)kallsyms_lookup_name("flush_tlb_mm_range");
+    if (!k_flush_tlb_mm_range) {
+        printk(KERN_ERR "kernel-helper error: "
+                        "can't find kernel function flush_tlb_mm_range\n");
+        return;
+    }
+    (*k_flush_tlb_mm_range)(mm, 0UL, TLB_FLUSH_ALL, 0UL);
 }
 
 long

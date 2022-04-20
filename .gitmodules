@@ -4,3 +4,6 @@
 [submodule "deps/gflags"]
 	path = deps/gflags
 	url = https://github.com/gflags/gflags.git
+[submodule "deps/hashbrown"]
+	path = deps/hashbrown
+	url = https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/mitosis-project/hashbrown.git

@@ -1,5 +1,5 @@
 #![no_std]
-
+#![feature(allocator_api)]
 extern crate alloc;
 
 use rust_kernel_linux_util as log;

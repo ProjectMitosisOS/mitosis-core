@@ -9,11 +9,20 @@ const _4K: usize = 4096;
 /// A wrapper over the original linux's page data structure
 /// It will copy the page to a newly allocated one to prevent overwriting
 /// Currently, we only support 4K pages
+#[derive(Debug)]
 pub struct Copy4KPage {
-    inner: &'static mut page, // linux data structure wrapper always use the 'static lifetime
+    inner: *mut page, // linux data structure wrapper always use the 'static lifetime
 }
 
 impl Copy4KPage {
+    /// Note: this function is just used for testing!
+    #[allow(dead_code)]
+    pub(crate) unsafe fn new_as_null() -> Self {
+        Self {
+            inner: core::ptr::null_mut(),
+        }
+    }
+
     pub unsafe fn new(
         user_vaddr: *mut crate::linux_kernel_module::c_types::c_void,
     ) -> Option<Self> {
@@ -34,9 +43,7 @@ impl Copy4KPage {
             .read(core::slice::from_raw_parts_mut(new_virt as *mut u8, _4K))
             .expect("cannot copy from user");
 
-        Some(Self {
-            inner: &mut *(new_page_p as *mut page),
-        })
+        Some(Self { inner: new_page_p })
     }
 
     pub fn get_kva(&self) -> *mut crate::linux_kernel_module::c_types::c_void {
@@ -56,7 +63,9 @@ impl super::page_table::GetPhyAddr for Copy4KPage {
 
 impl Drop for Copy4KPage {
     fn drop(&mut self) {
-        unsafe { pmem_free_page(self.inner as *mut _) };
+        if !self.inner.is_null() {
+            unsafe { pmem_free_page(self.inner as *mut _) };
+        }
     }
 }
 
@@ -71,7 +80,9 @@ impl COW4KPage {
         crate::bindings::pmem_get_page(page);
         crate::bindings::pmem_page_dup_rmap(page, false);
 
-        Some(Self { inner: &mut (*page) })
+        Some(Self {
+            inner: &mut (*page),
+        })
     }
 }
 

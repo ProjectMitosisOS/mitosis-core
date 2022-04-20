@@ -66,7 +66,13 @@ pmem_mmap_region(struct file* file,
                  unsigned long pgoff);
 
 void
+pmem_flush_tlb_range(struct vm_area_struct *vma, unsigned long start, unsigned long end);
+
+void
 pmem_flush_tlb_all(void);
+
+void
+pmem_flush_tlb_mm(struct mm_struct *mm);
 
 void
 pmem_clear_pte_present(pte_t* pte);

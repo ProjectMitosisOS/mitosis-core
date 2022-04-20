@@ -19,8 +19,15 @@ pub use rdma::*;
 
 pub mod vma;
 
+pub mod fast_descriptors;
+
+pub use fast_descriptors::*;
+
 pub use vma::*;
 
+pub mod pair;
+
+pub use pair::*;
 // pub mod factory;
 // pub use factory::DescriptorFactoryService;
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
@@ -69,9 +76,7 @@ impl Descriptor {
                 let vma = vma.unwrap();
                 let (size, start) = (m.get_sz(), m.get_start());
                 for addr in (start..start + size).step_by(4096) {
-                    if let Some(new_page_p) =
-                        unsafe { self.read_remote_page(addr, &access_info) }
-                    {
+                    if let Some(new_page_p) = unsafe { self.read_remote_page(addr, &access_info) } {
                         // FIXME: 52 is hard-coded
                         vma.vm_page_prot.pgprot =
                             vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit

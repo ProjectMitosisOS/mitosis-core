@@ -1,5 +1,12 @@
 #![no_std]
-#![feature(core_intrinsics)]
+#![feature(
+    core_intrinsics,
+    allocator_api,
+    nonnull_slice_from_raw_parts,
+    alloc_layout_extra,
+    get_mut_unchecked,
+    trait_alias
+)]
 
 extern crate alloc;
 
@@ -26,6 +33,8 @@ pub mod shadow_process_service;
 
 pub mod descriptors;
 
+pub mod mem_pools;
+
 use alloc::vec::Vec;
 
 // TODO: doc how to use mitosis
@@ -41,8 +50,8 @@ declare_global!(max_caller_num, usize);
 
 declare_global!(max_cluster_size, usize);
 
-// FIXME: currently, we assume that all machines in the cluster has the 
-// same number of RNIC attached to it. 
+// FIXME: currently, we assume that all machines in the cluster has the
+// same number of RNIC attached to it.
 declare_global!(max_nics_used, usize);
 
 #[derive(Debug, Clone)]
@@ -60,7 +69,9 @@ pub struct Config {
 
     pub(crate) init_dc_targets: usize,
 
-    pub(crate) max_cluster_size : usize,
+    pub(crate) max_cluster_size: usize,
+
+    pub(crate) mem_pool_size: usize,
 }
 
 impl Default for Config {
@@ -72,7 +83,8 @@ impl Default for Config {
             max_core_cnt: 48,
             peers_gid: Vec::new(),
             init_dc_targets: 256,
-            max_cluster_size : 128,
+            max_cluster_size: 128,
+            mem_pool_size: 20,
         }
     }
 }
@@ -114,6 +126,11 @@ impl Config {
 
     pub fn set_init_dc_targets(&mut self, num: usize) -> &mut Self {
         self.init_dc_targets = num;
+        self
+    }
+
+    pub fn set_mem_pool_size(&mut self, sz: usize) -> &mut Self {
+        self.mem_pool_size = sz;
         self
     }
 }
@@ -266,4 +283,16 @@ pub unsafe fn get_sps_ref() -> &'static crate::shadow_process_service::ShadowPro
 #[inline]
 pub unsafe fn get_sps_mut() -> &'static mut crate::shadow_process_service::ShadowProcessService {
     crate::sp_service::get_mut()
+}
+
+declare_global!(mem_pool, crate::mem_pools::MemPool);
+
+#[inline]
+pub unsafe fn get_mem_pool_ref() -> &'static crate::mem_pools::MemPool {
+    crate::mem_pool::get_ref()
+}
+
+#[inline]
+pub unsafe fn get_mem_pool_mut() -> &'static mut crate::mem_pools::MemPool {
+    crate::mem_pool::get_mut()
 }

@@ -110,11 +110,12 @@ impl MySyscallHandler {
 
     #[inline(always)]
     fn handle_page_table_test(&self, _arg: c_ulong) -> c_long {
+        log::debug!("start test handle page table"); 
         let mut mac_info: mitosis::descriptors::RDMADescriptor = Default::default();
         mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
 
         let _sp = ShadowProcess::new_copy(mac_info.clone());
-        // let _sp = ShadowProcess::new_cow(mac_info);
+        log::debug!("page table test done");
         0
     }
 }
