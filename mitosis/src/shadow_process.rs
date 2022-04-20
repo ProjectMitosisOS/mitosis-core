@@ -86,17 +86,20 @@ impl ShadowProcess {
         let task = crate::kern_wrappers::task::Task::new();
         let mm = task.get_memory_descriptor();
 
+        // crate::log::debug!("before iterating the VMAs");
         for vma in mm.get_vma_iter() {
             vma_descriptors.push(vma.generate_descriptor());
-            shadow_vmas.push(ShadowVMA::new(vma, true));
+            shadow_vmas.push(ShadowVMA::new(vma, false));
             vma_page_table.push(Default::default());
         }
 
+        // crate::log::debug!("before iterating the page table");
         for (idx, _) in mm.get_vma_iter().enumerate() {
             let pt: &mut VMAPageTable = vma_page_table.get_mut(idx).unwrap();
             let s_vma = shadow_vmas.get(idx).unwrap();
             VMACopyPTGenerator::new(s_vma, &mut shadow_pt, pt).generate();
         }
+
         Self {
             shadow_vmas,
             cow_shadow_pagetable: None,
