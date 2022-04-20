@@ -5,14 +5,13 @@
 Suppose you have a directory named `app` and the application python code has put in it with the following structure: 
 
 ```
-app
 └── hello
     ├── hello.py
     ├── requirements.txt
     └── Dockerfile # Optional, we have a default Dockerfile
 ```
 
-We can build a docker image from `app/hello/`. The name of docker image is `hello`. The rootfs is exported to `.base/hello/rootfs`.
+We can build a docker image from `hello/`. The name of docker image is `hello`. The rootfs is exported to `.base/hello/rootfs`.
 
 ```bash
 python3 make_app_rootfs.py --app $PATH_TO_APP$/app/hello/ --name hello --export $OUTPUT_DIR$/$NAME$
