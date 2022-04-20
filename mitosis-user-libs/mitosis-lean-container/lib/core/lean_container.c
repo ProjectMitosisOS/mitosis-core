@@ -475,16 +475,11 @@ int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int namesp
     if (pid) {
         pid_t child;
         read(pipefd[0], &child, sizeof(child));
-        struct timespec start, now;
-        clock_gettime(CLOCK_REALTIME, &start);
         pid_t ret = waitpid(pid, NULL, 0);
         if (ret != pid) {
             perror("waitpid");
             return -1;
         }
-        clock_gettime(CLOCK_REALTIME, &now);
-        long time = get_passed_nanosecond(&start, &now);
-        printf("waitpid in setup_lean_container_w_double_fork time %ldns\n", time);
         close(pipefd[0]);
         close(pipefd[1]);
         return child;

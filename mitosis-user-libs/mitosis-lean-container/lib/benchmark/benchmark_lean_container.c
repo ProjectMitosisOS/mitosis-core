@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdlib.h> 
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/prctl.h>
@@ -17,6 +18,11 @@
 #else
 #define debug_printf
 #endif
+
+#define NANOSECONDS_IN_SECOND 1e9
+#define REPORT_INTERVAL_IN_SECOND 1
+
+static long count = 0;
 
 pid_t wait_pid(pid_t pid) {
     int ret;
@@ -31,13 +37,27 @@ pid_t wait_pid(pid_t pid) {
 }
 
 static long get_passed_nanosecond(struct timespec* start, struct timespec* end) {
-    return 1e9*(end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
+    return NANOSECONDS_IN_SECOND*(end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
+}
+
+void report(struct timespec* start, struct timespec* end) {
+    static long last_count = 0;
+    static long last_timestamp = 0;
+
+    // Report every second
+    static const long interval = REPORT_INTERVAL_IN_SECOND * NANOSECONDS_IN_SECOND;
+
+    long elapsed_time = get_passed_nanosecond(start, end);
+    long elapsed_time_since_last_report = elapsed_time - last_timestamp;
+    if (elapsed_time_since_last_report > interval) {
+        printf("start %ld lean containers in %f second(s)\n", count-last_count, elapsed_time_since_last_report/NANOSECONDS_IN_SECOND);
+        last_timestamp = elapsed_time;
+        last_count = count;
+    }
+    return;
 }
 
 int test_setup_lean_container(char* name, int namespace) {
-    struct timespec start, now;
-    clock_gettime(CLOCK_REALTIME, &start);
-
     pid_t pid = setup_lean_container_w_double_fork(name, ".", namespace);
     if (pid < 0) {
         debug_printf("set lean container failed!");
@@ -46,9 +66,6 @@ int test_setup_lean_container(char* name, int namespace) {
 
 
     if (pid) {
-        clock_gettime(CLOCK_REALTIME, &now);
-        long time = get_passed_nanosecond(&start, &now);
-        printf("setup_lean_container_w_double_fork time %ldns\n", time);
         debug_printf("this is the lean container launcher process!\n");
     } else {
         // we are now running in the lean container!
@@ -56,12 +73,7 @@ int test_setup_lean_container(char* name, int namespace) {
         _exit(0);
     }
 
-    // pid_t child = waitpid(pid, NULL, 0);
-    clock_gettime(CLOCK_REALTIME, &start);
     pid_t child = wait_pid(pid);
-    clock_gettime(CLOCK_REALTIME, &now);
-    long time = get_passed_nanosecond(&start, &now);
-    printf("wait_pid after setup_lean_container_w_double_fork time %ldns\n", time);
     if (child != pid) {
         printf("child pid: %d, expected: %d\n", child, pid);
         return -1;
@@ -69,24 +81,29 @@ int test_setup_lean_container(char* name, int namespace) {
     return 0;
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        printf("Usage: %s [time in seconds to run the benchmark]\n", argv[0]);
+        return 0;
+    }
+
+    long benchmark_time = atol(argv[1]);
+    long benchmark_time_nanoseconds = benchmark_time * NANOSECONDS_IN_SECOND;
+
+    printf("Running for %ld seconds\n", benchmark_time);
+
     char* name = "test";
     struct ContainerSpec spec;
     struct timespec start, now;
     int ret;
     pid_t pid;
-    int loop = 10;
+    long elapsed_time;
     
     spec.cpu_start = -1;
     spec.cpu_end = -1;
     spec.memory_in_mb = -1;
     spec.numa_start = -1;
     spec.numa_end = -1;
-
-    // set this process as the subreaper
-    // so that the process can reap the grandchild process
-    // ret = prctl(PR_SET_CHILD_SUBREAPER, 1);
-    // assert(ret == 0);
 
     pid = setup_cached_namespace();
     
@@ -97,17 +114,19 @@ int main() {
     assert(ret == 0);
 
 
-    for (int i = 0; i < loop; i++) {
-        clock_gettime(CLOCK_REALTIME, &start);
+    clock_gettime(CLOCK_REALTIME, &start);
+    for (;;) {
         test_setup_lean_container(name, pid);
         clock_gettime(CLOCK_REALTIME, &now);
-        long time = get_passed_nanosecond(&start, &now);
-        printf("generate %dth lean container: %ldns\n", i, time);
+        count++;
+        report(&start, &now);
+        elapsed_time = get_passed_nanosecond(&start, &now);
+        if (elapsed_time > benchmark_time_nanoseconds) {
+            break;
+        }
     }
 
-
-
-    // printf("average %fms\n", time/loop/1e6);
+    printf("total: start %ld lean containers in %f second(s)\n", count, elapsed_time/NANOSECONDS_IN_SECOND);
     
     printf("pass lean container unit test!\n");
 clean:
