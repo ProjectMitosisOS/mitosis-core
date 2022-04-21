@@ -1,59 +1,121 @@
-[[pass]]
-host = "val01"
-path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test0'
+# Comment out some entries to benchmark with fewer processes
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test1'
+cmd  = 'sudo ./benchmark_lean_container 40 test0'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test2'
+cmd  = 'sudo ./benchmark_lean_container 40 test1'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test3'
+cmd  = 'sudo ./benchmark_lean_container 40 test2'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test4'
+cmd  = 'sudo ./benchmark_lean_container 40 test3'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test5'
+cmd  = 'sudo ./benchmark_lean_container 40 test4'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test6'
+cmd  = 'sudo ./benchmark_lean_container 40 test5'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test7'
+cmd  = 'sudo ./benchmark_lean_container 40 test6'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test8'
+cmd  = 'sudo ./benchmark_lean_container 40 test7'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test9'
+cmd  = 'sudo ./benchmark_lean_container 40 test8'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test10'
+cmd  = 'sudo ./benchmark_lean_container 40 test9'
 
 [[pass]]
 host = "val01"
 path = ''
-cmd  = 'sudo ./benchmark_lean_container 30 test11'
+cmd  = 'sudo ./benchmark_lean_container 40 test10'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test11'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test12'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test13'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test14'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test15'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test16'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test17'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test18'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test19'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test20'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test21'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test22'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 40 test23'

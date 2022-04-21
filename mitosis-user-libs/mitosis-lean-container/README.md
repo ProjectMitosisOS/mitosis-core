@@ -132,3 +132,4 @@ The peak throughput on val01 is 5665 containers/s.
 | 10                             | 5382       |
 | 12                             | 5665       |
 | 16                             | 5491       |
+| 24                             | 4625       |
