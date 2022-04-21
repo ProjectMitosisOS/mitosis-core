@@ -17,7 +17,7 @@ deps-job:
   timeout: 10 minutes
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
-    - bash ci/is_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
+    - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
   only:
     refs:
       - branches
@@ -40,7 +40,7 @@ unittest-mitosis-job:   # This job runs in the test stage.
   timeout: 10 minutes
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
-    - bash ci/is_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
+    - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
   only:
     refs:
       - branches
@@ -63,7 +63,7 @@ unittest-os-network-job:   # This job also runs in the test stage.
   timeout: 10 minutes
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
-    - bash ci/is_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
+    - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
   only:
     refs:
       - branches
@@ -86,7 +86,7 @@ unittest-mitosis-macros-job:   # This job also runs in the test stage.
   timeout: 10 minutes
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
-    - bash ci/is_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
+    - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
   only:
     refs:
       - branches
