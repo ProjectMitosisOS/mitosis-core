@@ -27,7 +27,7 @@ int main() {
 
     // setup the lean container of `name`
     // and the rootfs of the lean container is specified by second parameter
-    pid = setup_lean_container(name, ".");
+    pid = setup_lean_container(name, ".", -1);
     if (pid < 0) {
         printf("set lean container failed!");
         goto clean;

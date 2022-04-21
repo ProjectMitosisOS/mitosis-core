@@ -1,0 +1,1 @@
+add_executable(benchmark_lean_container benchmark/benchmark_lean_container.c core/lean_container.c)

@@ -1,0 +1,59 @@
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test0'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test1'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test2'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test3'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test4'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test5'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test6'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test7'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test8'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test9'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test10'
+
+[[pass]]
+host = "val01"
+path = ''
+cmd  = 'sudo ./benchmark_lean_container 30 test11'

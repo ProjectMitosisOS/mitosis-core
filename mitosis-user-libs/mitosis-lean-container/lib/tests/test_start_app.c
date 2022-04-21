@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 
     // setup the lean container of `name`
     // and the rootfs of the lean container is specified by second parameter
-    pid = setup_lean_container(name, rootfs_path);
+    pid = setup_lean_container(name, rootfs_path, -1);
     if (pid < 0) {
         printf("set lean container failed!");
         goto clean;
