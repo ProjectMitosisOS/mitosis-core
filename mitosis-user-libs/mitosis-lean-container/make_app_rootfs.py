@@ -42,6 +42,11 @@ def main():
     if args.app is None:
         print('specify the app directory by --app')
         return
+    
+    dockerfile = os.path.join(args.app, 'Dockerfile')
+    if not os.path.isfile(dockerfile):
+        print('cannot find Dockerfile in app directory: %s' % (dockerfile))
+        return
 
     if args.export is None:
         print('specify the export app rootfs directory by --export')
