@@ -52,20 +52,23 @@ make
 Run the arbitrary binary in the lean container.
 
 ```bash
-export ROOTFS_DIR=/path/to/rootfs
+export CONTAINER_NAME=my_container
+export ROOTFS_ABS_PATH=/path/to/rootfs
 export COMMAND_ABS_PATH=/usr/bin/xxxx
 export ARGS1=xxx
 export ARGS2=xxx
 ```
 
 ```bash
-sudo ./lib/build/test_start_app $ROOTFS_DIR $COMMAND_ABS_PATH $ARGS1 $ARGS2 # can be continued with arbitrary args
+sudo ./lib/build/test_start_app $CONTAINER_NAME $ROOTFS_ABS_PATH $COMMAND_ABS_PATH $ARGS1 $ARGS2 # can be continued with arbitrary args
 ```
 
-For example, we can run a python code `/hello.py` from the rootfs `.base/hello/rootfs/` via the following command.
+For example, we can run a python code `/hello.py` from the rootfs `${PWD}/.base/hello/rootfs/` via the following command.
+
+Note that the rootfs should be specified with **absolute path** on the host machine, and the command should be specified with its **absolute path** in the rootfs directory.
 
 ```bash
-sudo ./lib/build/test_start_app .base/hello/rootfs/ /usr/local/bin/python /hello.py
+sudo ./lib/build/test_start_app my_test_container ${PWD}/.base/hello/rootfs/ /usr/local/bin/python /hello.py
 ```
 
 ## Running the single thread microbenchmark
