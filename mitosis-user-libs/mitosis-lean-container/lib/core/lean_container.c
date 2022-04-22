@@ -436,6 +436,7 @@ int setup_lean_container(char* name, char* rootfs_path, int namespace) {
         ret = chdir(rootfs_path);
         if (ret != 0) {
             fprintf(stderr, "chdir to %s failed\n", rootfs_path);
+            perror("chdir");
             goto err;
         }
 
