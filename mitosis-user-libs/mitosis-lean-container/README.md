@@ -2,26 +2,39 @@
 
 ## Rootfs Preparation
 
-Suppose you have a directory named `app` and the application python code has put in it with the following structure: 
+Prepare your app according to the following structure. You **must** place your `Dockerfile` in the application directory.
+
+A example is shown in `app/hello`.
 
 ```
 └── hello
     ├── hello.py
     ├── requirements.txt
-    └── Dockerfile # Optional, we have a default Dockerfile
+    └── Dockerfile # A Dockerfile is obligatory to build a docker image
 ```
 
-We can build a docker image from `hello/`. The name of docker image is `hello`. The rootfs is exported to `.base/hello/rootfs`.
+We can build a docker image from this via `make_app_rootfs.py`. The name of created docker image specified by `--name`. The rootfs is exported to the path specified by `--export`.
 
 ```bash
-python3 make_app_rootfs.py --app $PATH_TO_APP$/app/hello/ --name hello --export $OUTPUT_DIR$/$NAME$
+export PATH_TO_APP=/path/to/app
+export IMAGE_NAME=your_image_name
+export ROOTFS_DIR=/path/to/rootfs
 ```
 
+```bash
+python3 make_app_rootfs.py --app $PATH_TO_APP --name $IMAGE_NAME --export $ROOTFS_DIR
+```
+
+For example, we can build a image named by `hello` from `app/hello`, and export rootfs to `.base/hello/rootfs` via the following command.
+
+```bash
+python3 make_app_rootfs.py --app app/hello/ --name hello --export .base/hello/rootfs
+```
 
 We can skip the build process of docker image, and only export the docker image.
 
 ```bash
-python3 make_app_rootfs.py --name hello --only-export $OUTPUT_DIR$/$NAME$
+python3 make_app_rootfs.py --name $IMAGE_NAME --only-export $ROOTFS_DIR
 ```
 
 ## Running the lean container
@@ -36,10 +49,23 @@ cmake ..
 make
 ```
 
-Run the python code in the lean container.
+Run the arbitrary binary in the lean container.
 
 ```bash
-sudo ./lib/build/test_start_app $OUTPUT_DIR$/$NAME$ hello.py
+export ROOTFS_DIR=/path/to/rootfs
+export COMMAND_ABS_PATH=/usr/bin/xxxx
+export ARGS1=xxx
+export ARGS2=xxx
+```
+
+```bash
+sudo ./lib/build/test_start_app $ROOTFS_DIR $COMMAND_ABS_PATH $ARGS1 $ARGS2 # can be continued with arbitrary args
+```
+
+For example, we can run a python code `/hello.py` from the rootfs `.base/hello/rootfs/` via the following command.
+
+```bash
+sudo ./lib/build/test_start_app .base/hello/rootfs/ /usr/local/bin/python /hello.py
 ```
 
 ## Running the single thread microbenchmark
