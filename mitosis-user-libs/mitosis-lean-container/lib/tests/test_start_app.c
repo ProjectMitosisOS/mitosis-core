@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -42,6 +43,9 @@ int main(int argc, char* argv[]) {
     spec.memory_in_mb = -1;
     spec.numa_start = -1;
     spec.numa_end = -1;
+
+    ret = prctl(PR_SET_CHILD_SUBREAPER);
+    assert(ret == 0);
     
     ret = init_cgroup();
     assert(ret == 0);
@@ -53,7 +57,7 @@ int main(int argc, char* argv[]) {
 
     // setup the lean container of `name`
     // and the rootfs of the lean container is specified by second parameter
-    pid = setup_lean_container(name, rootfs_path, cached_namespace);
+    pid = setup_lean_container_w_double_fork(name, rootfs_path, cached_namespace);
     if (pid < 0) {
         printf("set lean container failed!\n");
         goto clean;
