@@ -60,7 +60,7 @@ export ARGS2=xxx
 ```
 
 ```bash
-sudo ./lib/build/test_start_app $CONTAINER_NAME $ROOTFS_ABS_PATH $COMMAND_ABS_PATH $ARGS1 $ARGS2 # can be continued with arbitrary args
+sudo ./lib/build/start_lean_container $CONTAINER_NAME $ROOTFS_ABS_PATH $COMMAND_ABS_PATH $ARGS1 $ARGS2 # can be continued with arbitrary args
 ```
 
 For example, we can run a python code `/hello.py` from the rootfs `${PWD}/.base/hello/rootfs/` via the following command.
@@ -68,10 +68,11 @@ For example, we can run a python code `/hello.py` from the rootfs `${PWD}/.base/
 Note that the rootfs should be specified with **absolute path** on the host machine, and the command should be specified with its **absolute path** in the rootfs directory.
 
 ```bash
-sudo ./lib/build/test_start_app my_test_container ${PWD}/.base/hello/rootfs/ /usr/local/bin/python /hello.py
+sudo ./lib/build/start_lean_container my_test_container ${PWD}/.base/hello/rootfs/ /usr/local/bin/python /hello.py
 ```
 
-## Running the single thread microbenchmark
+## Performance of lean container
+### Running the single thread microbenchmark
 
 The single thread microbenchmark measures the latency of lean container creation.
 
@@ -123,7 +124,7 @@ total: start 8396 lean containers in 10.000178 second(s)
 
 Reference performace: 1.2ms latency on val01.
 
-## Running the concurrent container startup microbenchmark
+### Running the concurrent container startup microbenchmark
 
 We want to measure the concurrent container startup throughput of the lean container.
 
