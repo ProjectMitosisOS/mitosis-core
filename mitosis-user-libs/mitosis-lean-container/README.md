@@ -37,6 +37,22 @@ We can skip the build process of docker image, and only export the docker image.
 python3 make_app_rootfs.py --name $IMAGE_NAME --only-export $ROOTFS_DIR
 ```
 
+We can mount a device into the container's rootfs via `mount_device.py`.
+
+```bash
+export DEVICE=/dev/null
+```
+
+```bash
+sudo python3 mount_device.py --rootfs $ROOTFS_DIR --device $DEVICE
+```
+
+And we can unmount it with the option `--unmount`.
+
+```bash
+sudo python3 mount_device.py --rootfs $ROOTFS_DIR --device $DEVICE --unmount
+```
+
 ## Running the lean container
 
 Build the lean container.
