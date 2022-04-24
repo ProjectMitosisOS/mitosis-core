@@ -46,6 +46,15 @@ fork_prepare(int sd, unsigned long key) {
 }
 
 static inline int
+fork_prepare_ping(int sd, unsigned long key) {
+    if (ioctl(sd, PreparePing, key) == -1) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static inline int
 fork_resume_local(int sd, unsigned long key) {
     if (ioctl(sd, ResumeLocal, key) == -1) {
         return -1;

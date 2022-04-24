@@ -22,10 +22,20 @@ struct ResumeDataStruct {
     access_info: crate::remote_paging::AccessInfo,
 }
 
-#[derive(Default)]
 struct CallerData {
+    ping_img: bool,
     prepared_key: Option<usize>,
     resume_related: Option<ResumeDataStruct>,
+}
+
+impl Default for CallerData {
+    fn default() -> Self {
+        Self {
+            ping_img: false,
+            prepared_key: None,
+            resume_related: None,
+        }
+    }
 }
 
 /// The MitosisSysCallService has the following two jobs:
@@ -39,11 +49,13 @@ pub struct MitosisSysCallHandler {
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
-        self.caller_status.prepared_key.map(|k| {
-            crate::log::info!("unregister prepared process {}", k);
-            let process_service = unsafe { crate::get_sps_mut() };
-            process_service.unregister(k);
-        });
+        if self.caller_status.ping_img == false {
+            self.caller_status.prepared_key.map(|k| {
+                crate::log::info!("unregister prepared process {}", k);
+                let process_service = unsafe { crate::get_sps_mut() };
+                process_service.unregister(k);
+            });
+        }
     }
 }
 
@@ -79,7 +91,7 @@ impl FileOperations for MitosisSysCallHandler {
         use linux_kernel_module::bindings::_copy_from_user;
         match cmd {
             LibMITOSISCmd::Nil => 0, // a nill core do nothing
-            LibMITOSISCmd::Prepare => self.syscall_prepare(arg),
+            LibMITOSISCmd::Prepare => self.syscall_prepare(arg, false),
             LibMITOSISCmd::ResumeLocal => self.syscall_local_resume(arg),
             LibMITOSISCmd::ResumeRemote => {
                 let mut req: resume_remote_req_t = Default::default();
@@ -127,6 +139,7 @@ impl FileOperations for MitosisSysCallHandler {
                 let (machine_id, gid, nic_id) = (req.machine_id, String::from(addr), req.nic_id);
                 self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
             }
+            LibMITOSISCmd::PreparePing => self.syscall_prepare(arg, true),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -152,11 +165,12 @@ const TIMEOUT_USEC: i64 = 1000_000; // 1s
 /// The system call parts
 impl MitosisSysCallHandler {
     #[inline]
-    fn syscall_prepare(&mut self, key: c_ulong) -> c_long {
+    fn syscall_prepare(&mut self, key: c_ulong, ping_img: bool) -> c_long {
         if self.caller_status.prepared_key.is_some() {
             crate::log::error!("We don't support multiple fork yet. ");
             return -1;
         }
+        self.caller_status.ping_img = ping_img;
 
         let process_service = unsafe { crate::get_sps_mut() };
         let res = if cfg!(feature = "cow") {

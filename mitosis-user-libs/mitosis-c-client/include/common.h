@@ -6,6 +6,7 @@ enum LibMITOSISCmd {
     Prepare = 4, // prepare the memory mapping of this process
     ResumeLocal = 5, // resume to another process
     ResumeRemote = 6, // resume to another process of remote via RPC
+    PreparePing = 7, // Prepare the memory mapping of this process (and ping it in kernel)
 };
 
 typedef struct {
