@@ -71,6 +71,6 @@ impl Drop for Module {
 linux_kernel_module::kernel_module!(
     Module,
     author: b"xmm",
-    description: b"A kernel module for testing the core fork functions!",
+    description: b"The kernel module for exposing system calls.",
     license: b"GPL"
 );
