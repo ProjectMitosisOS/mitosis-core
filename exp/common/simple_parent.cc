@@ -6,6 +6,7 @@
 #include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
 
 DEFINE_int64(handler_id, 73, "rfork handler id");
+DEFINE_bool(pin, false, "whether pin in kernel");
 
 int
 main(int argc, char *argv[]) {
@@ -14,13 +15,19 @@ main(int argc, char *argv[]) {
     int sd = sopen();
     int cnt = 0;
     assert(sd != 0);
-    sleep(1);
-    printf("time %d\n", cnt++);
-    fork_prepare(sd, FLAGS_handler_id);
+
+    if (FLAGS_pin) {
+        fork_prepare_ping(sd, FLAGS_handler_id);
+        // return immediately
+        return 0;
+    } else {
+        sleep(1);
+        printf("time %d\n", cnt++);
+        fork_prepare(sd, FLAGS_handler_id);
+    }
 
     while (1) {
         printf("time %d\n", cnt++);
         sleep(1);
     }
-    return 0;
 }
