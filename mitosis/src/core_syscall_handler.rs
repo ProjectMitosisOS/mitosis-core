@@ -49,12 +49,14 @@ pub struct MitosisSysCallHandler {
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
-        if self.caller_status.ping_img == false {
+        if !self.caller_status.ping_img {
             self.caller_status.prepared_key.map(|k| {
                 crate::log::info!("unregister prepared process {}", k);
                 let process_service = unsafe { crate::get_sps_mut() };
                 process_service.unregister(k);
             });
+        } else {
+
         }
     }
 }
@@ -358,7 +360,7 @@ impl MitosisSysCallHandler {
                 0
             }
             None => {
-                crate::log::error!("Failed to read the remote page");
+                // crate::log::error!("Failed to read the remote page");
                 crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
             }
         }

@@ -1,4 +1,4 @@
-KMS_DIR=../mitosis-kms
+KMS_DIR=mitosis-kms
 KMODULE_NAME=fork
 
 # Build kernel module file
@@ -12,11 +12,3 @@ insmod:
 rmmod:
 	sudo rmmod ${KMODULE_NAME}
 
-###### Exp of fork-micro #####
-fork_micro_path=fork-micro
-execute_time_path=${fork_micro_path}/execution-time
-parent:
-	python ${execute_time_path}/parent.py
-
-child:
-	python ${execute_time_path}/child.py

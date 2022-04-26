@@ -1,10 +1,7 @@
 import os
-import sys
 import time
 
-sys.path.append("../../common")  # include outer path
 import syscall_lib
-from bench import report
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
@@ -23,18 +20,12 @@ def handler():
     end = time.time()
 
 
-def checkpoint():
+def checkpoint(key):
     fd = syscall_lib.open()
-    syscall_lib.call_prepare(fd, dump_key)
+    syscall_lib.call_prepare(fd, key)
 
 
 if __name__ == '__main__':
-    global start, end
     handler()
-    report("execution", start, end)
-
-    checkpoint()
+    checkpoint(dump_key)
     handler()
-    report("execution", start, end)
-    while True:
-        time.sleep(1)
