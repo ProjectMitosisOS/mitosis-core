@@ -21,11 +21,11 @@
 #define NANOSECONDS_IN_SECOND 1e9
 #define NANOSECONDS_IN_MILLISECOND 1e6
 #define REPORT_INTERVAL_IN_SECOND 1
-
+#define MAX_COMMAND_LENGTH 256
 
 static long count = 0;
-char *execve_argv[256];
-char *execve_envp[256];
+char *execve_argv[MAX_COMMAND_LENGTH];
+char *execve_envp[MAX_COMMAND_LENGTH];
 
 pid_t wait_pid(pid_t pid) {
     int ret;
@@ -105,7 +105,12 @@ int main(int argc, char **argv) {
     char *name = argv[2];
     char *rootfs_abs_path = argv[3];
     char *command = argv[4];
-    char *command_params = argv[5];
+
+    int argv_index = 0;
+    for(int i = 4; i < argc && argv_index < MAX_COMMAND_LENGTH; ++i, ++argv_index) {
+        execve_argv[argv_index] = argv[i];
+    }
+    execve_argv[argv_index] = NULL;
 
     printf("Running for %ld seconds, lean container name %s\n", benchmark_time, name);
 
@@ -131,8 +136,6 @@ int main(int argc, char **argv) {
 
 
     clock_gettime(CLOCK_REALTIME, &start);
-    execve_argv[0] = command;
-    execve_argv[1] = command_params;
 
     for (;;) {
         // TODO: support python child execution ?

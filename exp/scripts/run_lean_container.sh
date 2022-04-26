@@ -4,6 +4,5 @@ bench_sec=5
 name=bench_lean_container
 rootfs_path=/home/lfm/projects/mos/mitosis-user-libs/mitosis-lean-container/.base/hello/rootfs
 command="/app/lean_child"
-command_params="-mac_id=1"
 
-sudo $exe_path $bench_sec $name $rootfs_path $command $command_params
+sudo $exe_path $bench_sec $name $rootfs_path $command 1 73
