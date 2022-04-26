@@ -1,3 +1,4 @@
+import os
 import sys
 
 import syscall_lib
@@ -28,6 +29,7 @@ if __name__ == '__main__':
             s = "check counter %d, fd %d" % (counter, fd)
             print(s)
             time.sleep(1)
+        os._exit(0)
     else:
         syscall_lib.call_prepare(fd, handler_id)
         while True:

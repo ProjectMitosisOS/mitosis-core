@@ -42,12 +42,7 @@ def checkpoint(key):
 if __name__ == '__main__':
     ret = ret_imm == 1
     handler(working_set)
-    print("hello")
-    time.sleep(1)
     checkpoint(handler_id)
     if not ret:
         handler(working_set)
-
-    for i in range(4):
-        time.sleep(1)
-        print("hello")
+    os._exit(0)
