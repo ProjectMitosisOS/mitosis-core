@@ -13,12 +13,10 @@ set(samples
         simple_parent   ## simple parent demo
         bench_exe_time_parent ## get execution time
         bench_prepare_time  ## get prepare time
-        lean_child
         bench_lean_container
         )
 add_executable(connector common/connector.cc)
 add_executable(simple_child common/simple_child.cc)
-add_executable(lean_child fork-functions/child/lean_child.cc)
 add_executable(simple_parent common/simple_parent.cc)
 add_executable(bench_lean_container fork-functions/benchmark_lean_container.c
         ../mitosis-user-libs/mitosis-lean-container/lib/core/lean_container.c
