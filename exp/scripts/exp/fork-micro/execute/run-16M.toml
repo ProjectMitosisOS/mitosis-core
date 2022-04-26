@@ -6,10 +6,10 @@ cmd =  'make insmod'
 
 [[pass]]
 host = 'val08'
-path = '/home/lfm/projects/mos/exp/fork-micro'
+path = '/home/lfm/projects/mos/exp'
 cmd = 'python ./bench_exe_time_parent.py -working_set=16777216 -run_sec=5'
 
 [[pass]]
 host = 'val08'
-path = '/home/lfm/projects/mos/exp/fork-micro'
+path = '/home/lfm/projects/mos/exp'
 cmd = './simple_child -mac_id=0'

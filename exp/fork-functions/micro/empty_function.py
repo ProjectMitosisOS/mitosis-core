@@ -1,8 +1,11 @@
 import os
+import time
+import time
 
 import syscall_lib
 import argparse
 import mmap
+from bench import report
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
@@ -20,23 +23,10 @@ handler_id = args.handler_id
 working_set = args.working_set
 ret_imm = args.ret_imm
 
-mm = mmap.mmap(-1, length=working_set)
-
-
-def handler(working_sz):
-    mm.seek(0)
-    mm.read(working_sz)
-
-
 def checkpoint(key):
     fd = syscall_lib.open()
     syscall_lib.call_prepare_ping(fd, key)  # we should ping here
 
-
 if __name__ == '__main__':
-    ret = ret_imm == 1
-    handler(working_set)
     checkpoint(handler_id)
-    if not ret:
-        handler(working_set)
     os._exit(0)

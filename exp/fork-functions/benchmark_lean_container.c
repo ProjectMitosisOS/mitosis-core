@@ -22,6 +22,7 @@
 #define NANOSECONDS_IN_MILLISECOND 1e6
 #define REPORT_INTERVAL_IN_SECOND 1
 
+
 static long count = 0;
 char *execve_argv[256];
 char *execve_envp[256];
@@ -52,22 +53,21 @@ void report(struct timespec *start, struct timespec *end) {
     long elapsed_time = get_passed_nanosecond(start, end);
     long elapsed_time_since_last_report = elapsed_time - last_timestamp;
     if (elapsed_time_since_last_report > interval) {
-        printf("start %ld lean containers in %f second(s), latency per container %f ms\n", count - last_count,
-               elapsed_time_since_last_report / NANOSECONDS_IN_SECOND,
-               (elapsed_time_since_last_report / NANOSECONDS_IN_MILLISECOND) / (count - last_count));
+        long op = count - last_count;
+        double latency = (elapsed_time_since_last_report / NANOSECONDS_IN_MILLISECOND) / op;
+        long qps = (op / (elapsed_time_since_last_report / NANOSECONDS_IN_SECOND));
+        printf("qps %ld containers/sec, latency %f ms\n", qps, latency);
+
         last_timestamp = elapsed_time;
         last_count = count;
     }
-    return;
 }
 
-int test_setup_lean_container(char *name, int namespace) {
+int test_setup_lean_container(char *name, int namespace, char *rootfs_path, char *command) {
     pid_t pid = setup_lean_container_w_double_fork(name,
-                                                   "/home/lfm/projects/mos/mitosis-user-libs/mitosis-lean-container/.base/hello/rootfs",
+                                                   rootfs_path,
                                                    namespace);
 
-    execve_argv[0] = "/app/lean_child";
-    execve_argv[1] = "-mac_id=1";
     if (pid < 0) {
         debug_printf("set lean container failed!");
         return -1;
@@ -79,7 +79,7 @@ int test_setup_lean_container(char *name, int namespace) {
     } else {
         // we are now running in the lean container!
         // exit immediately to avoid performance overhead in benchmark
-        execve("/app/lean_child", execve_argv, execve_envp);
+        execve(command, execve_argv, execve_envp);
         assert(0);
     }
 
@@ -98,9 +98,14 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    /* benchmark in seconds */
     long benchmark_time = atol(argv[1]);
     long benchmark_time_nanoseconds = benchmark_time * NANOSECONDS_IN_SECOND;
-    char *name = argc >= 3 ? argv[2] : "test";
+    /* name */
+    char *name = argv[2];
+    char *rootfs_abs_path = argv[3];
+    char *command = argv[4];
+    char *command_params = argv[5];
 
     printf("Running for %ld seconds, lean container name %s\n", benchmark_time, name);
 
@@ -126,8 +131,12 @@ int main(int argc, char **argv) {
 
 
     clock_gettime(CLOCK_REALTIME, &start);
+    execve_argv[0] = command;
+    execve_argv[1] = command_params;
+
     for (;;) {
-        test_setup_lean_container(name, pid);
+        // TODO: support python child execution ?
+        test_setup_lean_container(name, pid, rootfs_abs_path, command);
         clock_gettime(CLOCK_REALTIME, &now);
         count++;
         report(&start, &now);
