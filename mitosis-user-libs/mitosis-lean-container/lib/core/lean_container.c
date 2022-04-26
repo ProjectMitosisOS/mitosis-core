@@ -316,8 +316,8 @@ int setup_cached_namespace() {
     }
 }
 
-int remove_cached_namespace(int namespace) {
-    return kill(namespace, SIGKILL);
+int remove_cached_namespace(int _namespace) {
+    return kill(_namespace, SIGKILL);
 }
 
 int init_cgroup() {
@@ -381,7 +381,7 @@ int remove_lean_container_template(char* name) {
     return 0;
 }
 
-int setup_lean_container(char* name, char* rootfs_path, int namespace) {
+int setup_lean_container(char* name, char* rootfs_path, int _namespace) {
     int ret;
     int pipefd[2];
     pid_t pid;
@@ -391,13 +391,13 @@ int setup_lean_container(char* name, char* rootfs_path, int namespace) {
         return -1;
     }
 
-    if (namespace < 0) {
+    if (_namespace < 0) {
         if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
             perror("unshare");
             goto err;
         }
     } else {
-        if (set_namespace(namespace) < 0) {
+        if (set_namespace(_namespace) < 0) {
             goto err;
         }
     }
@@ -458,7 +458,7 @@ err:
     return -1;
 }
 
-int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int namespace) {
+int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int _namespace) {
     pid_t pid;
     int pipefd[2];
 
@@ -489,7 +489,7 @@ int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int namesp
         close(pipefd[0]);
 
         // setup lean container
-        pid = setup_lean_container(name, rootfs_path, namespace);
+        pid = setup_lean_container(name, rootfs_path, _namespace);
         if (pid < 0) {
             return -1;
         }
