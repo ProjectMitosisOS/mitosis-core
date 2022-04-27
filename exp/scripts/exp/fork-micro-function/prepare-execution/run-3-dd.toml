@@ -1,0 +1,15 @@
+[[pass]]
+host = 'val08'
+path = '/home/lfm/projects/mos'
+cmd = 'make insmod'
+
+[[pass]]
+host = 'val08'
+path = '/home/lfm/projects/mos/exp/fork-functions/dd'
+cmd = 'python function.py -pin=1 -profile=1 -handler_id=102'
+
+[[pass]]
+host = 'val08'
+path = '/home/lfm/projects/mos/exp'
+cmd = './simple_child -mac_id=0 -handler_id=102'
+
