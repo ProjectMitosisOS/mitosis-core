@@ -28,9 +28,9 @@ impl<'a> ShadowVMA<'a> {
 
         // toggle the VM map flag
         let mut vm_flag = vma.get_flags();
-        if vm_flag.contains(VMFlags::WRITE) && is_cow {
-            vm_flag.insert(VMFlags::SHARED);
-            vma.set_raw_flags(vm_flag.bits());
+        if (vm_flag.contains(VMFlags::WRITE) || vm_flag.contains(VMFlags::MAY_WRITE)) && is_cow {
+            // vm_flag.insert(VMFlags::SHARED);
+            // vma.set_raw_flags(vm_flag.bits());
         }
 
         Self {
@@ -112,8 +112,10 @@ impl VMACopyPTGenerator<'_, '_> {
             // my.inner_flat.add_one(addr, copied_page.get_physical_addr());
             {
                 let start = my.vma.vma_inner.get_start();
-                my.inner_flat
-                    .add_one((addr as VirtAddrType - start) as _, copied_page.get_physical_addr() as _);
+                my.inner_flat.add_one(
+                    (addr as VirtAddrType - start) as _,
+                    copied_page.get_physical_addr() as _,
+                );
             }
             // the page table is present
             my.inner.add_page(copied_page);
