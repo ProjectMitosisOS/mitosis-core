@@ -39,10 +39,7 @@ tal:content="python: d" />
 </tr>
 </table>""" % six.text_type.__name__
 
-
-def prepare():
-    pass
-
+tmpl = PageTemplate(BIGTABLE_ZPT)
 
 def handler():
     global start, end
@@ -50,7 +47,8 @@ def handler():
 
     num_of_rows = 4
     num_of_cols = 4
-    tmpl = PageTemplate(BIGTABLE_ZPT)  # FIXME: bus error here (only CoW)!
+
+    tmpl = PageTemplate(BIGTABLE_ZPT)
     data = {}
     for i in range(num_of_cols):
         data[str(i)] = i
@@ -58,13 +56,12 @@ def handler():
     table = [data for x in range(num_of_rows)]
     options = {'table': table}
     data = tmpl.render(options=options)
-
     end = time.time()
     if profile == 1:
         bench.report("%s-execution" % app_name, start, end)
 
 
-def checkpoint(key):
+def prepare(key):
     global start, end
     fd = syscall_lib.open()
     start = time.time()
@@ -78,8 +75,7 @@ def checkpoint(key):
 
 
 if __name__ == '__main__':
-    prepare()
     handler()
-    checkpoint(handler_id)
+    prepare(handler_id)
     handler()
     os._exit(0)

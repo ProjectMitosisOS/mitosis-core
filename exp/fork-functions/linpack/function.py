@@ -58,7 +58,7 @@ def handler():
         bench.report("%s-execution" % app_name, start, end)
 
 
-def checkpoint(key):
+def prepare(key):
     global start, end
     fd = syscall_lib.open()
     start = time.time()
@@ -73,6 +73,6 @@ def checkpoint(key):
 
 if __name__ == '__main__':
     handler()
-    checkpoint(handler_id)
+    prepare(handler_id)
     handler()
     os._exit(0)

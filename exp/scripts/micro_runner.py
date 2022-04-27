@@ -57,4 +57,3 @@ if __name__ == '__main__':
                       ]
                       )
 
-    # print(analyse('run/run-peak.toml.txt'))

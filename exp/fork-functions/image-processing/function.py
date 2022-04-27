@@ -27,7 +27,7 @@ handler_id = args.handler_id
 profile = args.profile
 pin = args.pin
 
-def prepare():
+def init():
     im = Image.open('test.jpg')
     size = (128, 128)
     im.thumbnail(size)
@@ -53,7 +53,7 @@ def handler():
         bench.report("%s-execution" % app_name, start, end)
 
 
-def checkpoint(key):
+def prepare(key):
     global start, end
     fd = syscall_lib.open()
     start = time.time()
@@ -67,8 +67,8 @@ def checkpoint(key):
 
 
 if __name__ == '__main__':
-    prepare()
+    init()
     handler()
-    checkpoint(handler_id)
+    prepare(handler_id)
     handler()
     os._exit(0)
