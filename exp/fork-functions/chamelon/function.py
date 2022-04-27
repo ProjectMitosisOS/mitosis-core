@@ -39,7 +39,6 @@ tal:content="python: d" />
 </tr>
 </table>""" % six.text_type.__name__
 
-tmpl = PageTemplate(BIGTABLE_ZPT) # TODO: put here at present...
 
 def prepare():
     pass
@@ -51,7 +50,7 @@ def handler():
 
     num_of_rows = 4
     num_of_cols = 4
-    # tmpl = PageTemplate(BIGTABLE_ZPT)  # FIXME: bus error here (only CoW)!
+    tmpl = PageTemplate(BIGTABLE_ZPT)  # FIXME: bus error here (only CoW)!
     data = {}
     for i in range(num_of_cols):
         data[str(i)] = i
