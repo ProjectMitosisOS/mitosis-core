@@ -9,8 +9,8 @@ import bench
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
-# import numpy as np
-
+import numpy as np
+# https://bootstrap.pypa.io/pip/2.7/ to solve
 ## Migration related
 app_name = "matmul"
 
@@ -34,9 +34,9 @@ def handler():
     global start, end
     start = time.time()
     n = 100
-    # A = np.random.rand(n, n)
-    # B = np.random.rand(n, n)
-    # C = np.matmul(A, B)
+    A = np.random.rand(n, n)
+    B = np.random.rand(n, n)
+    C = np.matmul(A, B)
     end = time.time()
     if profile == 1:
         bench.report("%s-execution" % app_name, start, end)
