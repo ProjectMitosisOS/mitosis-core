@@ -1,4 +1,5 @@
 import mmap
+import os
 import sys
 from ctypes import sizeof
 
@@ -62,3 +63,4 @@ if __name__ == '__main__':
         print("counter %d" % cnt)
         cnt += 1
         time.sleep(1)
+    # os._exit(0)

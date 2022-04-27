@@ -1,11 +1,11 @@
 [[pass]]
 host = 'val08'
-path = '/home/lfm/projects/mos/exp'
+path = '/home/lfm/projects/mos'
 cmd =  'make insmod'
 
 [[pass]]
 host = 'val08'
-path = '/home/lfm/projects/mos/exp'
+path = '/home/lfm/projects/mos/exp/fork-micro/'
 cmd = 'python ./bench_exe_time_parent.py -working_set=4194304 -run_sec=5'
 
 [[pass]]

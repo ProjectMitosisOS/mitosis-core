@@ -1,11 +1,9 @@
 import os
 import time
 import time
-
-import syscall_lib
+import exp.common.syscall_lib as syscall_lib
 import argparse
 import mmap
-from bench import report
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
