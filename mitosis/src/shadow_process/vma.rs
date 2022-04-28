@@ -19,7 +19,7 @@ pub struct ShadowVMA<'a> {
 }
 
 impl<'a> ShadowVMA<'a> {
-    pub fn new(mut vma: VMA<'a>, is_cow: bool) -> Self {
+    pub fn new(vma: VMA<'a>, is_cow: bool) -> Self {
         // increment the file reference counter
 
         let file = unsafe { vma.get_file_ptr() };
@@ -28,7 +28,7 @@ impl<'a> ShadowVMA<'a> {
         }
 
         // toggle the VM map flag
-        /* 
+        /*
         let mut vm_flag = vma.get_flags();
         if (vm_flag.contains(VMFlags::WRITE) || vm_flag.contains(VMFlags::MAY_WRITE)) && is_cow {
             // vm_flag.insert(VMFlags::SHARED);
