@@ -37,6 +37,7 @@ mm = mmap.mmap(-1, length=working_set)
 start = time.time()
 end = time.time()
 
+
 def handler(working_sz):
     global start, end
     start = time.time()
@@ -46,6 +47,7 @@ def handler(working_sz):
     end = time.time()
     if profile == 1:
         bench.report("%s-execution" % app_name, start, end)
+
 
 def prepare(key):
     # global start, end
@@ -58,6 +60,7 @@ def prepare(key):
     end = time.time()
     if profile == 1:
         bench.report("%s-prepare" % app_name, start, end)
+
 
 if __name__ == '__main__':
     handler(working_set)

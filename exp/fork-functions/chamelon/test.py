@@ -31,7 +31,16 @@ pin = args.pin
 app_name = args.app_name
 ret = ret_imm == 1
 
+start = time.time()
+end = time.time()
 ## Migration related end
+from PIL import Image
+
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+from chameleon import PageTemplate
+import six
+
 BIGTABLE_ZPT = """\
 <table xmlns="http://www.w3.org/1999/xhtml"
 xmlns:tal="http://xml.zope.org/namespaces/tal">
@@ -44,43 +53,29 @@ tal:content="python: d" />
 </tr>
 </table>""" % six.text_type.__name__
 
-
+dump_key = 73
 tmpl = PageTemplate(BIGTABLE_ZPT)
 
+
 def handler():
-    start = time.time()
+    global tmpl
+    tmpl = PageTemplate(BIGTABLE_ZPT)
 
     num_of_rows = 4
     num_of_cols = 4
-
-    tmpl = PageTemplate(BIGTABLE_ZPT)
     data = {}
     for i in range(num_of_cols):
         data[str(i)] = i
 
-    table = [data for x in range(num_of_rows)]
-    options = {'table': table}
-    data = tmpl.render(options=options)
-    end = time.time()
-    if profile == 1:
-        bench.report("%s-execution" % app_name, start, end)
+    data = tmpl.render(options={'table': [data for _ in range(num_of_rows)]})
 
-
-def prepare(key):
+def prepare():
     fd = syscall_lib.open()
-    start = time.time()
-    if pin == 1:
-        syscall_lib.call_prepare_ping(fd, key)
-    else:
-        syscall_lib.call_prepare(fd, key)
-    end = time.time()
-    if profile == 1:
-        bench.report("%s-prepare" % app_name, start, end)
-
+    syscall_lib.call_prepare_ping(fd, dump_key)
 
 if __name__ == '__main__':
     handler()
-    prepare(handler_id)
-    if not ret_imm:
-        handler()
+    prepare()
+    handler()
+    print("finish!!!")
     os._exit(0)

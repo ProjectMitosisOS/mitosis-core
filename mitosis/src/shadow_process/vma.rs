@@ -1,3 +1,4 @@
+use alloc::string::String;
 use crate::bindings::*;
 use crate::kern_wrappers::mm::VirtAddrType;
 use crate::kern_wrappers::vma::VMA;
@@ -108,7 +109,6 @@ impl VMACopyPTGenerator<'_, '_> {
 
         let phy_addr = pmem_get_phy_from_pte(pte);
 
-
         if phy_addr > 0 {
             let copied_page = Copy4KPage::new(addr as _).expect("Fail to copy from user space");
             // my.inner_flat.add_one(addr, copied_page.get_physical_addr());
@@ -170,10 +170,22 @@ impl VMACOWPTGenerator<'_, '_> {
         let my: &mut Self = &mut (*((*walk).private as *mut Self));
 
         let phy_addr = pmem_get_phy_from_pte(pte);
-        // if addr == 0x5bf000 || addr == 0x7ffff71e2000 {
+        // if addr == 0xd55000 {
+        //     // if addr == 0x5bf000 || addr == 0x7ffff71e2000 {
         //     let vma = &my.vma.vma_inner;
         //     let st = vma.is_stack();
-        //     crate::log::info!("st:{}, va:0x{:x}, pa:0x{:x}", st, addr, phy_addr)
+        //     let name = if vma.get_backed_file_name().is_some() {
+        //         vma.get_backed_file_name().unwrap()
+        //     } else {
+        //         String::from("none")
+        //     };
+        //     crate::log::info!(
+        //         "st:{}, va:0x{:x}, pa:0x{:x}, name:{}",
+        //         st,
+        //         addr,
+        //         phy_addr,
+        //         name
+        //     )
         // }
         if likely(phy_addr > 0) {
             if unlikely(my.vma.has_write_permission()) {
