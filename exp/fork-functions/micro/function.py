@@ -34,23 +34,18 @@ app_name = args.app_name
 ret = ret_imm == 1
 
 mm = mmap.mmap(-1, length=working_set)
-start = time.time()
-end = time.time()
 
 
 def handler(working_sz):
-    global start, end
     start = time.time()
     mm.seek(0)
-    mm.read(working_sz)
-
+    r = mm.read(working_sz)
     end = time.time()
     if profile == 1:
         bench.report("%s-execution" % app_name, start, end)
 
 
 def prepare(key):
-    # global start, end
     fd = syscall_lib.open()
     start = time.time()
     if pin == 1:
