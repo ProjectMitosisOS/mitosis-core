@@ -6,6 +6,9 @@ sys.path.append("../../common")  # include outer path
 
 import syscall_lib
 import bench
+# import json
+# import random
+# import requests
 
 import argparse
 import mmap
@@ -59,8 +62,8 @@ def prepare(key):
 
 if __name__ == '__main__':
     handler(working_set)
-    handler(working_set)
     prepare(handler_id)
     if not ret_imm:
         handler(working_set)
+    # print("done")
     os._exit(0)
