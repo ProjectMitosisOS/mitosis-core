@@ -360,7 +360,7 @@ impl MitosisSysCallHandler {
                 0
             }
             None => {
-                crate::log::error!("[handle_page_fault] Failed to read the remote page");
+                crate::log::error!("[handle_page_fault] Failed to read the remote page, fault addr: 0x{:x}", fault_addr);
                 crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
             }
         }

@@ -104,6 +104,7 @@ impl Descriptor {
     ) -> Option<*mut crate::bindings::page> {
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
+            crate::log::error!("[read_remote_page] pg entry not exist. remote_addr: 0x{:x}", remote_va);
             return None;
         }
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
