@@ -16,7 +16,7 @@ cmd = './connector -gid=fe80:0000:0000:0000:248a:0703:009c:7ca8 -mac_id=1 -nic_i
 [[pass]]
 host = 'val07'
 path = '/home/lfm/projects/mos/exp/fork-functions/micro'
-cmd = 'python function.py -ret_imm=1 -working_set=536870912 -handler_id=73'
+cmd = 'python function.py -pin=1 -profile=0 -exclude_execution=1 -working_set=536870912 -handler_id=73'
 
 
 [[pass]]

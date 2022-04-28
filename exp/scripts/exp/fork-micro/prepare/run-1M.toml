@@ -1,9 +1,0 @@
-[[pass]]
-host = 'val08'
-path = '/home/lfm/projects/mos/exp'
-cmd = 'make insmod'
-
-[[pass]]
-host = 'val08'
-path = '/home/lfm/projects/mos/exp'
-cmd = 'python ./bench_prepare_time.py -working_set=1048576'

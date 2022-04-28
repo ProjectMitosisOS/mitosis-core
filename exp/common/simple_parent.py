@@ -8,7 +8,7 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument("-handler_id", type=int, default=73,
                     help="rfork handler id")
-parser.add_argument("-pin", type=int, default=73,
+parser.add_argument("-pin", type=int, default=0,
                     help="whether pin in kernel")
 args = parser.parse_args()
 sys.path.append("module_path")

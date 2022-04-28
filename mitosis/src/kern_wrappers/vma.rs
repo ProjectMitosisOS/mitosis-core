@@ -1,4 +1,4 @@
-use crate::bindings::{vm_area_struct, VMFlags, file};
+use crate::bindings::{file, vm_area_struct, VMFlags};
 
 use super::mm::VirtAddrType;
 
@@ -13,13 +13,13 @@ impl<'a> VMA<'a> {
             range: self.get_range(),
             flags: self.get_raw_flags(),
             prot: self.get_prot(),
+            is_anonymous: self.is_anonymous(),
         }
     }
 
-
     #[inline]
     pub fn flush_self_tlb(&mut self) {
-        use crate::bindings::{pmem_flush_tlb_range};
+        use crate::bindings::pmem_flush_tlb_range;
         unsafe {
             pmem_flush_tlb_range(self.vma_inner as *mut _, self.get_start(), self.get_end());
         }
@@ -36,6 +36,10 @@ impl<'a> VMA<'a> {
 
     pub fn get_range(&self) -> (VirtAddrType, VirtAddrType) {
         (self.get_start(), self.get_end())
+    }
+
+    pub fn is_anonymous(&self) -> bool {
+        self.vma_inner.vm_ops.is_null()
     }
 
     /// whether this VMA is a stack
@@ -65,6 +69,18 @@ impl<'a> VMA<'a> {
 
     pub fn set_raw_flags(&mut self, flags: crate::linux_kernel_module::c_types::c_ulong) {
         self.vma_inner.vm_flags = flags;
+    }
+
+    pub fn set_alloc(&mut self) {
+        let mut vm_flag = self.get_flags();
+        vm_flag.insert(VMFlags::VM_ALLOC);
+        self.set_raw_flags(vm_flag.bits());
+    }
+
+    pub fn clear_alloc(&mut self) {
+        let mut vm_flag = self.get_flags();
+        vm_flag.remove(VMFlags::VM_ALLOC);
+        self.set_raw_flags(vm_flag.bits());
     }
 
     pub fn get_raw_flags(&self) -> crate::linux_kernel_module::c_types::c_ulong {
