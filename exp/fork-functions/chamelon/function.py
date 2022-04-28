@@ -45,8 +45,6 @@ tal:content="python: d" />
 </table>""" % six.text_type.__name__
 
 
-tmpl = PageTemplate(BIGTABLE_ZPT)
-
 def handler():
     start = time.time()
 
