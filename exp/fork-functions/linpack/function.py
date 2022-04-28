@@ -2,9 +2,8 @@ import os
 import random
 import sys
 import time
-
-import numpy as np
-
+import json
+import requests
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 from numpy import matrix, linalg, random
