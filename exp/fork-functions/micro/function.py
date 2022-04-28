@@ -61,6 +61,7 @@ def prepare(key):
 
 if __name__ == '__main__':
     handler(working_set)
+    handler(working_set)
     prepare(handler_id)
     if not ret_imm:
         handler(working_set)
