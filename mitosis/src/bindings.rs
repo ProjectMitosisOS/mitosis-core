@@ -116,6 +116,9 @@ bitflags::bitflags! {
         const SHARED =  PMEM_VM_SHARED;
         const DONTEXPAND = PMEM_VM_DONTEXPAND;
         const MIXEDMAP = PMEM_VM_MIXEDMAP;
+        const GROW_DOWN = PMEM_VM_GROWSDOWN;
+        const GROWSUP = PMEM_VM_GROWSUP;
+        const VM_ALLOC = PMEM_VM_RESERVE; 
     }
 }
 

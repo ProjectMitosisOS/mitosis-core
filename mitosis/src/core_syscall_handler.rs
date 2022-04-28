@@ -2,6 +2,7 @@ use alloc::string::String;
 use core::option::Option;
 
 use crate::descriptors::FastDescriptor;
+use crate::kern_wrappers::task::Task;
 use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
@@ -49,15 +50,13 @@ pub struct MitosisSysCallHandler {
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
-        if !self.caller_status.ping_img {
-            self.caller_status.prepared_key.map(|k| {
+        self.caller_status.prepared_key.map(|k| {
+            if !self.caller_status.ping_img {
                 crate::log::info!("unregister prepared process {}", k);
                 let process_service = unsafe { crate::get_sps_mut() };
                 process_service.unregister(k);
-            });
-        } else {
-
-        }
+            }
+        });
     }
 }
 
@@ -181,12 +180,37 @@ impl MitosisSysCallHandler {
             process_service.add_myself_copy(key as _)
         };
 
-        if res.is_some() {
-            self.caller_status.prepared_key = Some(key as _);
-            crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
-            return 0;
+        if res.is_none() {
+            return -1;
         }
-        return -1;
+
+        // double remote fork on parent is not supported yet
+        // so we mark a flag to prevent future re-prepare
+        self.caller_status.prepared_key = Some(key as _);
+        crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
+
+        // sanity checks
+        /*
+        use crate::bindings::VMFlags;
+        let mm = Task::new().get_memory_descriptor();
+        for mut vma in mm.get_vma_iter() {
+            if vma.is_is_anonymous() {
+                // reset the flags
+                let mut vm_flag = vma.get_flags();
+                vm_flag.insert(VMFlags::RESERVE);
+                vma.set_raw_flags(vm_flag.bits());
+
+                crate::log::info!(
+                    "VMA {:x}-{:x} {:?}, is_annoy {}",
+                    vma.get_start(),
+                    vma.get_end(),
+                    vma.get_flags(),
+                    vma.is_is_anonymous()
+                );
+            }
+        } */
+
+        return 0;
     }
 
     #[inline]
@@ -349,7 +373,6 @@ impl MitosisSysCallHandler {
     #[inline(always)]
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
         let fault_addr = (*vmf).address;
-        // crate::log::debug!("fault addr 0x{:x}", fault_addr);
         let resume_related = self.caller_status.resume_related.as_ref().unwrap();
         let new_page = resume_related
             .descriptor
@@ -360,7 +383,28 @@ impl MitosisSysCallHandler {
                 0
             }
             None => {
-                crate::log::error!("[handle_page_fault] Failed to read the remote page, fault addr: 0x{:x}", fault_addr);
+                // check whether the page is anonymous
+                let vma = crate::kern_wrappers::vma::VMA::new(&mut *((*vmf).vma));
+                for &vd in &resume_related.descriptor.vma {
+                    if vd.is_anonymous && (vma.get_start() == vd.get_start()) {
+                        let new_page_p =
+                            crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
+                        //crate::bindings::get_zeroed_page(crate::bindings::PMEM_GFP_HIGHUSER);
+
+                        (*vmf).page = new_page_p as *mut _;
+                        // crate::log::error!("in handle expand page {:?}", new_page_p);
+                        // crate::log::error!("check vma {:?}", vma);
+                        // crate::log::error!("check vma descriptor {:?}", vd);
+                        return 0;
+                        // return crate::bindings::FaultFlags::SIGSEGV.bits()
+                        //   as linux_kernel_module::c_types::c_int;
+                    }
+                }
+
+                crate::log::error!(
+                    "[handle_page_fault] Failed to read the remote page, fault addr: 0x{:x}",
+                    fault_addr
+                );
                 crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
             }
         }
