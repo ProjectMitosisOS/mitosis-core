@@ -70,6 +70,7 @@ def prepare(key):
     fd = syscall_lib.open()
     start = time.time()
     if pin == 1:
+        print("pin to the kernel")
         syscall_lib.call_prepare_ping(fd, key)
     else:
         syscall_lib.call_prepare(fd, key)

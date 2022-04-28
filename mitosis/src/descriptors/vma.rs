@@ -1,8 +1,8 @@
 use crate::bindings::VMFlags;
 use crate::kern_wrappers::mm::VirtAddrType;
 
-/// The VMA descriptors can generate from VMA in kern_wrappers 
-#[derive(Copy, Clone, Default)]
+/// The VMA descriptors can generate from VMA in kern_wrappers
+#[derive(Copy, Clone, Default,Debug)]
 pub struct VMADescriptor {
     pub range: (
         crate::kern_wrappers::mm::VirtAddrType,
@@ -11,6 +11,7 @@ pub struct VMADescriptor {
     // [start,end] of a vma range (virtual address)
     pub flags: crate::bindings::vm_flags_t,
     pub prot: crate::bindings::pgprot_t,
+    pub is_anonymous: bool,
 }
 
 impl VMADescriptor {
@@ -30,6 +31,11 @@ impl VMADescriptor {
     }
 
     #[inline]
+    pub fn is_anonymous(&self) -> bool { 
+        self.is_anonymous
+    }
+
+    #[inline]
     pub fn get_sz(&self) -> u64 {
         self.range.1 - self.range.0
     }
@@ -38,7 +44,7 @@ impl VMADescriptor {
     pub fn get_prot(&self) -> crate::bindings::pgprot_t {
         self.prot
     }
-    
+
     #[inline]
     pub fn get_flags(&self) -> crate::bindings::VMFlags {
         unsafe { crate::bindings::VMFlags::from_bits_unchecked(self.flags) }
@@ -48,16 +54,16 @@ impl VMADescriptor {
     pub fn get_mmap_flags(&self) -> crate::linux_kernel_module::c_types::c_ulong {
         let mut ret = 0;
         if self.get_flags().contains(VMFlags::READ) {
-            ret |= crate::bindings::PMEM_PROT_READ;     // 0x01
+            ret |= crate::bindings::PMEM_PROT_READ; // 0x01
         }
         if self.get_flags().contains(VMFlags::WRITE) {
-            ret |= crate::bindings::PMEM_PROT_WRITE;    // 0x02
+            ret |= crate::bindings::PMEM_PROT_WRITE; // 0x02
         }
         if self.get_flags().contains(VMFlags::EXEC) {
-            ret |= crate::bindings::PMEM_PROT_EXEC;     // 0x04
+            ret |= crate::bindings::PMEM_PROT_EXEC; // 0x04
         }
         if self.is_stack() {
-            ret |= crate::bindings::PMEM_PROT_GROWSUP;  // 0x02000000
+            ret |= crate::bindings::PMEM_PROT_GROWSUP; // 0x02000000
         }
         ret
     }
