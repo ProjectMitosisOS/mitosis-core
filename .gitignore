@@ -16,3 +16,4 @@ build/
 .vscode/
 scripts/*.toml
 scripts/exp
+.DS_Store

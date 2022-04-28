@@ -121,6 +121,11 @@ const unsigned long PMEM_VM_DONTEXPAND = VM_DONTEXPAND;
 const unsigned long PMEM_VM_MAYREAD = VM_MAYREAD;
 const unsigned long PMEM_VM_MAYWRITE = VM_MAYWRITE;
 const unsigned long PMEM_VM_MIXEDMAP = VM_MIXEDMAP;
+const unsigned long PMEM_VM_GROWSDOWN = VM_GROWSDOWN;
+const unsigned long PMEM_VM_GROWSUP = VM_GROWSUP;
+
+// forbidden 
+const unsigned long PMEM_VM_RESERVE = 0x00000000; // This flags seems not used by the Linux, use it 
 
 /*
  MMap flags

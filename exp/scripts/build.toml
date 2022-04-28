@@ -1,0 +1,14 @@
+#global_configs = ""
+
+[[pass]]
+host = 'val07'
+path = '/home/lfm/projects/mos'
+cmd = 'source $HOME/.cargo/env; make km insmod'
+
+
+[[pass]]
+host = 'val08'
+path = '/home/lfm/projects/mos'
+cmd = 'source $HOME/.cargo/env; make km insmod'
+
+
