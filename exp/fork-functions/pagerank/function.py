@@ -1,7 +1,6 @@
-import json
+import igraph
 import os
 import sys
-import numpy as np
 
 sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
@@ -9,18 +8,17 @@ from mitosis_wrapper import *
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 
+size = 128 * 1024
+
+graph = igraph.Graph.Barabasi(size, 10)
 
 @tick_execution_time
-def handler():
-    n = 64
-    A = np.random.rand(n, n)
-    B = np.random.rand(n, n)
-    C = np.matmul(A, B)
-
+def lambda_handler():
+    result = graph.pagerank()
 
 @mitosis_bench
 def bench():
-    handler()
+    lambda_handler()
 
 
 if __name__ == '__main__':

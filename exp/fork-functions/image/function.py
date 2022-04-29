@@ -1,8 +1,7 @@
+from PIL import Image
 import json
 import os
-import subprocess
 import sys
-import numpy as np
 
 sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
@@ -10,20 +9,23 @@ from mitosis_wrapper import *
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 
-tmp = '/tmp/'
-bs = 'bs=4M'
-count = 'count=100'
+
+## Migration related end
+def init():
+    im = Image.open('test.jpg')
+    size = (128, 128)
+    im.thumbnail(size)
+    im.close()
+    del (im)
+    del (size)
 
 
 @tick_execution_time
 def handler():
-    global start, end
-
-    out_fd = open(tmp + 'io_write_logs', 'w')
-    dd = subprocess.Popen(['dd', 'if=/dev/zero', 'of=/dev/zero', bs, count], stderr=out_fd)
-    dd.communicate()
-
-    subprocess.check_output(['ls', '-alh', tmp])
+    im = Image.open('test.jpg')
+    size = (128, 128)
+    im.thumbnail(size)
+    im.save('thumbnail.jpg')
 
 
 @mitosis_bench
@@ -32,4 +34,5 @@ def bench():
 
 
 if __name__ == '__main__':
+    init()
     bench()

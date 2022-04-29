@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-import numpy as np
 
 sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
@@ -11,16 +10,14 @@ os.environ['MKL_NUM_THREADS'] = '1'
 
 
 @tick_execution_time
-def handler():
-    n = 64
-    A = np.random.rand(n, n)
-    B = np.random.rand(n, n)
-    C = np.matmul(A, B)
+def lambda_handler():
+    json_data = json.loads('["foo", {"bar":["baz", null, 1.0, 2]}]')
+    str_json = json.dumps(["foo", {"bar": ["baz", None, 1.0, 2]}], indent=4)
 
 
 @mitosis_bench
 def bench():
-    handler()
+    lambda_handler()
 
 
 if __name__ == '__main__':
