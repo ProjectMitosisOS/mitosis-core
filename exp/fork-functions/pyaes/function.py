@@ -20,8 +20,14 @@ def generate(length):
 
 @tick_execution_time
 def handler():
-    length_of_message = 256
-    num_of_iterations = 10
+    """
+    "params": [
+                "{\"length_of_message\":\"22000\", \"num_of_iterations\":\"1\"}"
+            ]
+    :return:
+    """
+    length_of_message = 22000
+    num_of_iterations = 1
 
     message = generate(length_of_message)
 

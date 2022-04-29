@@ -35,8 +35,8 @@ def trigger_bootstrap(boost_path, dictorys):
         # again = False       # Just get result
         for root, dirs, files in os.walk(dictory):
             for f in files:
-                pattern = re.compile(r"^.*?helloworld.*?toml$")
-                # pattern = re.compile(r"^run.*?toml$")
+                # pattern = re.compile(r"^.*?helloworld.*?toml$")
+                pattern = re.compile(r"^run.*?toml$")
                 if pattern.match(f) is not None:
                     log_path = "{}/{}.txt".format(dictory, f)
                     cmd = "python {} -f {}".format(boost_path, os.path.join(root, f))
@@ -48,8 +48,14 @@ def trigger_bootstrap(boost_path, dictorys):
 if __name__ == '__main__':
     trigger_bootstrap('bootstrap.py',
                       [
+                          # micro startup
                           # "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro/startup",
-                          "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro-function/startup"
+
+                          # touch ratio
+                          "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro/touch-ratio",
+
+                          # functions
+                          # "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro-function/startup"
                       ]
                       )
 
