@@ -2,14 +2,12 @@ import os
 import sys
 
 sys.path.append("../../common")  # include outer path
-
-import bench
 from mitosis_wrapper import *
-from chameleon import PageTemplate
-import six
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
+import six
+from chameleon import PageTemplate
 
 
 BIGTABLE_ZPT = """\
@@ -27,8 +25,8 @@ tal:content="python: d" />
 
 @tick_execution_time
 def handler():
-    num_of_rows = 4
-    num_of_cols = 4
+    num_of_rows = 32
+    num_of_cols = 32
 
     tmpl = PageTemplate(BIGTABLE_ZPT)
     data = {}
@@ -38,6 +36,7 @@ def handler():
     table = [data for x in range(num_of_rows)]
     options = {'table': table}
     data = tmpl.render(options=options)
+
 
 @mitosis_bench
 def bench():

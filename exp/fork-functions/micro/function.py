@@ -1,22 +1,17 @@
 import os
 import sys
 import time
+import mmap
 
 sys.path.append("../../common")  # include outer path
-
 import syscall_lib
 import bench
 from mitosis_wrapper import *
-# import json
-# import random
-# import requests
 
-import mmap
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 working_set = working_set
-
 mm = mmap.mmap(-1, length=working_set)
 
 

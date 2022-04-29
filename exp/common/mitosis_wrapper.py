@@ -51,6 +51,7 @@ def mitosis_bench(handler):
     @wraps(handler)
     def wrapper(*args, **kwargs):
         result = handler(*args, **kwargs)
+        result = handler(*args, **kwargs)
         prepare(handler_id)
         if not ret_imm:
             result = handler(*args, **kwargs)

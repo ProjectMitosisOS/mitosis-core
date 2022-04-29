@@ -1,15 +1,12 @@
-[[pass]]
-host = 'val08'
-path = '/home/lfm/projects/mos'
-cmd = 'make insmod'
-
-
-[[pass]]
-host = 'val08'
-path = '/home/lfm/projects/mos/exp/fork-functions/micro'
-cmd = 'python function.py -ret_imm=1 -working_set=8'
-
-[[pass]]
-host = 'val08'
-path = '/home/lfm/projects/mos/exp'
-cmd = './simple_child'
+helloworld
+json
+linpack
+compression
+pyaes
+chameleon
+image
+dd
+recognition
+pagerank
+matmul
+ffmpeg
