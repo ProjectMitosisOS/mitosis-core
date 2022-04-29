@@ -9,7 +9,6 @@ os.environ['MKL_NUM_THREADS'] = '1'
 import six
 from chameleon import PageTemplate
 
-
 BIGTABLE_ZPT = """\
 <table xmlns="http://www.w3.org/1999/xhtml"
 xmlns:tal="http://xml.zope.org/namespaces/tal">
@@ -25,8 +24,13 @@ tal:content="python: d" />
 
 @tick_execution_time
 def handler():
-    num_of_rows = 32
-    num_of_cols = 32
+    """
+    "params": [
+                "{\"num_of_rows\":\"200\", \"num_of_cols\":\"200\"}"
+            ]
+    """
+    num_of_rows = 200
+    num_of_cols = 200
 
     tmpl = PageTemplate(BIGTABLE_ZPT)
     data = {}

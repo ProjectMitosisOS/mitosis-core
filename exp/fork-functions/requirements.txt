@@ -5,7 +5,6 @@ pyaes
 Pillow
 opencv-python==4.2.0.32
 requests
-json
 future
 torch
 torchvision
