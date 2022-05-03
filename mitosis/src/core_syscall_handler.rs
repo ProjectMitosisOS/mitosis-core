@@ -22,9 +22,16 @@ struct ResumeDataStruct {
     access_info: crate::remote_paging::AccessInfo,
 }
 
+impl ResumeDataStruct {
+    pub fn pg_table_entry_cnt(&self) -> usize {
+        self.descriptor.page_table.len()
+    }
+}
+
 struct CallerData {
     ping_img: bool,
     prepared_key: Option<usize>,
+    fault_page_cnt: usize,
     resume_related: Option<ResumeDataStruct>,
 }
 
@@ -33,6 +40,7 @@ impl Default for CallerData {
         Self {
             ping_img: false,
             prepared_key: None,
+            fault_page_cnt: 0,
             resume_related: None,
         }
     }
@@ -49,6 +57,15 @@ pub struct MitosisSysCallHandler {
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
+        {
+            let pg_fault_sz = self.fault_page_size() / 1024;
+            let meta_workingset_sz = self.meta_workingset_size() / 1024;
+            crate::log::debug!(
+                "workingset size {} KB, page fault size {} KB",
+                meta_workingset_sz,
+                pg_fault_sz
+            );
+        }
         self.caller_status.prepared_key.map(|k| {
             if !self.caller_status.ping_img {
                 crate::log::info!("unregister prepared process {}", k);
@@ -372,6 +389,7 @@ impl MitosisSysCallHandler {
     #[inline(always)]
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
         let fault_addr = (*vmf).address;
+        self.incr_fault_page_cnt();
         let resume_related = self.caller_status.resume_related.as_ref().unwrap();
         let new_page = resume_related
             .descriptor
@@ -406,6 +424,26 @@ impl MitosisSysCallHandler {
                 );
                 crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
             }
+        }
+    }
+
+    #[inline]
+    fn incr_fault_page_cnt(&mut self) {
+        self.caller_status.fault_page_cnt += 1;
+    }
+
+    /// Page fault size (in Bytes)
+    #[inline]
+    fn fault_page_size(&self) -> usize {
+        self.caller_status.fault_page_cnt * 4096 as usize
+    }
+
+    #[inline]
+    fn meta_workingset_size(&self) -> usize {
+        if let Some(meta) = self.caller_status.resume_related.as_ref() {
+            meta.pg_table_entry_cnt() * 4096 as usize
+        } else {
+            0
         }
     }
 }

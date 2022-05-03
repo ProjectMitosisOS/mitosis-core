@@ -5,3 +5,7 @@ pyaes
 Pillow
 opencv-python==4.2.0.32
 requests
+future
+torch
+torchvision
+python-igraph==0.8.0
