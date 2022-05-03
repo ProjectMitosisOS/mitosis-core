@@ -24,7 +24,7 @@ Note: All of the child process could be boosted via the file `common/simple_chil
 
 ### 2. Common tools
 
-There are ample `toml` scripts and shell scripts under `scripts`, and you may find them helpful to ease the experiment process.
+There are sample `toml` scripts and shell scripts under `scripts`, and you may find them helpful to ease the experiment process.
 
 | path                          | usage                                                        | trigger point                                                |
 | ----------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
