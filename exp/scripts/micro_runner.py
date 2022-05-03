@@ -24,6 +24,7 @@ def analysis_log(file_name, cmd_txt):
         if execute_time_pattern.match(line) is not None:
             exe = float(execute_time_pattern.findall(line)[-1])
             exe_li.append(exe)
+    if len(prepare_li) == 0: return
     prepare = prepare_li[0]
 
     print("Execute on file %s, prepare latency \t\t%f us" % (file_name, prepare))
@@ -40,6 +41,7 @@ def trigger_bootstrap(boost_path, dictorys):
                 # pattern = re.compile(r"run.toml$")
                 pattern = re.compile(r"^run.*?toml$")
                 if pattern.match(f) is not None:
+                    print("run case:", f)
                     log_path = "{}/{}.txt".format(dictory, f)
                     cmd = "python {} -f {}".format(boost_path, os.path.join(root, f))
                     cmd_txt = execCmd(cmd)
@@ -50,8 +52,8 @@ def trigger_bootstrap(boost_path, dictorys):
 if __name__ == '__main__':
     trigger_bootstrap('bootstrap.py',
                       [
-                          # '/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro/prepare-execution',
-                          '/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro-function/prepare-execution'
+                          '/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro/prepare-execution',
+                          # '/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro-function/prepare-execution'
                           # '/Users/lufangming/Documents/repos/mitosis/scripts'
                       ]
                       )
