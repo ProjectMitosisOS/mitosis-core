@@ -24,7 +24,7 @@ Note: All of the child process could be boosted via the file `common/simple_chil
 
 ### 2. Common tools
 
-There are sample `toml` scripts and shell scripts under `scripts`, and you may find them helpful to ease the experiment process.
+There are sample `toml` scripts and shell scripts under `exp/scripts`, and you may find them helpful to ease the experiment process.
 
 | path                          | usage                                                        | trigger point                                                |
 | ----------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -35,7 +35,7 @@ There are sample `toml` scripts and shell scripts under `scripts`, and you may f
 | `run_lean_container.sh`       | The trigger script that start the specific command in lean-container. | Wrapped by `.toml` files                                     |
 | scripts under `exp`           | All of the experiment `toml` scripts                         | Call at each time we <br />do the experiment                 |
 
-Moreover, prepare the `bootstrap.py` (or `bootstrap_proxy.py`) under `exp/scripts`. And make sure you have synchronize all of the codes to the server.
+Moreover, prepare the `bootstrap.py` (or `bootstrap_proxy.py`) under `exp/scripts` (which can be found in in the $PATH_TO_MITOSIS/scripts$. And make sure you have synchronize all of the codes to the server (e.g., by preparing the code in NFS).
 
 
 
