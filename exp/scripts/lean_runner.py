@@ -24,6 +24,7 @@ def analysis_log(file_name, cmd_txt):
             lat = float(latency_pattern.findall(line)[-1])
             qps_li.append(qps)
             lat_li.append(lat)
+    if len(qps_li) == 0: return
     print("Execute on file %s\tqps %f op/s\tlatency %f ms" % (file_name, np.mean(qps_li), np.mean(lat_li)))
 
 
@@ -38,6 +39,7 @@ def trigger_bootstrap(boost_path, dictorys):
                 # pattern = re.compile(r"^.*?helloworld.*?toml$")
                 pattern = re.compile(r"^run.*?toml$")
                 if pattern.match(f) is not None:
+                    print("run case:", f)
                     log_path = "{}/{}.txt".format(dictory, f)
                     cmd = "python {} -f {}".format(boost_path, os.path.join(root, f))
                     cmd_txt = execCmd(cmd)
@@ -49,10 +51,10 @@ if __name__ == '__main__':
     trigger_bootstrap('bootstrap.py',
                       [
                           # micro startup
-                          # "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro/startup",
+                          "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro/startup",
 
                           # touch ratio
-                          "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro/touch-ratio",
+                          # "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro/touch-ratio",
 
                           # functions
                           # "/Users/lufangming/Documents/repos/mitosis/scripts/exp/fork-micro-function/startup"
