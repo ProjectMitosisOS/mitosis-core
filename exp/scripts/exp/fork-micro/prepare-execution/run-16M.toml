@@ -12,4 +12,4 @@ cmd = 'python function.py -working_set=16777216 -exclude_execution=0 -handler_id
 [[pass]]
 host = 'val08'
 path = '/home/lfm/projects/mos/exp'
-cmd = './simple_child -mac_id=0 -wait_finish_sec=1'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=2'

@@ -21,6 +21,7 @@ rust-kernel-linux-util = {path = "../../deps/rust-kernel-rdma/rust-kernel-linux-
 krdma-test = {path="../../deps/rust-kernel-rdma/krdma-test",optional = true}
 #mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = []}
 mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow"]}
+#mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow","eager-resume"]}
 #mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow", "resume-profile"]}
 
 [dev-dependencies]
