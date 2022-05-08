@@ -42,7 +42,7 @@ int unpause_container(char* name);
 int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int namespace);
 
 // setup cached namespaces
-int setup_cached_namespace();
+int setup_cached_namespace(char* rootfs);
 int remove_cached_namespace(int namespace);
 
 #endif

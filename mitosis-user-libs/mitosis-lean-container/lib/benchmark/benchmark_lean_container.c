@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
     spec.numa_start = -1;
     spec.numa_end = -1;
 
-    pid = setup_cached_namespace();
+    pid = setup_cached_namespace(NULL);
     
     ret = init_cgroup();
     assert(ret == 0);

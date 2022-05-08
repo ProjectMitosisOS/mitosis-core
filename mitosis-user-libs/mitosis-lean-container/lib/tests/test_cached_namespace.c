@@ -4,7 +4,7 @@
 
 int main() {
     int ret, pid;
-    pid = setup_cached_namespace();
+    pid = setup_cached_namespace(NULL);
     assert(pid > 0);
     ret = remove_cached_namespace(pid);
     assert(ret == 0);
