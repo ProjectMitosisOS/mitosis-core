@@ -22,3 +22,7 @@ cp -r /lib/x86_64-linux-gnu/* $1/lib/x86_64-linux-gnu
 
 # copy restore scripts
 cp restore.sh $1/restore.sh
+
+# chmod
+sudo chmod 666 $1/dev/null
+sudo chmod 755 $1
