@@ -1,0 +1,15 @@
+[[pass]]
+host = 'val08'
+path = '/home/lfm/projects/mos'
+cmd =  'make insmod'
+
+
+[[pass]]
+host = 'val08'
+path = '/home/lfm/projects/mos/exp/fork-functions/chameleon'
+cmd = 'python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="chameleon" '
+
+[[pass]]
+host = 'val08'
+path = '/home/lfm/projects/mos/exp'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=1'

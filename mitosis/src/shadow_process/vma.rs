@@ -1,3 +1,4 @@
+// use alloc::string::String;
 use crate::bindings::*;
 use crate::kern_wrappers::mm::VirtAddrType;
 use crate::kern_wrappers::vma::VMA;
@@ -18,7 +19,7 @@ pub struct ShadowVMA<'a> {
 }
 
 impl<'a> ShadowVMA<'a> {
-    pub fn new(mut vma: VMA<'a>, is_cow: bool) -> Self {
+    pub fn new(vma: VMA<'a>, is_cow: bool) -> Self {
         // increment the file reference counter
 
         let file = unsafe { vma.get_file_ptr() };
@@ -27,11 +28,12 @@ impl<'a> ShadowVMA<'a> {
         }
 
         // toggle the VM map flag
+        /*
         let mut vm_flag = vma.get_flags();
-        if vm_flag.contains(VMFlags::WRITE) && is_cow {
-            vm_flag.insert(VMFlags::SHARED);
-            vma.set_raw_flags(vm_flag.bits());
-        }
+        if (vm_flag.contains(VMFlags::WRITE) || vm_flag.contains(VMFlags::MAY_WRITE)) && is_cow {
+            // vm_flag.insert(VMFlags::SHARED);
+            // vma.set_raw_flags(vm_flag.bits());
+        } */
 
         Self {
             vma_inner: vma,
@@ -107,13 +109,16 @@ impl VMACopyPTGenerator<'_, '_> {
         let my: &mut Self = &mut (*((*walk).private as *mut Self));
 
         let phy_addr = pmem_get_phy_from_pte(pte);
+
         if phy_addr > 0 {
             let copied_page = Copy4KPage::new(addr as _).expect("Fail to copy from user space");
             // my.inner_flat.add_one(addr, copied_page.get_physical_addr());
             {
                 let start = my.vma.vma_inner.get_start();
-                my.inner_flat
-                    .add_one((addr as VirtAddrType - start) as _, copied_page.get_physical_addr() as _);
+                my.inner_flat.add_one(
+                    (addr as VirtAddrType - start) as _,
+                    copied_page.get_physical_addr() as _,
+                );
             }
             // the page table is present
             my.inner.add_page(copied_page);
@@ -166,6 +171,23 @@ impl VMACOWPTGenerator<'_, '_> {
         let my: &mut Self = &mut (*((*walk).private as *mut Self));
 
         let phy_addr = pmem_get_phy_from_pte(pte);
+        // if addr == 0xd55000 {
+        //     // if addr == 0x5bf000 || addr == 0x7ffff71e2000 {
+        //     let vma = &my.vma.vma_inner;
+        //     let st = vma.is_stack();
+        //     let name = if vma.get_backed_file_name().is_some() {
+        //         vma.get_backed_file_name().unwrap()
+        //     } else {
+        //         String::from("none")
+        //     };
+        //     crate::log::info!(
+        //         "st:{}, va:0x{:x}, pa:0x{:x}, name:{}",
+        //         st,
+        //         addr,
+        //         phy_addr,
+        //         name
+        //     )
+        // }
         if likely(phy_addr > 0) {
             if unlikely(my.vma.has_write_permission()) {
                 my.inner

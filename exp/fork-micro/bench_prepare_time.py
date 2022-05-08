@@ -1,4 +1,5 @@
 import mmap
+import os
 import sys
 from ctypes import sizeof
 
@@ -50,9 +51,8 @@ if __name__ == '__main__':
     # parent first touch
     touch_working_set(working_sz=working_set)
     # Call prepare
-    cnt = 0
-    print("counter %d" % cnt)
     start = time.time()
     syscall_lib.call_prepare(fd, handler_id)
     end = time.time()
     report("prepare")
+    os._exit(0)

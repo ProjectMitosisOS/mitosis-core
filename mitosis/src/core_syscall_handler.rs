@@ -22,10 +22,28 @@ struct ResumeDataStruct {
     access_info: crate::remote_paging::AccessInfo,
 }
 
-#[derive(Default)]
+impl ResumeDataStruct {
+    pub fn pg_table_entry_cnt(&self) -> usize {
+        self.descriptor.page_table.len()
+    }
+}
+
 struct CallerData {
+    ping_img: bool,
     prepared_key: Option<usize>,
+    fault_page_cnt: usize,
     resume_related: Option<ResumeDataStruct>,
+}
+
+impl Default for CallerData {
+    fn default() -> Self {
+        Self {
+            ping_img: false,
+            prepared_key: None,
+            fault_page_cnt: 0,
+            resume_related: None,
+        }
+    }
 }
 
 /// The MitosisSysCallService has the following two jobs:
@@ -39,10 +57,21 @@ pub struct MitosisSysCallHandler {
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
+        {
+            let pg_fault_sz = self.fault_page_size() / 1024;
+            let meta_workingset_sz = self.meta_workingset_size() / 1024;
+            crate::log::debug!(
+                "workingset size {} KB, page fault size {} KB",
+                meta_workingset_sz,
+                pg_fault_sz
+            );
+        }
         self.caller_status.prepared_key.map(|k| {
-            crate::log::info!("unregister prepared process {}", k);
-            let process_service = unsafe { crate::get_sps_mut() };
-            process_service.unregister(k);
+            if !self.caller_status.ping_img {
+                crate::log::info!("unregister prepared process {}", k);
+                let process_service = unsafe { crate::get_sps_mut() };
+                process_service.unregister(k);
+            }
         });
     }
 }
@@ -79,7 +108,7 @@ impl FileOperations for MitosisSysCallHandler {
         use linux_kernel_module::bindings::_copy_from_user;
         match cmd {
             LibMITOSISCmd::Nil => 0, // a nill core do nothing
-            LibMITOSISCmd::Prepare => self.syscall_prepare(arg),
+            LibMITOSISCmd::Prepare => self.syscall_prepare(arg, false),
             LibMITOSISCmd::ResumeLocal => self.syscall_local_resume(arg),
             LibMITOSISCmd::ResumeRemote => {
                 let mut req: resume_remote_req_t = Default::default();
@@ -127,6 +156,7 @@ impl FileOperations for MitosisSysCallHandler {
                 let (machine_id, gid, nic_id) = (req.machine_id, String::from(addr), req.nic_id);
                 self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
             }
+            LibMITOSISCmd::PreparePing => self.syscall_prepare(arg, true),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -152,11 +182,12 @@ const TIMEOUT_USEC: i64 = 1000_000; // 1s
 /// The system call parts
 impl MitosisSysCallHandler {
     #[inline]
-    fn syscall_prepare(&mut self, key: c_ulong) -> c_long {
+    fn syscall_prepare(&mut self, key: c_ulong, ping_img: bool) -> c_long {
         if self.caller_status.prepared_key.is_some() {
             crate::log::error!("We don't support multiple fork yet. ");
             return -1;
         }
+        self.caller_status.ping_img = ping_img;
 
         let process_service = unsafe { crate::get_sps_mut() };
         let res = if cfg!(feature = "cow") {
@@ -165,12 +196,37 @@ impl MitosisSysCallHandler {
             process_service.add_myself_copy(key as _)
         };
 
-        if res.is_some() {
-            self.caller_status.prepared_key = Some(key as _);
-            crate::log::info!("prepared buf sz {}KB", res.unwrap() / 1024);
-            return 0;
+        if res.is_none() {
+            return -1;
         }
-        return -1;
+
+        // double remote fork on parent is not supported yet
+        // so we mark a flag to prevent future re-prepare
+        self.caller_status.prepared_key = Some(key as _);
+        crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
+
+        // sanity checks
+        /*
+        use crate::bindings::VMFlags;
+        let mm = Task::new().get_memory_descriptor();
+        for mut vma in mm.get_vma_iter() {
+            if vma.is_is_anonymous() {
+                // reset the flags
+                let mut vm_flag = vma.get_flags();
+                vm_flag.insert(VMFlags::RESERVE);
+                vma.set_raw_flags(vm_flag.bits());
+
+                crate::log::info!(
+                    "VMA {:x}-{:x} {:?}, is_annoy {}",
+                    vma.get_start(),
+                    vma.get_end(),
+                    vma.get_flags(),
+                    vma.is_is_anonymous()
+                );
+            }
+        } */
+
+        return 0;
     }
 
     #[inline]
@@ -333,7 +389,7 @@ impl MitosisSysCallHandler {
     #[inline(always)]
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
         let fault_addr = (*vmf).address;
-        // crate::log::debug!("fault addr 0x{:x}", fault_addr);
+        self.incr_fault_page_cnt();
         let resume_related = self.caller_status.resume_related.as_ref().unwrap();
         let new_page = resume_related
             .descriptor
@@ -344,9 +400,50 @@ impl MitosisSysCallHandler {
                 0
             }
             None => {
-                crate::log::error!("Failed to read the remote page");
+                // check whether the page is anonymous
+                let vma = crate::kern_wrappers::vma::VMA::new(&mut *((*vmf).vma));
+                for &vd in &resume_related.descriptor.vma {
+                    if vd.is_anonymous && (vma.get_start() == vd.get_start()) {
+                        let new_page_p =
+                            crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
+                        //crate::bindings::get_zeroed_page(crate::bindings::PMEM_GFP_HIGHUSER);
+
+                        (*vmf).page = new_page_p as *mut _;
+                        // crate::log::error!("in handle expand page {:?}", new_page_p);
+                        // crate::log::error!("check vma {:?}", vma);
+                        // crate::log::error!("check vma descriptor {:?}", vd);
+                        return 0;
+                        // return crate::bindings::FaultFlags::SIGSEGV.bits()
+                        //   as linux_kernel_module::c_types::c_int;
+                    }
+                }
+
+                crate::log::error!(
+                    "[handle_page_fault] Failed to read the remote page, fault addr: 0x{:x}",
+                    fault_addr
+                );
                 crate::bindings::FaultFlags::SIGSEGV.bits() as linux_kernel_module::c_types::c_int
             }
+        }
+    }
+
+    #[inline]
+    fn incr_fault_page_cnt(&mut self) {
+        self.caller_status.fault_page_cnt += 1;
+    }
+
+    /// Page fault size (in Bytes)
+    #[inline]
+    fn fault_page_size(&self) -> usize {
+        self.caller_status.fault_page_cnt * 4096 as usize
+    }
+
+    #[inline]
+    fn meta_workingset_size(&self) -> usize {
+        if let Some(meta) = self.caller_status.resume_related.as_ref() {
+            meta.pg_table_entry_cnt() * 4096 as usize
+        } else {
+            0
         }
     }
 }

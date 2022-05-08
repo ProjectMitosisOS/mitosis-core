@@ -5,7 +5,7 @@
 
 DEFINE_int64(mac_id, 0, "machine id");
 DEFINE_int64(handler_id, 73, "rfork handler id");
-DEFINE_int64(wait_finish_sec, 1, "waiting for parent finish prepare");
+DEFINE_int64(wait_finish_sec, 0, "waiting for parent finish prepare");
 
 
 int
@@ -15,8 +15,6 @@ main(int argc, char *argv[]) {
     int sd = sopen();
     printf("mac id:%d\n", FLAGS_mac_id);
     assert(sd != 0);
-    sleep(1);
-
     fork_resume_remote(sd, FLAGS_mac_id, FLAGS_handler_id);
     assert(false);
     return 0;

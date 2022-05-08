@@ -1,6 +1,12 @@
-global_configs = "-l"
-
-[[pass]]
-host = 'localhost'
-path = ''
-cmd = 'ls {}'
+helloworld
+json
+linpack
+compression
+pyaes
+chameleon
+image
+dd
+recognition
+pagerank
+matmul
+ffmpeg
