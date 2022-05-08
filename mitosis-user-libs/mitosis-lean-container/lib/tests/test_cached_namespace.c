@@ -6,7 +6,7 @@ int main() {
     int ret, pid;
     pid = setup_cached_namespace(NULL);
     assert(pid > 0);
-    ret = remove_cached_namespace(pid);
+    ret = remove_cached_namespace(pid, NULL);
     assert(ret == 0);
     return 0;
 }

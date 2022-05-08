@@ -135,7 +135,7 @@ clean:
     ret = remove_lean_container_template(name);
     assert(ret == 0);
 
-    ret = remove_cached_namespace(pid);
+    ret = remove_cached_namespace(pid, NULL);
     assert(ret == 0);
 
     printf("clean resources!\n");

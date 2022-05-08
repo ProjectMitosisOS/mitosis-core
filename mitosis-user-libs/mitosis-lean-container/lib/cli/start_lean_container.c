@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
     }
 
 clean:
-    ret = remove_cached_namespace(cached_namespace);
+    ret = remove_cached_namespace(cached_namespace, rootfs_path);
     assert(ret == 0);
 
     ret = remove_lean_container_template(name);
