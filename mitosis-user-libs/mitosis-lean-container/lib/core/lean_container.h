@@ -42,7 +42,9 @@ int unpause_container(char* name);
 int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int _namespace);
 
 // setup cached namespaces
+// if rootfs is not NULL, we will mount a procfs in the rootfs
+// the procfs is bound to the namespace
 int setup_cached_namespace(char* rootfs);
-int remove_cached_namespace(int _namespace);
+int remove_cached_namespace(int _namespace, char* rootfs);
 
 #endif

@@ -329,7 +329,15 @@ int setup_cached_namespace(char* rootfs) {
     }
 }
 
-int remove_cached_namespace(int _namespace) {
+int remove_cached_namespace(int _namespace, char* rootfs) {
+    if (rootfs) {
+        char buf[BUF_SIZE];
+        sprintf(buf, "%s%s", rootfs, "/proc");
+        int ret = umount2(buf, 0);
+        if (ret < 0) {
+            perror("umount2");
+        }
+    }
     return kill(_namespace, SIGKILL);
 }
 
