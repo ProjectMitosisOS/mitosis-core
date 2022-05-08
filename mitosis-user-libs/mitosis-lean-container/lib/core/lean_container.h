@@ -30,7 +30,7 @@ int remove_lean_container_template(char* name);
 // returns the pid of the containered process in the parent process
 // returns 0 in the containered process
 // return negative value on failure
-int setup_lean_container(char* name, char* rootfs_path, int namespace);
+int setup_lean_container(char* name, char* rootfs_path, int _namespace);
 
 // pause/unpause the corresponding container
 // returns 0 on success
@@ -39,10 +39,10 @@ int unpause_container(char* name);
 
 // setup lean container, with an additional call to fork (a.k.a: double fork)
 // so that the process is created in a new pid namespace
-int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int namespace);
+int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int _namespace);
 
 // setup cached namespaces
 int setup_cached_namespace(char* rootfs);
-int remove_cached_namespace(int namespace);
+int remove_cached_namespace(int _namespace);
 
 #endif

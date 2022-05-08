@@ -28,8 +28,8 @@ struct ProcessBundler {
 
 impl ProcessBundler {
     fn new(process: ShadowProcess, targets: Arc<DCTarget>) -> Self {
-        crate::log::debug!(
-            "before alloc serialization buf sz {}KB",
+        crate::log::info!(
+            "Alloc serialization buf sz {} KB",
             process.get_descriptor_ref().serialization_buf_len() / 1024
         );
         let mut buf = unsafe { get_mem_pool_mut() }.pop_one();

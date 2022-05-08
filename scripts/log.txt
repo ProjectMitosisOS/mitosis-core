@@ -1,0 +1,248 @@
+(execute cmd @val08 make insmod
+connect val08
+(execute cmd @val08 python function.py -working_set=1048576 -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="micro" 
+connect val08
+(execute cmd @val08 ./simple_child -mac_id=0 -wait_finish_sec=4
+connect val08
+@val08      sudo rmmod fork ; sudo insmod mitosis-kms/fork.ko
+exit  val08
+@val08      ffmpeg version 3.1 Copyright (c) 2000-2016 the FFmpeg developers
+@val08      built with gcc 5.4.0 (Ubuntu 5.4.0-6ubuntu1~16.04.10) 20160609
+@val08      configuration: --prefix=/usr/local/ffmpeg --disable-yasm
+@val08      libavutil      55. 27.100 / 55. 27.100
+@val08      libavcodec     57. 48.101 / 57. 48.101
+@val08      libavformat    57. 40.101 / 57. 40.101
+@val08      libavdevice    57.  0.101 / 57.  0.101
+@val08      libavfilter     6. 46.102 /  6. 46.102
+@val08      libswscale      4.  1.100 /  4.  1.100
+@val08      libswresample   2.  1.100 /  2.  1.100
+@val08      Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'test.mp4':
+@val08      Metadata:
+@val08      major_brand     : mp42
+@val08      minor_version   : 0
+@val08      compatible_brands: mp42mp41isomavc1
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      Duration: 00:00:30.53, start: 0.000000, bitrate: 411 kb/s
+@val08      Stream #0:0(und): Video: h264 (Constrained Baseline) (avc1 / 0x31637661), yuv420p, 480x270 [SAR 1:1 DAR 16:9], 301 kb/s, 30 fps, 30 tbr, 30 tbn, 60 tbc (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Video Handler
+@val08      encoder         : AVC Coding
+@val08      Stream #0:1(und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 112 kb/s (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Audio Handler
+@val08      [1;35m[mp4 @ 0x1f3d600] [0m[0;33mUsing AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
+@val08      [0m    Last message repeated 1 times
+@val08      Last message repeated 1 times
+@val08      Output #0, mp4, to 'out.mp4':
+@val08      Metadata:
+@val08      major_brand     : mp42
+@val08      minor_version   : 0
+@val08      compatible_brands: mp42mp41isomavc1
+@val08      encoder         : Lavf57.40.101
+@val08      Stream #0:0(und): Video: mpeg4 ( [0][0][0] / 0x0020), yuv420p, 480x270 [SAR 1:1 DAR 16:9], q=2-31, 200 kb/s, 30 fps, 15360 tbn, 30 tbc (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Video Handler
+@val08      encoder         : Lavc57.48.101 mpeg4
+@val08      Side data:
+@val08      cpb: bitrate max/min/avg: 0/0/200000 buffer size: 0 vbv_delay: -1
+@val08      Stream #0:1(und): Audio: aac (LC) ([64][0][0][0] / 0x0040), 48000 Hz, stereo, fltp, 128 kb/s (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Audio Handler
+@val08      encoder         : Lavc57.48.101 aac
+@val08      Stream mapping:
+@val08      Stream #0:0 -> #0:0 (h264 (native) -> mpeg4 (native))
+@val08      Stream #0:1 -> #0:1 (aac (native) -> aac (native))
+@val08      Press [q] to stop, [?] for help
+@val08      frame=  200 fps=0.0 q=3.5 size=     275kB time=00:00:06.97 bitrate= 323.4kbits/s speed=13.9x
+@val08      frame=  404 fps=402 q=3.6 size=     486kB time=00:00:13.99 bitrate= 284.2kbits/s speed=13.9x
+@val08      frame=  611 fps=406 q=3.6 size=     678kB time=00:00:21.01 bitrate= 264.3kbits/s speed=  14x
+@val08      frame=  838 fps=418 q=3.5 size=     873kB time=00:00:28.03 bitrate= 255.1kbits/s speed=  14x
+@val08      frame=  901 fps=426 q=2.8 Lsize=     962kB time=00:00:30.52 bitrate= 258.2kbits/s speed=14.4x
+@val08      video:927kB audio:8kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 2.886229%
+@val08      [1;36m[aac @ 0x1ed0ce0] [0mQavg: 65536.000
+@val08      [micro-execution] time: 2142467.98 us
+@val08      ffmpeg version 3.1 Copyright (c) 2000-2016 the FFmpeg developers
+@val08      built with gcc 5.4.0 (Ubuntu 5.4.0-6ubuntu1~16.04.10) 20160609
+@val08      configuration: --prefix=/usr/local/ffmpeg --disable-yasm
+@val08      libavutil      55. 27.100 / 55. 27.100
+@val08      libavcodec     57. 48.101 / 57. 48.101
+@val08      libavformat    57. 40.101 / 57. 40.101
+@val08      libavdevice    57.  0.101 / 57.  0.101
+@val08      libavfilter     6. 46.102 /  6. 46.102
+@val08      libswscale      4.  1.100 /  4.  1.100
+@val08      libswresample   2.  1.100 /  2.  1.100
+@val08      Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'test.mp4':
+@val08      Metadata:
+@val08      major_brand     : mp42
+@val08      minor_version   : 0
+@val08      compatible_brands: mp42mp41isomavc1
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      Duration: 00:00:30.53, start: 0.000000, bitrate: 411 kb/s
+@val08      Stream #0:0(und): Video: h264 (Constrained Baseline) (avc1 / 0x31637661), yuv420p, 480x270 [SAR 1:1 DAR 16:9], 301 kb/s, 30 fps, 30 tbr, 30 tbn, 60 tbc (default)
+@val08      Metadata:
+@val08      creation_time   : 2
+@val08      015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Video Handler
+@val08      encoder         : AVC Coding
+@val08      Stream #0:1(und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 112 kb/s (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Audio Handler
+@val08      [1;35m[mp4 @ 0x1f3d600] [0m[0;33mUsing AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
+@val08      [0m    Last message repeated 1 times
+@val08      Last message repeated 1 times
+@val08      Output #0, mp4, to 'out.mp4':
+@val08      Metadata:
+@val08      major_brand     : mp42
+@val08      minor_version   : 0
+@val08      compatible_brands: mp42mp41isomavc1
+@val08      encoder         : Lavf57.40.101
+@val08      Stream #0:0(und): Video: mpeg4 ( [0][0][0] / 0x0020), yuv420p, 480x270 [SAR 1:1 DAR 16:9], q=2-31, 200 kb/s, 30 fps, 15360 tbn, 30 tbc (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Video Handler
+@val08      encoder         : Lavc57.48.101 mpeg4
+@val08      Side data:
+@val08      cpb: bitrate max/min/avg: 0/0/200000 buffer size: 0 vbv_delay: -1
+@val08      Stream #0:1(und): Audio: aac (LC) ([64][0][0][0] / 0x0040), 48000 Hz, stereo, fltp, 128 kb/s (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Audio Handler
+@val08      encoder         : Lavc57.48.101 aac
+@val08      Stream mapping:
+@val08      Stream #0:0 -> #0:0 (h264 (native) -> mpeg4 (native))
+@val08      Stream #0:1 -> #0:1 (aac (native) -> aac (native))
+@val08      Press [q] to stop, [?] for help
+@val08      frame=  258 fps=0.0 q=3.4 size=     339kB time=00:00:08.98 bitrate= 309.2kbits/s speed=17.9x
+@val08      frame=  551 fps=550 q=3.5 size=     624kB time=00:00:19.00 bitrate= 269.1kbits/s speed=  19x
+@val08      frame=  805 fps=535 q=3.1 size=     846kB time=00:00:27.02 bitrate= 256.5kbits/s speed=  18x
+@val08      frame=  901 fps=524 q=2.8 Lsize=     962kB time=00:00:30.52 bitrate= 258.2kbits/s speed=17.8x
+@val08      video:927kB audio:8kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 2.886229%
+@val08      [1;36m[aac @ 0x1ed0ce0] [0mQavg: 65536.000
+@val08      [micro-execution] time: 1743877.89 us
+@val08      done...
+@val08      [micro-prepare] time: 1041.89 us
+@val08      ffmpeg version 3.1 Copyright (c) 2000-2016 the FFmpeg developers
+@val08      built with gcc 5.4.0 (Ubuntu 5.4.0-6ubuntu1~16.04.10) 20160609
+@val08      configuration: --prefix=/usr/local/ffmpeg --disable-yasm
+@val08      libavutil      55. 27.100 / 55. 27.100
+@val08      libavcodec     57. 48.101 / 57. 48.101
+@val08      libavformat    57. 40.101 / 57. 40.101
+@val08      libavdevice    57.  0.101 / 57.  0.101
+@val08      libavfilter     6. 46.102 /  6. 46.102
+@val08      libswscale      4.  1.100 /  4.  1.100
+@val08      libswresample   2.  1.100 /  2.  1.100
+@val08      Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'test.mp4':
+@val08      Metadata:
+@val08      major_brand     : mp42
+@val08      minor_version   : 0
+@val08      compatible_brands: mp42mp41isomavc1
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      Duration: 00:00:30.53, start: 0.000000, bitrate: 411 kb/s
+@val08      Stream #0:0(und): Video: h264 (Constrained Baseline) (avc1 / 0x31637661), yuv420p, 480x270 [SAR 1:1 DAR 16:9], 301 kb/s, 30 fps, 30 tbr, 30 tbn, 60 tbc (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Video Handler
+@val08      encoder         : AVC Coding
+@val08      Stream #0:1(und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 112 kb/s (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Audio Handler
+@val08      [1;35m[mp4 @ 0x1f3d600] [0m[0;33mUsing AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
+@val08      [0m    Last message repeated 1 times
+@val08      Last message repeated 1 times
+@val08      Output #0, mp4, to 'out.mp4':
+@val08      Metadata:
+@val08      major_brand     : mp42
+@val08      minor_version   : 0
+@val08      compatible_brands: mp42mp41isomavc1
+@val08      encoder         : Lavf57.40.101
+@val08      Stream #0:0(und): Video: mpeg4 ( [0][0][0] / 0x0020), yuv420p, 480x270 [SAR 1:1 DAR 16:9], q=2-31, 200 kb/s, 30 fps, 15360 tbn, 30 tbc (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Video Handler
+@val08      encoder         : Lavc57.48.101 mpeg4
+@val08      Side data:
+@val08      cpb: bitrate max/min/avg: 0/0/200000 buffer size: 0 vbv_delay: -1
+@val08      Stream #0:1(und): Audio: aac (LC) ([64][0][0][0] / 0x0040), 48000 Hz, stereo, fltp, 128 kb/s (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Audio Handler
+@val08      encoder         : Lavc57.48.101 aac
+@val08      Stream mapping:
+@val08      Stream #0:0 -> #0:0 (h264 (native) -> mpeg4 (native))
+@val08      Stream #0:1 -> #0:1 (aac (native) -> aac (native))
+@val08      Press [q] to stop, [?] for help
+@val08      frame=  254 fps=0.0 q=3.6 size=     336kB time=00:00:08.98 bitrate= 306.9kbits/s speed=  18x
+@val08      frame=  477 fps=477 q=3.4 size=     556kB time=00:00:16.00 bitrate= 284.9kbits/s speed=  16x
+@val08      frame=  696 fps=464 q=3.2 size=     746kB time=00:00:23.16 bitrate= 263.7kbits/s speed=15.4x
+@val08      mac id:0
+@val08      done...
+@val08      [micro-prepare] time: 1719751.83 us
+@val08      ffmpeg version 3.1 Copyright (c) 2000-2016 the FFmpeg developers
+@val08      built with gcc 5.4.0 (Ubuntu 5.4.0-6ubuntu1~16.04.10) 20160609
+@val08      configuration: --prefix=/usr/local/ffmpeg --disable-yasm
+@val08      libavutil      55. 27.100 / 55. 27.100
+@val08      libavcodec     57. 48.101 / 57. 48.101
+@val08      libavformat    57. 40.101 / 57. 40.101
+@val08      libavdevice    57.  0.101 / 57.  0.101
+@val08      libavfilter     6. 46.102 /  6. 46.102
+@val08      libswscale      4.  1.100 /  4.  1.100
+@val08      libswresample   2.  1.100 /  2.  1.100
+@val08      Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'test.mp4':
+@val08      Metadata:
+@val08      major_brand     : mp42
+@val08      minor_version   : 0
+@val08      compatible_brands: mp42mp41isomavc1
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      Duration: 00:00:30.53, start: 0.000000, bitrate: 411 kb/s
+@val08      Stream #0:0(und): Video: h264 (Constrained Baseline) (avc1 / 0x31637661), yuv420p, 480x270 [SAR 1:1 DAR 16:9], 301 kb/s, 30 fps, 30 tbr, 30 tbn, 60 tbc (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Video Handler
+@val08      encoder         : AVC Coding
+@val08      Stream #0:1(und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 112 kb/s (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Audio Handler
+@val08      [1;35m[mp4 @ 0x1f3d600] [0m[0;33mUsing AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
+@val08      [0m    Last message repeated 1 times
+@val08      Last message repeated 1 times
+@val08      Output #0, mp4, to 'out.mp4':
+@val08      Metadata:
+@val08      major_brand     : mp42
+@val08      minor_version   : 0
+@val08      compatible_brands: mp42mp41isomavc1
+@val08      encoder         : Lavf57.40.101
+@val08      Stream #0:0(und): Video: mpeg4 ( [0][0][0] / 0x0020), yuv420p, 480x270 [SAR 1:1 DAR 16:9], q=2-31, 200 kb/s, 30 fps, 15360 tbn, 30 tbc (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Video Handler
+@val08      encoder         : Lavc57.48.101 mpeg4
+@val08      Side data:
+@val08      cpb: bitrate max/min/avg: 0/0/200000 buffer size: 0 vbv_delay: -1
+@val08      Stream #0:1(und): Audio: aac (LC) ([64][0][0][0] / 0x0040), 48000 Hz, stereo, fltp, 128 kb/s (default)
+@val08      Metadata:
+@val08      creation_time   : 2015-08-07 09:13:02
+@val08      handler_name    : L-SMASH Audio Handler
+@val08      encoder         : Lavc57.48.101 aac
+@val08      Stream mapping:
+@val08      Stream #0:0 -> #0:0 (h264 (native) -> mpeg4 (native))
+@val08      Stream #0:1 -> #0:1 (aac (native) -> aac (native))
+@val08      Press [q] to stop, [?] for help
+@val08      frame=  901 fps=489 q=2.8 Lsize=     962kB time=00:00:30.52 bitrate= 258.2kbits/s speed=16.6x
+@val08      video:927kB audio:8kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 2.886229%
+@val08      [1;36m[aac @ 0x1ed0ce0] [0mQavg: 65536.000
+@val08      [micro-execution] time: 1869696.14 us
+exit  val08
+@val08      frame=  300 fps=0.0 q=3.7 size=     380kB time=00:00:10.98 bitrate= 283.4kbits/s speed=21.9x
+@val08      frame=  573 fps=571 q=3.4 size=     644kB time=00:00:19.06 bitrate= 276.5kbits/s speed=  19x
+@val08      frame=  805 fps=535 q=3.1 size=     846kB time=00:00:27.02 bitrate= 256.5kbits/s speed=  18x
+@val08      frame=  901 fps=531 q=2.8 Lsize=     962kB time=00:00:30.52 bitrate= 258.2kbits/s speed=  18x
+@val08      video:927kB audio:8kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 2.886229%
+@val08      [1;36m[aac @ 0x1ed0ce0] [0mQavg: 65536.000
+exit  val08

@@ -72,8 +72,20 @@ impl Descriptor {
         // 2. Map new vma regions
         (&self.vma).into_iter().for_each(|m| {
             let vma = unsafe { task.map_one_region(file, m) };
-            if cfg!(feature = "eager-resume") && vma.is_some() {
-                let vma = vma.unwrap();
+
+            #[allow(dead_code)]
+            let vma = vma.unwrap();
+
+            // tune the bits
+            let origin_vma_flags =
+                unsafe { crate::bindings::VMFlags::from_bits_unchecked(m.flags) };
+            // crate::log::info!("orign vma: {:?}", origin_vma_flags);
+            if origin_vma_flags.contains(crate::bindings::VMFlags::VM_ALLOC) {
+                // set the vma
+                crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
+            }
+
+            if cfg!(feature = "eager-resume") {
                 let (size, start) = (m.get_sz(), m.get_start());
                 for addr in (start..start + size).step_by(4096) {
                     if let Some(new_page_p) = unsafe { self.read_remote_page(addr, &access_info) } {
