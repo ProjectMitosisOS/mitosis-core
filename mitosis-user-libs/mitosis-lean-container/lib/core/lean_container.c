@@ -11,6 +11,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/mount.h>
+#include <sys/syscall.h>      /* Definition of SYS_* constants */
+#include <unistd.h>
 
 #include "lean_container.h"
 
@@ -256,10 +259,16 @@ int set_memory_cgroup(char* name, long memory_in_mb) {
     return write_memory_limit(memory_cgroup_path, memory_in_bytes);
 }
 
-void unshare_and_fork(int* pipefd) {
+void unshare_and_fork(int* pipefd, char* rootfs) {
     // close the read end of pipe
     close(pipefd[0]);
     pid_t pid = -1;
+
+    int ret = chroot(rootfs);
+    if (ret < 0) {
+        perror("chroot");
+        return;
+    }
 
     if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
         perror("unshare");
@@ -276,6 +285,10 @@ void unshare_and_fork(int* pipefd) {
         goto end;
     } else {
         close(pipefd[1]);
+        ret = mount("proc", "/proc", "proc", 0, NULL);
+        if (ret < 0) {
+            perror("mount");
+        }
         while (1) {
             pause();
         }
@@ -288,7 +301,7 @@ end:
 
 // ============================== end utility functions ==============================
 
-int setup_cached_namespace() {
+int setup_cached_namespace(char* rootfs) {
     pid_t pid;
     int pipefd[2];
 
@@ -310,13 +323,21 @@ int setup_cached_namespace() {
     } else {
         // parent calls unshare and forks a child
         // write the child pid to the parent process's pipe
-        unshare_and_fork(pipefd);
+        unshare_and_fork(pipefd, rootfs);
         // should never reach here
         assert(0);
     }
 }
 
-int remove_cached_namespace(int _namespace) {
+int remove_cached_namespace(int _namespace, char* rootfs) {
+    if (rootfs) {
+        char buf[BUF_SIZE];
+        sprintf(buf, "%s%s", rootfs, "/proc");
+        int ret = umount2(buf, 0);
+        if (ret < 0) {
+            perror("umount2");
+        }
+    }
     return kill(_namespace, SIGKILL);
 }
 

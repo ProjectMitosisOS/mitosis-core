@@ -179,3 +179,50 @@ The peak throughput on val01 is 5665 containers/s.
 | 12                             | 5665       |
 | 16                             | 5491       |
 | 24                             | 4625       |
+
+## Running the lean container with CRIU
+
+### Base Image Preparation
+
+Build and export the criu base image to the specified path.
+
+```bash
+export ROOTFS_ABS_PATH=/path/to/rootfs
+```
+
+```bash
+sudo python3 make_app_rootfs.py --app ./app/criu-base/ --name criu --export $ROOTFS_ABS_PATH
+```
+
+### Dump images on the host machine
+
+```bash
+cd app/criu
+sudo bash host_dump.sh # TODO: this command will only work on val01
+```
+
+### Copy images and environments to the rootfs
+
+```bash
+cd app/criu
+sudo bash copy_env.sh $ROOTFS_ABS_PATH # TODO: the val01-specific environments
+```
+
+### Restore process in the container
+
+```bash
+export CONTAINER_NAME=my_container
+```
+
+```bash
+sudo ./lib/build/start_lean_container $CONTAINER_NAME $CONTAINER_NAME /bin/bash /restore.sh
+```
+
+Sample output:
+
+```
+this is the lean container launcher process!
+this is the process in the lean container, pid in container: 2
+restore!
+xxxxx (Output of containered process)
+```
