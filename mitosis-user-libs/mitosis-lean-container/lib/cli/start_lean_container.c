@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     ret = add_lean_container_template(name, &spec);
     assert(ret == 0);
 
-    cached_namespace = setup_cached_namespace();
+    cached_namespace = setup_cached_namespace(rootfs_path);
 
     // setup the lean container of `name`
     // and the rootfs of the lean container is specified by second parameter
@@ -93,13 +93,13 @@ int main(int argc, char* argv[]) {
     }
 
 clean:
+    ret = remove_cached_namespace(cached_namespace, rootfs_path);
+    assert(ret == 0);
+
     ret = remove_lean_container_template(name);
     assert(ret == 0);
 
     ret = deinit_cgroup();
-    assert(ret == 0);
-
-    ret = remove_cached_namespace(cached_namespace);
     assert(ret == 0);
 
     printf("pass lean container unit test!\n");
