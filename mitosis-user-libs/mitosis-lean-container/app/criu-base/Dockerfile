@@ -14,3 +14,5 @@ RUN GIT_SSL_NO_VERIFY=1 git clone --branch no_error_for_restore https://criu:oDq
 RUN cd criu && rm images/google/protobuf/descriptor.proto && ln -s /usr/include/google/protobuf/descriptor.proto images/google/protobuf/descriptor.proto && make -j $(nproc)
 
 RUN apt update && apt install -y python3 wget && wget https://bootstrap.pypa.io/pip/3.5/get-pip.py && python3 get-pip.py && rm -rf /var/lib/apt/lists/*
+
+RUN apt update && apt install -y bc && rm -rf /var/lib/apt/lists/*
