@@ -215,7 +215,7 @@ export CONTAINER_NAME=my_container
 ```
 
 ```bash
-sudo ./lib/build/start_lean_container $CONTAINER_NAME $CONTAINER_NAME /bin/bash /restore.sh
+sudo ./lib/build/start_lean_container $CONTAINER_NAME $ROOTFS_ABS_PATH /bin/bash /restore.sh
 ```
 
 Sample output:
