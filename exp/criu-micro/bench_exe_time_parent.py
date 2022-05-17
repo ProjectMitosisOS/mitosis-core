@@ -24,8 +24,7 @@ mm = '1' * working_set
 
 @tick_execution_time
 def touch_working_set(working_sz):
-    for i in range(working_sz):
-        c = mm[i]
+    mm[0:working_sz-1]
 
 @criu_bench
 def bench():
