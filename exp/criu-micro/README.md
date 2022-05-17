@@ -86,10 +86,9 @@ before start python handler: 1652613157.934134 # let this be point C, then (C-B)
 
 ## Reference Performance
 
-|                     | 1MB  | 4MB  | 16MB  | 64MB  | 256MB | 1024MB |
-| ------------------- | ---- | ---- | ----- | ----- | ----- | ------ |
-| dump (on tmpfs, ms) | TODO | TODO | TODO  | TODO  | TODO  | TODO   |
-| dump (on disk, ms)  | 15.3 | 17.1 | 28.4  | 70.8  | 225.2 | 838.7  |
-| lean container (ms) | 6    | 6    | 6     | 6     | 6     | 6      |
-| restore (ms)        | 6.1  | 8.8  | 17.5  | 54.7  | 179.7 | 737.2  |
-| execution (ms)      | 0.63 | 2.44 | 11.06 | 44.55 | 168.9 | 694.1  |
+|                     | 1MB  | 4MB  | 16MB | 64MB | 256MB | 1024MB |
+| ------------------- | ---- | ---- | ---- | ---- | ----- | ------ |
+| dump (on tmpfs, ms) | 12.7 | 14.4 | 21.5 | 46.5 | 158.2 | 514.9  |
+| lean container (ms) | 6    | 6    | 6    | 6    | 6     | 6      |
+| restore (ms)        | 5    | 5    | 5.2  | 5.2  | 5.2   | 5.6    |
+| execution (ms)      | 0.72 | 3    | 12.7 | 55   | 188   | 744    |
