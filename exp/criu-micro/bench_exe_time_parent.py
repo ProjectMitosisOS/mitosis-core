@@ -20,18 +20,15 @@ args, _ = parser.parse_known_args()
 touch_ratio = args.touch_ratio
 working_set = args.working_set
 
-time.sleep(1)
-mm = mmap.mmap(-1, length=working_set)
+mm = '1' * working_set
 
 @tick_execution_time
 def touch_working_set(working_sz):
-    mm.seek(0)
-    mm.read(working_sz)
+    mm[0:working_sz]
 
 @criu_bench
 def bench():
     touch_working_set(working_sz=(working_set * touch_ratio // 100))
-
 
 if __name__ == '__main__':
     bench()
