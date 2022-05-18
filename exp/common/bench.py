@@ -3,5 +3,5 @@ import sys
 
 def report(name, start, end):
     passed_us = (end - start) * 1000000
-    print("[%s] time: %.2f us" % (str(name), passed_us))
+    print("[%s] duration: %.2f ms" % (str(name), passed_us / 1000))
     sys.stdout.flush()
