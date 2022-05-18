@@ -84,7 +84,7 @@ before start python handler: 1652613157.934134 # let this be point C, then (C-B)
 [micro-execution] time: 10312.56 us # this is the execution time
 ```
 
-## Reference Performance
+### Reference Performance
 
 |                     | 1MB  | 4MB  | 16MB | 64MB | 256MB | 1024MB |
 | ------------------- | ---- | ---- | ---- | ---- | ----- | ------ |
@@ -92,3 +92,33 @@ before start python handler: 1652613157.934134 # let this be point C, then (C-B)
 | lean container (ms) | 6    | 6    | 6    | 6    | 6     | 6      |
 | restore (ms)        | 5    | 5    | 5.2  | 5.2  | 5.2   | 5.6    |
 | execution (ms)      | 0.72 | 3    | 12.7 | 55   | 188   | 744    |
+
+## Run the benchmark of rcopy
+
+[rcopy](https://man7.org/linux/man-pages/man1/rcopy.1.html) is a tool to copy files with RDMA.
+
+1. Enable IPOIB on the machines.
+2. Follow the section `Dump on the host machine` to dump the process on the host machine (machine A). The images will be in directory `imgs/`.
+3. On another machine (machine B) which will receive the images
+
+```bash
+mkdir imgs
+rcopy # start rcopy server
+```
+
+4. Send the dumped images in the current machine A to machine B
+
+```bash
+export IMG_DIRECTORY=imgs
+export MACHINE_IP=<rdma ip of machine B>
+bash rcopy.sh $IMG_DIRECTORY $MACHINE_IP
+```
+
+### Reference Performance
+
+We use `time bash rcopy.sh $IMG_DIRECTORY $MACHINE_IP` to measure the time.
+
+|                               | 1MB  | 4MB  | 16MB | 64MB | 256MB | 1024MB |
+| ----------------------------- | ---- | ---- | ---- | ---- | ----- | ------ |
+| rcopy tmpfs (ms)              | 212  | 210  | 214  | 232  | 377   | 890    |
+| scp tmps (for reference) (ms) | 300  | 326  | 433  | 860  | 2574  | 9434   |
