@@ -122,3 +122,13 @@ We use `time bash rcopy.sh $IMG_DIRECTORY $MACHINE_IP` to measure the time.
 | ----------------------------- | ---- | ---- | ---- | ---- | ----- | ------ |
 | rcopy tmpfs (ms)              | 212  | 210  | 214  | 232  | 377   | 890    |
 | scp tmps (for reference) (ms) | 300  | 326  | 433  | 860  | 2574  | 9434   |
+
+## Combined Results for tmpfs
+
+|                     | 1MB  | 4MB  | 16MB | 64MB | 256MB | 1024MB |
+| ------------------- | ---- | ---- | ---- | ---- | ----- | ------ |
+| dump (on tmpfs, ms) | 12.7 | 14.4 | 21.5 | 46.5 | 158.2 | 514.9  |
+| rcopy (ms)          | 212  | 210  | 214  | 232  | 377   | 890    |
+| lean container (ms) | 6    | 6    | 6    | 6    | 6     | 6      |
+| restore (ms)        | 5    | 5    | 5.2  | 5.2  | 5.2   | 5.6    |
+| execution (ms)      | 0.72 | 3    | 12.7 | 55   | 188   | 744    |
