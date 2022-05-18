@@ -35,16 +35,18 @@ app_name = args.app_name
 touch_ratio = args.touch_ratio
 ret = ret_imm == 1
 
-mm = mmap.mmap(-1, length=working_set)
+mm = ''
 
+#mm = mmap.mmap(-1, length=working_set)
 def handler(working_sz):
+    global mm
     start = time.time()
-    mm.seek(0)
-    r = mm.read(working_sz)
+    if len(mm) < 12:
+        mm = '1' * working_set
+    mm[0:working_sz-1]
     end = time.time()
     if profile == 1:
         bench.report("%s-execution with workingset %fMB" % (app_name, working_sz / (1024 * 1024)), start, end)
-
 
 def prepare(key):
     fd = syscall_lib.open()
