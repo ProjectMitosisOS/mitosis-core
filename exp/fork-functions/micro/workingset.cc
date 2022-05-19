@@ -23,6 +23,7 @@ DEFINE_int64(run_sec, 10, "running seconds");
 DEFINE_string(lock_file, "lock", "lock file name");
 DEFINE_int32(lock_string, '0', "lock string");
 DEFINE_int64(handler_id, 73, "rfork handler id");
+DEFINE_int32(whether_prepare, 0, "whether to prepare");
 
 char *buffer = nullptr;
 
@@ -53,7 +54,7 @@ static void init_buffer() {
     }    
 }
 
-static void __attribute__((optimize("O0"))) handler()
+static void __attribute__((optimize("O2"))) handler()
 {
     uint64_t sum = 0;
     int count = 0;
@@ -64,8 +65,8 @@ static void __attribute__((optimize("O0"))) handler()
 
     auto gap = PAGE_SIZE;
     for (uint64_t i = 0;i < (uint64_t)FLAGS_working_set; i += gap) { 
-        sum += *((uint64_t *)(buffer + i));
-        // *((uint64_t *)(buffer + i)) = i * 73 + random.count();        
+        // sum += *((uint64_t *)(buffer + i));
+        *((uint64_t *)(buffer + i)) = i * 73 + random.count();        
         count += 1;
     }
 
@@ -82,7 +83,15 @@ int main(int argc, char **argv)
 
     int sd = sopen();    
 
-    buffer = (char *)malloc(FLAGS_working_set * sizeof(char));
+    // buffer = (char *)malloc(FLAGS_working_set * sizeof(char));
+    buffer = (char *)mmap(
+        nullptr,
+        FLAGS_working_set,                         // for one page length
+        PROT_READ|PROT_WRITE|PROT_EXEC,
+        MAP_ANON|MAP_PRIVATE,             // to a private block of hardware memory
+        0,
+        0
+      );    
 
     // cold start 
     {
@@ -91,12 +100,12 @@ int main(int argc, char **argv)
     }
 
     // prepare 
-    {
+    if (FLAGS_whether_prepare > 0) {
         Timer<std::chrono::milliseconds, std::chrono::steady_clock> clock;
         clock.tick();
         fork_prepare_ping(sd, FLAGS_handler_id);    
         clock.tock();
-        std::cout << "Fork time = " << clock.duration().count() << " ms\n";    
+        std::cout << "prepare time = " << clock.duration().count() << " ms\n";    
     }
 
     // warm start 
@@ -105,6 +114,6 @@ int main(int argc, char **argv)
         printf("second execution (warm start) done\n");
     }
 
-    free(buffer);
+    // free(buffer);
     return 0;
 }
