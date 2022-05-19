@@ -71,6 +71,7 @@ impl Drop for MitosisSysCallHandler {
                 crate::log::info!("unregister prepared process {}", k);
                 let process_service = unsafe { crate::get_sps_mut() };
                 process_service.unregister(k);
+                crate::log::info!("unregister prepared process {} done", k);
             }
         });
     }
