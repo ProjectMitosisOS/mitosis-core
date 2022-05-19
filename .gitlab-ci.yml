@@ -1,6 +1,7 @@
 # fetch submodules
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
+  test_timeout : 30 minutes
 
 stages:          # List of stages for jobs, and their order of execution
   - deps
@@ -14,7 +15,7 @@ deps-job:
   script:
     - chmod +x ci/install_deps.sh
     - ./ci/install_deps.sh
-  timeout: 10 minutes
+  timeout: ${test_timeout}
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
     - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
@@ -37,7 +38,7 @@ unittest-mitosis-job:   # This job runs in the test stage.
     - echo "Running unit tests on mitosis"
     - sudo dmesg -C
     - python3 mitosis/unitests/run_tests.py
-  timeout: 10 minutes
+  timeout: 30 minutes
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
     - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
@@ -60,7 +61,7 @@ unittest-os-network-job:   # This job also runs in the test stage.
     - echo "Running unit tests on os-network"
     - sudo dmesg -C
     - python3 os-network/unitests/run_tests.py
-  timeout: 10 minutes
+  timeout: 30 minutes
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
     - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
@@ -83,7 +84,7 @@ unittest-mitosis-macros-job:   # This job also runs in the test stage.
     - echo "Running unit tests on mitosis-macros"
     - sudo dmesg -C
     - python3 mitosis-macros/unitests/run_tests.py
-  timeout: 10 minutes
+  timeout: 30 minutes
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
     - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
