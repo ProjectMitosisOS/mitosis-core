@@ -1,7 +1,6 @@
 # fetch submodules
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  test_timeout : "30 minutes"
 
 stages:          # List of stages for jobs, and their order of execution
   - deps
@@ -15,7 +14,7 @@ deps-job:
   script:
     - chmod +x ci/install_deps.sh
     - ./ci/install_deps.sh
-  timeout: $test_timeout
+  timeout: 30 minutes
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
     - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
