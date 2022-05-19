@@ -15,7 +15,7 @@ deps-job:
   script:
     - chmod +x ci/install_deps.sh
     - ./ci/install_deps.sh
-  timeout: ${test_timeout}
+  timeout: $test_timeout
   after_script:
     - bash ci/check_kernel.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
     - bash ci/check_module_exist.sh $TEST_MACHINE $REBOOT_USER $REBOOT_PWD
