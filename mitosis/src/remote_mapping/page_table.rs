@@ -1,11 +1,13 @@
 pub use x86_64::{
     structures::paging::{Page, Size4KiB},
-    PhysAddr, VirtAddr,
+    VirtAddr,
 };
 
 use alloc::boxed::Box;
 
 use super::page_structures::*;
+
+#[allow(unused_imports)]
 use crate::linux_kernel_module;
 
 pub type RemotePage = Page<Size4KiB>;
@@ -45,12 +47,8 @@ impl RemotePageTable {
     /// Lookup the physical address using the $addr$
     pub fn translate(&self, addr: VirtAddr) -> core::option::Option<PhysAddr> {
         let entry = RemotePage::containing_address(addr);
-        let l3_pt = unsafe {
-            lookup_table(
-                usize::from(entry.p4_index()),
-                (&(*self.l4_page_table)) as _,
-            )
-        };
+        let l3_pt =
+            unsafe { lookup_table(usize::from(entry.p4_index()), (&(*self.l4_page_table)) as _) };
 
         if l3_pt.is_some() {
             let l2_pt = unsafe { lookup_table(usize::from(entry.p3_index()), l3_pt.unwrap()) };
@@ -102,7 +100,7 @@ unsafe fn create_table(index: usize, src: *mut PageTable) -> *mut PageTable {
         next_level = Box::into_raw(Box::new(PageTable::new(
             pt.get_level().next_lower_level().unwrap(),
         )));
-        crate::log::debug!("created next level {:?}", next_level);
+        // crate::log::debug!("created next level {:?}", next_level);
         pt[index] = next_level as _;
     }
     next_level
@@ -110,7 +108,10 @@ unsafe fn create_table(index: usize, src: *mut PageTable) -> *mut PageTable {
 
 /// Helper function to lookup the next-level page table
 #[inline]
-unsafe fn lookup_table(index: usize, src: *const PageTable) -> core::option::Option<*mut PageTable> {
+unsafe fn lookup_table(
+    index: usize,
+    src: *const PageTable,
+) -> core::option::Option<*mut PageTable> {
     let pt: &PageTable = &(*src);
     let res = pt[index] as *mut PageTable;
     if res.is_null() {

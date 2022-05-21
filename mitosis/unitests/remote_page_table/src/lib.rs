@@ -6,17 +6,16 @@ use mitosis::linux_kernel_module;
 use mitosis::log;
 
 use mitosis::remote_mapping::*;
-
-use krdma_test::*;
+use mitosis::syscalls::*;
 
 use alloc::boxed::Box;
+mod my_syscall;
+use my_syscall::MySyscallHandler;
 
 fn test_basic() {
     let mut pt = Box::new(RemotePageTable::new());
     log::info!("in test basic page_table: {:?}, is empty {}", pt, pt.is_empty());
         
-    let page = RemotePage::containing_address(VirtAddr::new(0xdeadbeaf));
-
     // map a single page
     assert!(pt.map(VirtAddr::new(4096), PhysAddr::new(73)).is_none());
     log::info!("in test basic page_table: {:?}, is empty {}", pt, pt.is_empty());
@@ -25,12 +24,29 @@ fn test_basic() {
     log::info!("check lookup result {:?}", pt.translate(VirtAddr::new(4096)));
 }
 
-#[krdma_test(test_basic)]
-fn init() {
-    log::info!("in test mitosis remote page table!");
+#[allow(dead_code)]
+struct Module {
+    service : SysCallsService<MySyscallHandler>,
 }
 
-#[krdma_drop]
-fn clean() {
-    //    end_instance();
+impl linux_kernel_module::KernelModule for Module {
+    fn init() -> linux_kernel_module::KernelResult<Self> {
+        test_basic();
+        Ok(Self { 
+            service : SysCallsService::<MySyscallHandler>::new()?
+        })
+    }
 }
+
+impl Drop for Module {
+    fn drop(&mut self) {
+        log::info!("drop System call modules")
+    }
+}
+
+linux_kernel_module::kernel_module!(
+    Module,
+    author: b"xmm",
+    description: b"A kernel module for testing system calls",
+    license: b"GPL"
+);
