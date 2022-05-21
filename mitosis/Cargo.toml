@@ -26,6 +26,7 @@ rust-kernel-linux-util = { path = "../deps/rust-kernel-rdma/rust-kernel-linux-ut
 mitosis-macros = { path = "../mitosis-macros" }
 bitflags = "1"
 hashbrown = {features=["raw"], path="../deps/hashbrown"}
+x86_64 = {}
 
 [dependencies.lazy_static]
 version = "1.0"
