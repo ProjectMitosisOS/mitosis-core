@@ -6,9 +6,17 @@ use core::fmt;
 use core::ops::{Index, IndexMut};
 
 pub use x86_64::{
+    align_down, align_up,
     structures::paging::{Page, Size4KiB},
-    PhysAddr, VirtAddr,
+    VirtAddr,
 };
+
+/// We cannot use the PhysAddr in x86_64
+/// This is because it will raise a
+/// "physical addresses must not have any bits in the range 52 to 64 set" error
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
+pub struct PhysAddr(u64);
 
 /// The number of entries in a page table.
 const ENTRY_COUNT: usize = 512;
@@ -59,7 +67,7 @@ impl PageTable {
 
     /// Get the page table level
     #[inline]
-    pub fn get_level(&self) -> PageTableLevel { 
+    pub fn get_level(&self) -> PageTableLevel {
         self.level
     }
 
@@ -255,5 +263,67 @@ impl PageTableLevel {
     /// Returns the alignment for the address space described by an entry in a table of this level.
     pub const fn entry_address_space_alignment(self) -> u64 {
         1u64 << (((self as u8 - 1) * 9) + 12)
+    }
+}
+
+// Credits: most code is from x86_64, just remove unnecessary checks
+// If the crate updates, we can switch back to it
+impl PhysAddr {
+    /// Creates a new physical address.
+    ///
+    /// Panics if a bit in the range 52 to 64 is set.
+    pub fn new(addr: u64) -> PhysAddr {
+        PhysAddr(addr)
+    }
+
+    /// Tries to create a new physical address.
+    ///
+    /// Fails if any bits in the range 52 to 64 are set.
+    pub fn try_new(addr: u64) -> Result<PhysAddr, ()> {
+        Ok(PhysAddr(addr))
+    }
+
+    /// Converts the address to an `u64`.
+    pub fn as_u64(self) -> u64 {
+        self.0
+    }
+
+    /// Convenience method for checking if a physical address is null.
+    pub fn is_null(&self) -> bool {
+        self.0 == 0
+    }
+
+    /// Aligns the physical address upwards to the given alignment.
+    ///
+    /// See the `align_up` function for more information.
+    pub fn align_up<U>(self, align: U) -> Self
+    where
+        U: Into<u64>,
+    {
+        PhysAddr(align_up(self.0, align.into()))
+    }
+
+    /// Aligns the physical address downwards to the given alignment.
+    ///
+    /// See the `align_down` function for more information.
+    pub fn align_down<U>(self, align: U) -> Self
+    where
+        U: Into<u64>,
+    {
+        PhysAddr(align_down(self.0, align.into()))
+    }
+
+    /// Checks whether the physical address has the demanded alignment.
+    pub fn is_aligned<U>(self, align: U) -> bool
+    where
+        U: Into<u64>,
+    {
+        self.align_down(align) == self
+    }
+}
+
+impl core::fmt::Debug for PhysAddr {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "PhysAddr({:#x})", self.0)
     }
 }
