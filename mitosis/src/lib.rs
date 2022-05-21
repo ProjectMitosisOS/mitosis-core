@@ -37,6 +37,8 @@ pub mod mem_pools;
 
 use alloc::vec::Vec;
 
+pub mod remote_mapping; 
+
 // TODO: doc how to use mitosis
 
 pub const MAX_RPC_THREADS_CNT: usize = 10;
