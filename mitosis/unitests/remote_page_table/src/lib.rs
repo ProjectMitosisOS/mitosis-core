@@ -14,13 +14,16 @@ use krdma_test::*;
 use alloc::boxed::Box;
 
 fn test_basic() {
-    let pt = Box::new(RemotePageTable::new());
+    let mut pt = Box::new(RemotePageTable::new());
     log::info!("in test basic page_table: {:?}, is empty {}", pt, pt.is_empty());
         
     let page = RemotePage::containing_address(VirtAddr::new(0xdeadbeaf));
-    log::debug!("test page: {:?}", page);
 
     log::info!("check lookup result {:?}", pt.lookup(VirtAddr::new(0xdeadbeaf)));
+
+    // map a single page
+    assert!(pt.map(VirtAddr::new(4096), PhysAddr::new(73)).is_none());
+    log::info!("in test basic page_table: {:?}, is empty {}", pt, pt.is_empty());
 }
 
 #[krdma_test(test_basic)]
