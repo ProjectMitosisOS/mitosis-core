@@ -1,12 +1,12 @@
 //! Abstractions for page tables and page table entries.
-//! 
+//!
 //! Credits: https://github.com/rust-osdev/x86_64/blob/master/src/structures/paging/page_table.rs
 
 use core::fmt;
 use core::ops::{Index, IndexMut};
 
 pub use x86_64::{
-    structures::paging::{Size4KiB, Page}, 
+    structures::paging::{Page, Size4KiB},
     PhysAddr, VirtAddr,
 };
 
@@ -26,16 +26,41 @@ pub type PageTableEntry = u64;
 #[derive(Clone)]
 pub struct PageTable {
     entries: [PageTableEntry; ENTRY_COUNT],
+    level: PageTableLevel,
+}
+
+impl Drop for PageTable {
+    fn drop(&mut self) {
+        match self.level.next_lower_level() {
+            Some(_) => {
+                for entry in self.iter() {
+                    if *entry != 0 {
+                        // this is a pointer
+                        unsafe { alloc::boxed::Box::from_raw(*entry as *mut PageTable) };
+                    }
+                }
+            }
+            // last page level do nothing
+            None => {}
+        }
+    }
 }
 
 impl PageTable {
     /// Creates an empty page table.
     #[inline]
-    pub const fn new() -> Self {
+    pub const fn new(level: PageTableLevel) -> Self {
         const EMPTY: PageTableEntry = 0;
         PageTable {
             entries: [EMPTY; ENTRY_COUNT],
+            level,
         }
+    }
+
+    /// Get the page table level
+    #[inline]
+    pub fn get_level(&self) -> PageTableLevel { 
+        self.level
     }
 
     /// Returns an iterator over the entries of the page table.
@@ -85,7 +110,7 @@ impl IndexMut<PageTableIndex> for PageTable {
 
 impl Default for PageTable {
     fn default() -> Self {
-        Self::new()
+        Self::new(PageTableLevel::One)
     }
 }
 
