@@ -19,6 +19,8 @@ fn test_basic() {
         
     let page = RemotePage::containing_address(VirtAddr::new(0xdeadbeaf));
     log::debug!("test page: {:?}", page);
+
+    log::info!("check lookup result {:?}", pt.lookup(VirtAddr::new(0xdeadbeaf)));
 }
 
 #[krdma_test(test_basic)]
