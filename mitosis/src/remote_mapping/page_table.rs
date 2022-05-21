@@ -42,13 +42,27 @@ impl RemotePageTable {
         return true;
     }
 
-    pub fn lookup(&self, addr: VirtAddr) -> core::option::Option<PhysAddr> {
+    /// Lookup the physical address using the $addr$
+    pub fn translate(&self, addr: VirtAddr) -> core::option::Option<PhysAddr> {
         let entry = RemotePage::containing_address(addr);
-        let l3_pt = self.l4_page_table[usize::from(entry.p4_index())] as *mut PageTable;
-        if l3_pt.is_null() {
-            return None;
+        let l3_pt = unsafe {
+            lookup_table(
+                usize::from(entry.p4_index()),
+                (&(*self.l4_page_table)) as _,
+            )
+        };
+
+        if l3_pt.is_some() {
+            let l2_pt = unsafe { lookup_table(usize::from(entry.p3_index()), l3_pt.unwrap()) };
+            if l2_pt.is_some() {
+                let l1_pt = unsafe { lookup_table(usize::from(entry.p2_index()), l2_pt.unwrap()) };
+                if l1_pt.is_some() {
+                    return unsafe { lookup_table(usize::from(entry.p1_index()), l1_pt.unwrap()) }
+                        .map(|a| PhysAddr::new(a as _));
+                }
+            }
         }
-        Some(PhysAddr::new(0))
+        return None;
     }
 
     /// Add a (addr, phy) mapping to the page table.
@@ -79,6 +93,7 @@ impl RemotePageTable {
 }
 
 /// Helper function to create or lookup the next-level page table
+#[inline]
 unsafe fn create_table(index: usize, src: *mut PageTable) -> *mut PageTable {
     let pt: &mut PageTable = &mut (*src);
     let mut next_level = pt[index] as *mut PageTable;
@@ -91,4 +106,15 @@ unsafe fn create_table(index: usize, src: *mut PageTable) -> *mut PageTable {
         pt[index] = next_level as _;
     }
     next_level
+}
+
+/// Helper function to lookup the next-level page table
+#[inline]
+unsafe fn lookup_table(index: usize, src: *const PageTable) -> core::option::Option<*mut PageTable> {
+    let pt: &PageTable = &(*src);
+    let res = pt[index] as *mut PageTable;
+    if res.is_null() {
+        return None;
+    }
+    Some(res)
 }
