@@ -9,6 +9,7 @@ use mitosis::core_syscall_handler::*;
 use mitosis::startup::{end_instance, start_instance};
 use mitosis::syscalls::*;
 
+/// The module corresponding to the kernel module lifetime 
 #[allow(dead_code)]
 struct Module {
     service: SysCallsService<MitosisSysCallHandler>,
@@ -17,8 +18,12 @@ struct Module {
 use os_network::block_on;
 
 impl linux_kernel_module::KernelModule for Module {
+    /// Called by the kernel upon the kernel module creation
     fn init() -> linux_kernel_module::KernelResult<Self> {
+
+        // Currently, we use a default configuration of MITOSIS
         let mut config: mitosis::Config = Default::default();
+
         config.set_num_nics_used(2).set_rpc_threads(2).set_init_dc_targets(12);
         
         assert!(start_instance(config.clone()).is_some());
