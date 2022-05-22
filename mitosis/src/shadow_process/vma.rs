@@ -67,14 +67,14 @@ type COWPageTable = super::page_table::ShadowPageTable<COW4KPage>;
 pub(crate) struct VMACopyPTGenerator<'a, 'b> {
     vma: &'a ShadowVMA<'a>,
     inner: &'b mut CopyPageTable,
-    inner_flat: &'b mut crate::descriptors::VMAPageTable,
+    inner_flat: &'b mut crate::descriptors::CompactPageTable,
 }
 
 impl<'a, 'b> VMACopyPTGenerator<'a, 'b> {
     pub fn new(
         vma: &'a ShadowVMA,
         inner: &'b mut CopyPageTable,
-        inner_flat: &'b mut crate::descriptors::VMAPageTable,
+        inner_flat: &'b mut crate::descriptors::CompactPageTable,
     ) -> Self {
         Self {
             vma: vma,
@@ -132,14 +132,14 @@ impl VMACopyPTGenerator<'_, '_> {
 pub(crate) struct VMACOWPTGenerator<'a, 'b> {
     vma: &'a ShadowVMA<'a>,
     inner: &'b mut COWPageTable,
-    inner_flat: &'b mut crate::descriptors::VMAPageTable,
+    inner_flat: &'b mut crate::descriptors::CompactPageTable,
 }
 
 impl<'a, 'b> VMACOWPTGenerator<'a, 'b> {
     pub fn new(
         vma: &'a ShadowVMA,
         inner: &'b mut COWPageTable,
-        inner_flat: &'b mut crate::descriptors::VMAPageTable,
+        inner_flat: &'b mut crate::descriptors::CompactPageTable,
     ) -> Self {
         Self {
             vma,

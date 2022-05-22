@@ -10,9 +10,6 @@
 
 extern crate alloc;
 
-#[macro_use]
-extern crate cfg_if;
-
 use mitosis_macros::declare_global;
 
 pub use os_network;
@@ -23,20 +20,6 @@ pub use rust_kernel_linux_util as log;
 pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 pub const VERSION: usize = 0;
-
-// pub mod resume;
-pub mod core_syscall_handler;
-pub mod syscalls;
-
-pub mod bindings;
-pub mod kern_wrappers;
-
-pub mod shadow_process;
-pub mod shadow_process_service;
-
-pub mod descriptors;
-
-pub mod mem_pools;
 
 use alloc::vec::Vec;
 
@@ -301,3 +284,17 @@ pub unsafe fn get_mem_pool_ref() -> &'static crate::mem_pools::MemPool {
 pub unsafe fn get_mem_pool_mut() -> &'static mut crate::mem_pools::MemPool {
     crate::mem_pool::get_mut()
 }
+
+// pub mod resume;
+pub mod core_syscall_handler;
+pub mod syscalls;
+
+pub mod bindings;
+pub mod kern_wrappers;
+
+pub mod shadow_process;
+pub mod shadow_process_service;
+
+pub mod descriptors;
+
+pub mod mem_pools;

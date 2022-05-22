@@ -37,11 +37,7 @@ impl ProcessBundler {
 
         process.get_descriptor_ref().serialize(buf.get_bytes_mut());
         compiler_fence(SeqCst);
-        /*
-        crate::log::debug!("pre-check desc info {:?}", process.get_descriptor_ref().machine_info);
-        let _desc = FastDescriptor::deserialize(buf.get_bytes_mut()).unwrap();
-        crate::log::debug!("post-check desc info {:?}", desc.machine_info);
-        */
+
         crate::log::debug!("Process bundle descriptor len: {}", buf.len());
 
         let mut bound_targets = Vec::new();
@@ -79,7 +75,7 @@ impl ShadowProcessService {
     pub fn query_descriptor(
         &self,
         key: usize,
-    ) -> core::option::Option<&crate::descriptors::FastDescriptor> {
+    ) -> core::option::Option<&crate::descriptors::ParentDescriptor> {
         self.registered_processes
             .get(&key)
             .map(|s| s.process.get_descriptor_ref())
