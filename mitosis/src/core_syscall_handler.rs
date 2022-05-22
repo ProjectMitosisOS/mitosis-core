@@ -1,7 +1,7 @@
 use alloc::string::String;
 use core::option::Option;
 
-use crate::descriptors::FastDescriptor;
+use crate::descriptors::ParentDescriptor;
 use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
@@ -18,7 +18,7 @@ use crate::startup::probe_remote_rpc_end;
 #[allow(dead_code)]
 struct ResumeDataStruct {
     handler_id: usize,
-    descriptor: crate::descriptors::Descriptor,
+    descriptor: crate::descriptors::ChildDescriptor,
     access_info: crate::remote_paging::AccessInfo,
 }
 
@@ -90,7 +90,7 @@ impl FileOperations for MitosisSysCallHandler {
             MY_VM_OP.access = None;
         };
 
-        // Tricky: Walk can be accelerated here!
+        // Tricky: walk can be accelerated here!
         {
             let task = crate::kern_wrappers::task::Task::new();
             task.generate_mm();
@@ -185,7 +185,7 @@ impl MitosisSysCallHandler {
     #[inline]
     fn syscall_prepare(&mut self, key: c_ulong, ping_img: bool) -> c_long {
         if self.caller_status.prepared_key.is_some() {
-            crate::log::error!("We don't support multiple fork yet. ");
+            crate::log::error!("This version doesn't support multiple fork yet. ");
             return -1;
         }
         self.caller_status.ping_img = ping_img;
@@ -206,7 +206,7 @@ impl MitosisSysCallHandler {
         self.caller_status.prepared_key = Some(key as _);
         crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
 
-        // sanity checks
+        // code for sanity checks
         /*
         use crate::bindings::VMFlags;
         let mm = Task::new().get_memory_descriptor();
@@ -314,7 +314,7 @@ impl MitosisSysCallHandler {
 
                         // deserialize
                         let des = {
-                            let des = FastDescriptor::deserialize(desc_buf.unwrap().get_bytes());
+                            let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
                             if des.is_none() {
                                 crate::log::error!("failed to deserialize descriptor");
                                 return -1;

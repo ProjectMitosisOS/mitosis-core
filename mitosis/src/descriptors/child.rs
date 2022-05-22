@@ -1,35 +1,13 @@
-use alloc::vec::Vec;
-
 use os_network::bytes::BytesMut;
-
+use alloc::vec::Vec;
 use crate::linux_kernel_module;
 
-// sub descriptors
-pub mod reg;
+use super::vma::VMADescriptor;
+use super::reg::RegDescriptor;
+use super::rdma::RDMADescriptor;
 
-pub use reg::*;
+use super::page_table::FlatPageTable;
 
-pub mod page_table;
-
-pub use page_table::*;
-
-pub mod rdma;
-
-pub use rdma::*;
-
-pub mod vma;
-
-pub mod fast_descriptors;
-
-pub use fast_descriptors::*;
-
-pub use vma::*;
-
-pub mod pair;
-
-pub use pair::*;
-// pub mod factory;
-// pub use factory::DescriptorFactoryService;
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::kern_wrappers::task::Task;
 use crate::remote_paging::AccessInfo;
@@ -38,14 +16,16 @@ use crate::remote_paging::AccessInfo;
 /// The descriptors should be generate by the task
 #[allow(dead_code)]
 #[derive(Default, Clone)]
-pub struct Descriptor {
+pub struct ChildDescriptor {
     pub regs: RegDescriptor,
-    pub page_table: FlatPageTable,
+
+    pub page_table: FlatPageTable, 
+
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
 }
 
-impl Descriptor {
+impl ChildDescriptor {
     pub fn new(task: &crate::kern_wrappers::task::Task, mac_info: RDMADescriptor) -> Self {
         let (vma, pt) = task.generate_mm();
         Self {
@@ -103,7 +83,7 @@ impl Descriptor {
     }
 }
 
-impl Descriptor {
+impl ChildDescriptor {
     /// Resume one page at remote side
     ///
     /// @param remote_va: remote virt-addr
@@ -136,7 +116,7 @@ impl Descriptor {
     }
 }
 
-impl os_network::serialize::Serialize for Descriptor {
+impl os_network::serialize::Serialize for ChildDescriptor {
     /// Serialization format:
     /// ```
     /// | RegDescriptor <-sizeof(RegDescriptor)-> | PageMap
