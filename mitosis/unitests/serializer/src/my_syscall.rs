@@ -313,6 +313,7 @@ impl MySyscallHandler {
     }
 
     fn test_mitosis_child_descriptor(&self, _arg: c_ulong) -> c_long { 
+        
        crate::log::info!("test mitosis parent descriptor");
         let mut mac_info: RDMADescriptor = Default::default();
         mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
@@ -350,8 +351,19 @@ impl MySyscallHandler {
         }
 
         // deserialize
-        crate::log::info!("pass process ChildDescriptor (de)serialization test\n");
+        let result = ChildDescriptor::deserialize(&bytes);
+        if result.is_none() {
+            crate::log::error!("fail to deserialize process descriptor");
+            return 0;
+        }
+        
+        let result = result.unwrap();
+        if result.vma.len() != descriptor.vma.len() { 
+            crate::log::error!("the vam length not match"); 
+        }
+        crate::log::info!("de-serialized VMA count {}", result.vma.len());
 
+        crate::log::info!("pass process ChildDescriptor (de)serialization test\n");
         0
     }
 }

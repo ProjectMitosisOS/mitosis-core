@@ -7,8 +7,8 @@ use alloc::vec::Vec;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
 
-type Offset = u32;
-type Value = PhyAddrType;
+pub(crate) type Offset = u32;
+pub(crate) type Value = PhyAddrType;
 type PageEntry = (Offset, Value); // record the (offset, phy_addr) pair
 
 /// This is a simple, condensed page table to represent the parent's
@@ -208,6 +208,8 @@ impl os_network::serialize::Serialize for ParentDescriptor {
         true
     }
 
+    /// **TODO**
+    /// - Currently, we don't check the buf len, so this function is **unsafe**
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
         let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
         // regs
