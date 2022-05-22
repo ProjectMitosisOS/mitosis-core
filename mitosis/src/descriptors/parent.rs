@@ -184,14 +184,16 @@ impl os_network::serialize::Serialize for ParentDescriptor {
                 .unwrap()
         };
 
-        // 2. page table (size)
+        // 2. vmas & page table (size)
         let sz = unsafe { cur.memcpy_serialize_at(0, &self.page_table.len()).unwrap() };
         let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
+        assert_eq!(self.vma.len(), self.page_table.len());
+
         //   page table (vec)
-        for vma_pg_table in &self.page_table {
-            // size of each VMA page table.
-            // let sz = unsafe { cur.memcpy_serialize_at(0, &vma_pg_table.inner_pg_table.len()).unwrap() };
-            // cur = unsafe { cur.truncate_header(sz).unwrap() };
+        for (i, vma_pg_table) in self.page_table.iter().enumerate() {
+            let vma = self.vma[i];
+            vma.serialize(&mut cur);
+            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };            
 
             vma_pg_table.serialize(&mut cur);
             cur = unsafe {
@@ -200,15 +202,7 @@ impl os_network::serialize::Serialize for ParentDescriptor {
             };
         }
 
-        // 3. vmas
-        let sz = unsafe { cur.memcpy_serialize_at(0, &self.vma.len()).unwrap() };
-        let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
-
-        for vma in &self.vma {
-            vma.serialize(&mut cur);
-            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };
-        }
-        // 4. finally, machine info
+        // 3. finally, machine info
         self.machine_info.serialize(&mut cur);
 
         true
@@ -220,29 +214,25 @@ impl os_network::serialize::Serialize for ParentDescriptor {
         let regs = RegDescriptor::deserialize(&cur)?;
         cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
 
-        // vma pt
-        let mut pt = Vec::new_in(VmallocAllocator);
-        // VMA page table count
+        // VMA page counts
         let mut count: usize = 0;
         let off = unsafe { cur.memcpy_deserialize(&mut count)? };
         cur = unsafe { cur.truncate_header(off)? };
 
-        for _ in 0..count {
-            let vma_pg_table = CompactPageTable::deserialize(&cur)?;
-            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
-            pt.push(vma_pg_table);
-        }
-        // vmas
+        // VMA & its corresponding page table
+        let mut pt = Vec::new_in(VmallocAllocator);
         let mut vmas = Vec::new();
-        let mut count: usize = 0;
-        let off = unsafe { cur.memcpy_deserialize(&mut count)? };
-        cur = unsafe { cur.truncate_header(off)? };
 
         for _ in 0..count {
             let vma = VMADescriptor::deserialize(&cur)?;
             cur = unsafe { cur.truncate_header(vma.serialization_buf_len())? };
-            vmas.push(vma);
+            vmas.push(vma);            
+
+            let vma_pg_table = CompactPageTable::deserialize(&cur)?;
+            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
+            pt.push(vma_pg_table);
         }
+
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
         Some(Self {

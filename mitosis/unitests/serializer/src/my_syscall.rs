@@ -33,7 +33,7 @@ impl FileOperations for MySyscallHandler {
             0 => self.test_reg_descriptor(arg),
             1 => self.test_page_table(arg),
             3 => self.test_rdma_descriptor(arg),
-            4 => 0, // self.test_mitosis_descriptor(arg),
+            4 => self.test_mitosis_child_descriptor(arg),
             5 => self.test_vma_page_table(arg),
             6 => self.test_mitosis_parent_descriptor(arg),
             _ => {
@@ -308,6 +308,49 @@ impl MySyscallHandler {
         );
         
         crate::log::info!("pass process ParentDescriptor (de)serialization test\n");
+
+        0
+    }
+
+    fn test_mitosis_child_descriptor(&self, _arg: c_ulong) -> c_long { 
+       crate::log::info!("test mitosis parent descriptor");
+        let mut mac_info: RDMADescriptor = Default::default();
+        mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
+
+        let task = Task::new();
+        let (vma, _) = task.generate_mm();
+        let mut pg_table = Vec::new_in(VmallocAllocator);
+        for vm in vma.iter() {
+            let mut vma_pg_table = CompactPageTable::default();
+            {
+                vma_pg_table.add_one((0x10 + vm.get_start()) as _, 4);
+            }
+            pg_table.push(vma_pg_table);
+        }
+
+        let descriptor = ParentDescriptor {
+            regs: task.generate_reg_descriptor(),
+            page_table: pg_table,
+            vma,
+            machine_info: mac_info.clone(),
+        };
+
+        log::debug!(
+            "sanity check parent descriptor serialization sz: {}",
+            descriptor.serialization_buf_len()
+        );
+        let mut memory = vec![0; descriptor.serialization_buf_len()];
+        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
+
+        // serialize
+        let result = descriptor.serialize(&mut bytes);
+        if !result {
+            crate::log::error!("fail to serialize process descriptor");
+            return 0;
+        }
+
+        // deserialize
+        crate::log::info!("pass process ChildDescriptor (de)serialization test\n");
 
         0
     }
