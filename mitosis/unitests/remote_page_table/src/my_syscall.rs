@@ -27,7 +27,7 @@ impl MySyscallHandler {
                     phy_addr,
                     *v
                 );
-                pt.get(*k)
+                pt.translate(*k)
                     .map(|v| crate::log::debug!("Double-check the phys: {:x}", v));
                 continue;
             }

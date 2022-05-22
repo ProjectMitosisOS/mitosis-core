@@ -6,7 +6,11 @@ use super::rdma::RDMADescriptor;
 use super::reg::RegDescriptor;
 use super::vma::VMADescriptor;
 
+#[cfg(not(feature = "prefetch"))]
 use super::page_table::FlatPageTable;
+
+#[cfg(feature = "prefetch")]
+use super::remote_mapping::RemotePageTable;
 
 #[allow(unused_imports)]
 use super::parent::{Offset, Value, CompactPageTable};
@@ -22,8 +26,12 @@ use crate::remote_paging::AccessInfo;
 pub struct ChildDescriptor {
     pub regs: RegDescriptor,
 
+    #[cfg(not(feature = "prefetch"))]
     pub page_table: FlatPageTable,
 
+    #[cfg(feature = "prefetch")]
+    pub page_table : RemotePageTable,
+    
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
 }
@@ -41,7 +49,7 @@ impl ChildDescriptor {
 
     #[inline]
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
-        self.page_table.get(virt)
+        self.page_table.translate(virt)
     }
 
     /// Apply the descriptor into current process
