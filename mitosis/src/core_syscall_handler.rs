@@ -1,7 +1,7 @@
 use alloc::string::String;
 use core::option::Option;
 
-use crate::descriptors::FastDescriptor;
+use crate::descriptors::ParentDescriptor;
 use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
@@ -206,7 +206,7 @@ impl MitosisSysCallHandler {
         self.caller_status.prepared_key = Some(key as _);
         crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
 
-        // sanity checks
+        // code for sanity checks
         /*
         use crate::bindings::VMFlags;
         let mm = Task::new().get_memory_descriptor();
@@ -314,7 +314,7 @@ impl MitosisSysCallHandler {
 
                         // deserialize
                         let des = {
-                            let des = FastDescriptor::deserialize(desc_buf.unwrap().get_bytes());
+                            let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
                             if des.is_none() {
                                 crate::log::error!("failed to deserialize descriptor");
                                 return -1;

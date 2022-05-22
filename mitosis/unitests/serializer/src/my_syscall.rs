@@ -35,7 +35,7 @@ impl FileOperations for MySyscallHandler {
             3 => self.test_rdma_descriptor(arg),
             4 => self.test_mitosis_descriptor(arg),
             5 => self.test_vma_page_table(arg),
-            6 => self.test_mitosis_fast_descriptor(arg),
+            6 => self.test_mitosis_parent_descriptor(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -271,7 +271,7 @@ impl MySyscallHandler {
     }
 
     fn test_vma_page_table(&self, _arg: c_ulong) -> c_long {
-        let mut pg_table = VMAPageTable::default();
+        let mut pg_table = CompactPageTable::default();
         for i in 0..100 {
             pg_table.add_one(i, (i * 2) as _);
         }
@@ -285,7 +285,7 @@ impl MySyscallHandler {
             return 0;
         }
         // deserialize
-        let result = VMAPageTable::deserialize(&bytes);
+        let result = CompactPageTable::deserialize(&bytes);
         if result.is_none() {
             crate::log::error!("fail to deserialize process descriptor");
             return 0;
@@ -297,8 +297,8 @@ impl MySyscallHandler {
         0
     }
 
-    fn test_mitosis_fast_descriptor(&self, _arg: c_ulong) -> c_long {
-        crate::log::info!("test mitosis fast descriptor");
+    fn test_mitosis_parent_descriptor(&self, _arg: c_ulong) -> c_long {
+        crate::log::info!("test mitosis parent descriptor");
         let mut mac_info: RDMADescriptor = Default::default();
         mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
 
@@ -306,20 +306,20 @@ impl MySyscallHandler {
         let (vma, pt) = task.generate_mm();
         let mut pg_table = Vec::new_in(VmallocAllocator);
         for vm in vma.iter() {
-            let mut vma_pg_table = VMAPageTable::default();
+            let mut vma_pg_table = CompactPageTable::default();
             {
                 vma_pg_table.add_one((0x10 + vm.get_start()) as _, 4);
             }
             pg_table.push(vma_pg_table);
         }
-        let descriptor = FastDescriptor {
+        let descriptor = ParentDescriptor {
             regs: task.generate_reg_descriptor(),
             page_table: pg_table,
             vma,
             machine_info: mac_info.clone(),
         };
         log::debug!(
-            "sanity check fast-descriptor serialization sz: {}",
+            "sanity check parent descriptor serialization sz: {}",
             descriptor.serialization_buf_len()
         );
         let mut memory = vec![0; descriptor.serialization_buf_len()];
@@ -332,7 +332,7 @@ impl MySyscallHandler {
             return 0;
         }
         // deserialize
-        let result = FastDescriptor::deserialize(&bytes);
+        let result = ParentDescriptor::deserialize(&bytes);
         if result.is_none() {
             crate::log::error!("fail to deserialize process descriptor");
             return 0;
@@ -356,7 +356,7 @@ impl MySyscallHandler {
             descriptor.machine_info
         );
 
-        crate::log::info!("pass process FastDescriptor (de)serialization test\n");
+        crate::log::info!("pass process ParentDescriptor (de)serialization test\n");
 
         0
     }

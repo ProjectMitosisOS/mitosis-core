@@ -2,7 +2,7 @@ pub use vma::*;
 pub use page_table::*;
 pub use page::*;
 
-use crate::descriptors::{FastDescriptor, VMAPageTable};
+use crate::descriptors::{ParentDescriptor, CompactPageTable};
 use alloc::vec::Vec;
 use os_network::KRdmaKit::rust_kernel_rdma_base::VmallocAllocator;
 
@@ -11,7 +11,7 @@ use crate::linux_kernel_module;
 
 #[allow(dead_code)]
 pub struct ShadowProcess {
-    descriptor: FastDescriptor,
+    descriptor: ParentDescriptor,
 
     shadow_vmas: Vec<ShadowVMA<'static>>,
 
@@ -23,7 +23,7 @@ pub struct ShadowProcess {
 }
 
 impl ShadowProcess {
-    pub fn get_descriptor_ref(&self) -> &FastDescriptor {
+    pub fn get_descriptor_ref(&self) -> &ParentDescriptor {
         &self.descriptor
     }
 }
@@ -36,7 +36,7 @@ impl ShadowProcess {
         let mut shadow_vmas: Vec<ShadowVMA<'static>> = Vec::new();
 
         let mut vma_descriptors = Vec::new();
-        let mut vma_page_table: Vec<VMAPageTable, VmallocAllocator> = Vec::new_in(VmallocAllocator);
+        let mut vma_page_table: Vec<CompactPageTable, VmallocAllocator> = Vec::new_in(VmallocAllocator);
         // the generation process
         let task = crate::kern_wrappers::task::Task::new();
         let mut mm = task.get_memory_descriptor();
@@ -48,7 +48,7 @@ impl ShadowProcess {
         }
 
         for (idx, _) in mm.get_vma_iter().enumerate() {
-            let pt: &mut VMAPageTable = vma_page_table.get_mut(idx).unwrap();
+            let pt: &mut CompactPageTable = vma_page_table.get_mut(idx).unwrap();
             let s_vma = shadow_vmas.get(idx).unwrap();
             VMACOWPTGenerator::new(s_vma, &mut shadow_pt, pt).generate();
         }
@@ -59,7 +59,7 @@ impl ShadowProcess {
             shadow_vmas,
             cow_shadow_pagetable: Some(shadow_pt),
             copy_shadow_pagetable: None,
-            descriptor: FastDescriptor {
+            descriptor: ParentDescriptor {
                 machine_info: rdma_descriptor,
                 regs: task.generate_reg_descriptor(),
                 page_table: vma_page_table,
@@ -87,7 +87,7 @@ impl ShadowProcess {
 
         // crate::log::debug!("before iterating the page table");
         for (idx, _) in mm.get_vma_iter().enumerate() {
-            let pt: &mut VMAPageTable = vma_page_table.get_mut(idx).unwrap();
+            let pt: &mut CompactPageTable = vma_page_table.get_mut(idx).unwrap();
             let s_vma = shadow_vmas.get(idx).unwrap();
             VMACopyPTGenerator::new(s_vma, &mut shadow_pt, pt).generate();
         }
@@ -96,7 +96,7 @@ impl ShadowProcess {
             shadow_vmas,
             cow_shadow_pagetable: None,
             copy_shadow_pagetable: Some(shadow_pt),
-            descriptor: FastDescriptor {
+            descriptor: ParentDescriptor {
                 machine_info: rdma_descriptor,
                 regs: task.generate_reg_descriptor(),
                 page_table: vma_page_table,

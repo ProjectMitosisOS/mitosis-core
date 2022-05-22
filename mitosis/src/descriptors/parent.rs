@@ -9,42 +9,25 @@ type Offset = u32;
 type Value = PhyAddrType;
 type PageEntry = (Offset, Value); // record the (offset, phy_addr) pair
 
+/// This is a simple, condensed page table to represent the parent's 
+/// page table in the descriptor. 
 #[derive(Clone)]
-pub struct VMAPageTable {
+pub struct CompactPageTable {
     inner_pg_table: Vec<PageEntry, VmallocAllocator>,
 }
 
-impl Default for VMAPageTable {
-    fn default() -> Self {
-        Self {
-            inner_pg_table: Vec::new_in(VmallocAllocator),
-        }
-    }
-}
-
-impl VMAPageTable {
-    #[inline(always)]
-    pub fn add_one(&mut self, offset: Offset, val: Value) {
-        self.inner_pg_table.push((offset, val))
-    }
-
-    #[inline(always)]
-    pub fn table_len(&self) -> usize {
-        self.inner_pg_table.len()
-    }
-}
-
+/// The descriptor used at the parents 
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct FastDescriptor {
+pub struct ParentDescriptor {
     pub regs: RegDescriptor,
     // 2-dimension matrix, each row means one page-table according to one VMA
-    pub page_table: Vec<VMAPageTable, VmallocAllocator>,
+    pub page_table: Vec<CompactPageTable, VmallocAllocator>,
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
 }
 
-impl Default for FastDescriptor {
+impl Default for ParentDescriptor {
     fn default() -> Self {
         Self {
             regs: Default::default(),
@@ -55,7 +38,7 @@ impl Default for FastDescriptor {
     }
 }
 
-impl FastDescriptor {
+impl ParentDescriptor {
     /// Transform into the flat descriptor.
     #[inline]
     pub fn to_descriptor(&self) -> Descriptor {
@@ -77,7 +60,7 @@ impl FastDescriptor {
     }
 }
 
-impl FastDescriptor {
+impl ParentDescriptor {
     #[inline]
     fn vma_pg_table_serialization_buf_len(&self) -> usize {
         let mut result = core::mem::size_of::<usize>();
@@ -89,7 +72,7 @@ impl FastDescriptor {
     }
 }
 
-impl os_network::serialize::Serialize for VMAPageTable {
+impl os_network::serialize::Serialize for CompactPageTable {
     /// Serialization format:
     /// ```
     /// | inner_pg_table length in bytes <-8 bytes-> | inner_pg_table entries|
@@ -158,7 +141,7 @@ impl os_network::serialize::Serialize for VMAPageTable {
             cur = unsafe { cur.truncate_header(sz1)? };
         }
 
-        Some(VMAPageTable {
+        Some(CompactPageTable {
             inner_pg_table: res,
         })
     }
@@ -176,7 +159,7 @@ impl os_network::serialize::Serialize for VMAPageTable {
     }
 }
 
-impl os_network::serialize::Serialize for FastDescriptor {
+impl os_network::serialize::Serialize for ParentDescriptor {
     /// Serialization format:
     /// ```
     /// | RegDescriptor <-sizeof(RegDescriptor)->
@@ -247,7 +230,7 @@ impl os_network::serialize::Serialize for FastDescriptor {
         cur = unsafe { cur.truncate_header(off)? };
 
         for _ in 0..count {
-            let vma_pg_table = VMAPageTable::deserialize(&cur)?;
+            let vma_pg_table = CompactPageTable::deserialize(&cur)?;
             cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
             pt.push(vma_pg_table);
         }
@@ -278,5 +261,25 @@ impl os_network::serialize::Serialize for FastDescriptor {
             + core::mem::size_of::<usize>() // the number of VMA descriptors
             + self.vma.len() * core::mem::size_of::<VMADescriptor>()
             + self.machine_info.serialization_buf_len()
+    }
+}
+
+impl Default for CompactPageTable {
+    fn default() -> Self {
+        Self {
+            inner_pg_table: Vec::new_in(VmallocAllocator),
+        }
+    }
+}
+
+impl CompactPageTable {
+    #[inline(always)]
+    pub fn add_one(&mut self, offset: Offset, val: Value) {
+        self.inner_pg_table.push((offset, val))
+    }
+
+    #[inline(always)]
+    pub fn table_len(&self) -> usize {
+        self.inner_pg_table.len()
     }
 }

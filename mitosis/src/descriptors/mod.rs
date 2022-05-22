@@ -7,7 +7,7 @@ use crate::linux_kernel_module;
 pub use reg::*;
 pub use page_table::*;
 pub use rdma::RDMADescriptor;
-pub use fast_descriptors::*;
+pub use parent::{CompactPageTable, ParentDescriptor};
 
 pub use vma::*;
 pub use pair::*;
@@ -217,7 +217,7 @@ impl os_network::serialize::Serialize for Descriptor {
 pub mod reg;
 pub mod page_table;
 pub mod vma;
-pub mod fast_descriptors;
+pub mod parent;
 pub mod pair;
 pub mod rdma;
 
