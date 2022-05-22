@@ -1,4 +1,6 @@
-use crate::descriptors::{ChildDescriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
+use crate::descriptors::{
+    ChildDescriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor,
+};
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::{linux_kernel_module, VmallocAllocator};
 use alloc::vec::Vec;
@@ -9,14 +11,14 @@ type Offset = u32;
 type Value = PhyAddrType;
 type PageEntry = (Offset, Value); // record the (offset, phy_addr) pair
 
-/// This is a simple, condensed page table to represent the parent's 
-/// page table in the descriptor. 
+/// This is a simple, condensed page table to represent the parent's
+/// page table in the descriptor.
 #[derive(Clone)]
 pub struct CompactPageTable {
     inner_pg_table: Vec<PageEntry, VmallocAllocator>,
 }
 
-/// The descriptor used at the parents 
+/// The descriptor used at the parents
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct ParentDescriptor {
@@ -86,6 +88,7 @@ impl os_network::serialize::Serialize for CompactPageTable {
             );
             return false;
         }
+
         let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
         let sz = unsafe {
             cur.memcpy_serialize_at(0, &self.inner_pg_table.len())
@@ -100,15 +103,14 @@ impl os_network::serialize::Serialize for CompactPageTable {
             cur = unsafe { cur.truncate_header(sz).unwrap() };
         }
 
-        for (offset, _) in self.inner_pg_table.iter() {
-            let sz0 = unsafe { cur.memcpy_serialize_at(0, offset).unwrap() };
+        for (offset, paddr) in self.inner_pg_table.iter() {
+            let sz0 = unsafe { cur.write_unaligned_at_head(*offset) };
+            cur = unsafe { cur.truncate_header(sz0).unwrap() };
+
+            let sz0 = unsafe { cur.write_unaligned_at_head(*paddr) };
             cur = unsafe { cur.truncate_header(sz0).unwrap() };
         }
 
-        for (_, paddr) in self.inner_pg_table.iter() {
-            let sz1 = unsafe { cur.memcpy_serialize_at(0, paddr).unwrap() };
-            cur = unsafe { cur.truncate_header(sz1).unwrap() };
-        }
         true
     }
 
@@ -128,17 +130,13 @@ impl os_network::serialize::Serialize for CompactPageTable {
         }
 
         for _ in 0..count {
-            let mut virt: Offset = 0;
-            let sz0 = unsafe { cur.memcpy_deserialize_at(0, &mut virt)? };
-            res.push((virt, 0));
-            cur = unsafe { cur.truncate_header(sz0)? };
-        }
+            let virt: Offset = unsafe { cur.read_unaligned_at_head() };
+            cur = unsafe { cur.truncate_header(core::mem::size_of::<Offset>())? };
 
-        for i in 0..count {
-            let mut phy: Value = 0;
-            let sz1 = unsafe { cur.memcpy_deserialize_at(0, &mut phy)? };
-            res[i].1 = phy;
-            cur = unsafe { cur.truncate_header(sz1)? };
+            let phy : Value = unsafe {cur.read_unaligned_at_head()  };
+            cur = unsafe { cur.truncate_header(core::mem::size_of::<Value>())? };
+
+            res.push((virt, phy));
         }
 
         Some(CompactPageTable {

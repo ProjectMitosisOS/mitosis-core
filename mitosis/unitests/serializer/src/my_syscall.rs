@@ -251,7 +251,7 @@ impl MySyscallHandler {
         mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
 
         let task = Task::new();
-        let (vma, pt) = task.generate_mm();
+        let (vma, _) = task.generate_mm();
         let mut pg_table = Vec::new_in(VmallocAllocator);
         for vm in vma.iter() {
             let mut vma_pg_table = CompactPageTable::default();
@@ -260,12 +260,14 @@ impl MySyscallHandler {
             }
             pg_table.push(vma_pg_table);
         }
+
         let descriptor = ParentDescriptor {
             regs: task.generate_reg_descriptor(),
             page_table: pg_table,
             vma,
             machine_info: mac_info.clone(),
         };
+
         log::debug!(
             "sanity check parent descriptor serialization sz: {}",
             descriptor.serialization_buf_len()
@@ -279,6 +281,7 @@ impl MySyscallHandler {
             crate::log::error!("fail to serialize process descriptor");
             return 0;
         }
+
         // deserialize
         let result = ParentDescriptor::deserialize(&bytes);
         if result.is_none() {
@@ -303,7 +306,7 @@ impl MySyscallHandler {
             result.machine_info,
             descriptor.machine_info
         );
-
+        
         crate::log::info!("pass process ParentDescriptor (de)serialization test\n");
 
         0
