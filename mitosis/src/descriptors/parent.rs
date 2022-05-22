@@ -1,4 +1,4 @@
-use crate::descriptors::{Descriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
+use crate::descriptors::{ChildDescriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::{linux_kernel_module, VmallocAllocator};
 use alloc::vec::Vec;
@@ -41,7 +41,7 @@ impl Default for ParentDescriptor {
 impl ParentDescriptor {
     /// Transform into the flat descriptor.
     #[inline]
-    pub fn to_descriptor(&self) -> Descriptor {
+    pub fn to_descriptor(&self) -> ChildDescriptor {
         let mut page_table = FlatPageTable::new();
 
         for (vma_idx, vma_pg_table) in self.page_table.iter().enumerate() {
@@ -51,7 +51,7 @@ impl ParentDescriptor {
             }
         }
 
-        Descriptor {
+        ChildDescriptor {
             regs: self.regs.clone(),
             page_table,
             vma: self.vma.clone(),

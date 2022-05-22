@@ -226,7 +226,7 @@ impl MySyscallHandler {
         let mut mac_info: RDMADescriptor = Default::default();
         mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
 
-        let descriptor = Descriptor::new(&Task::new(), mac_info);
+        let descriptor = ChildDescriptor::new(&Task::new(), mac_info);
 
         log::debug!(
             "sanity check descriptor serialization sz: {}",
@@ -242,7 +242,7 @@ impl MySyscallHandler {
             return 0;
         }
 
-        let result = Descriptor::deserialize(&bytes);
+        let result = ChildDescriptor::deserialize(&bytes);
         if result.is_none() {
             crate::log::error!("fail to deserialize process descriptor");
             return 0;
