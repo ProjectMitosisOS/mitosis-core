@@ -7,7 +7,7 @@ use hashbrown::HashMap;
 use os_network::rdma::dc::DCTarget;
 
 #[allow(unused_imports)]
-use crate::descriptors::{Descriptor, RDMADescriptor};
+use crate::descriptors::{ChildDescriptor, RDMADescriptor};
 use crate::shadow_process::*;
 
 #[allow(unused_imports)]

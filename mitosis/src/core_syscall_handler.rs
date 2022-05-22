@@ -18,7 +18,7 @@ use crate::startup::probe_remote_rpc_end;
 #[allow(dead_code)]
 struct ResumeDataStruct {
     handler_id: usize,
-    descriptor: crate::descriptors::Descriptor,
+    descriptor: crate::descriptors::ChildDescriptor,
     access_info: crate::remote_paging::AccessInfo,
 }
 
