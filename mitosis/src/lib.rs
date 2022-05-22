@@ -10,6 +10,9 @@
 
 extern crate alloc;
 
+#[macro_use]
+extern crate cfg_if;
+
 use mitosis_macros::declare_global;
 
 pub use os_network;

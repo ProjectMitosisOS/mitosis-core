@@ -90,7 +90,7 @@ impl FileOperations for MitosisSysCallHandler {
             MY_VM_OP.access = None;
         };
 
-        // Tricky: Walk can be accelerated here!
+        // Tricky: walk can be accelerated here!
         {
             let task = crate::kern_wrappers::task::Task::new();
             task.generate_mm();
@@ -185,7 +185,7 @@ impl MitosisSysCallHandler {
     #[inline]
     fn syscall_prepare(&mut self, key: c_ulong, ping_img: bool) -> c_long {
         if self.caller_status.prepared_key.is_some() {
-            crate::log::error!("We don't support multiple fork yet. ");
+            crate::log::error!("This version doesn't support multiple fork yet. ");
             return -1;
         }
         self.caller_status.ping_img = ping_img;
