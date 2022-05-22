@@ -54,7 +54,7 @@ impl FlatPageTable {
         self.0.len()
     }
 
-    pub fn get(&self, vaddr: VirtAddrType) -> core::option::Option<PhyAddrType> {
+    pub fn translate(&self, vaddr: VirtAddrType) -> core::option::Option<PhyAddrType> {
         self.0.get(&vaddr).map(|v| *v)
     }
 

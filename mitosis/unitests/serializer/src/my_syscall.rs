@@ -114,12 +114,12 @@ impl MySyscallHandler {
 
             assert_eq!(de_page_table.len(), page_table.len());
             assert_eq!(
-                de_page_table.get(0xdeadbeaf).unwrap(),
-                page_table.get(0xdeadbeaf).unwrap()
+                de_page_table.translate(0xdeadbeaf).unwrap(),
+                page_table.translate(0xdeadbeaf).unwrap()
             );
             assert_eq!(
-                de_page_table.get(0xffff).unwrap(),
-                page_table.get(0xffff).unwrap()
+                de_page_table.translate(0xffff).unwrap(),
+                page_table.translate(0xffff).unwrap()
             );
         }
 
