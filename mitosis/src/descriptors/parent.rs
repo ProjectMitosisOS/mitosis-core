@@ -1,22 +1,24 @@
-use crate::descriptors::{ChildDescriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor};
+use crate::descriptors::{
+    ChildDescriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor,
+};
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::{linux_kernel_module, VmallocAllocator};
 use alloc::vec::Vec;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
 
-type Offset = u32;
-type Value = PhyAddrType;
+pub(crate) type Offset = u32;
+pub(crate) type Value = PhyAddrType;
 type PageEntry = (Offset, Value); // record the (offset, phy_addr) pair
 
-/// This is a simple, condensed page table to represent the parent's 
-/// page table in the descriptor. 
+/// This is a simple, condensed page table to represent the parent's
+/// page table in the descriptor.
 #[derive(Clone)]
 pub struct CompactPageTable {
     inner_pg_table: Vec<PageEntry, VmallocAllocator>,
 }
 
-/// The descriptor used at the parents 
+/// The descriptor used at the parents
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct ParentDescriptor {
@@ -86,6 +88,7 @@ impl os_network::serialize::Serialize for CompactPageTable {
             );
             return false;
         }
+
         let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
         let sz = unsafe {
             cur.memcpy_serialize_at(0, &self.inner_pg_table.len())
@@ -100,15 +103,14 @@ impl os_network::serialize::Serialize for CompactPageTable {
             cur = unsafe { cur.truncate_header(sz).unwrap() };
         }
 
-        for (offset, _) in self.inner_pg_table.iter() {
-            let sz0 = unsafe { cur.memcpy_serialize_at(0, offset).unwrap() };
+        for (offset, paddr) in self.inner_pg_table.iter() {
+            let sz0 = unsafe { cur.write_unaligned_at_head(*offset) };
+            cur = unsafe { cur.truncate_header(sz0).unwrap() };
+
+            let sz0 = unsafe { cur.write_unaligned_at_head(*paddr) };
             cur = unsafe { cur.truncate_header(sz0).unwrap() };
         }
 
-        for (_, paddr) in self.inner_pg_table.iter() {
-            let sz1 = unsafe { cur.memcpy_serialize_at(0, paddr).unwrap() };
-            cur = unsafe { cur.truncate_header(sz1).unwrap() };
-        }
         true
     }
 
@@ -128,17 +130,13 @@ impl os_network::serialize::Serialize for CompactPageTable {
         }
 
         for _ in 0..count {
-            let mut virt: Offset = 0;
-            let sz0 = unsafe { cur.memcpy_deserialize_at(0, &mut virt)? };
-            res.push((virt, 0));
-            cur = unsafe { cur.truncate_header(sz0)? };
-        }
+            let virt: Offset = unsafe { cur.read_unaligned_at_head() };
+            cur = unsafe { cur.truncate_header(core::mem::size_of::<Offset>())? };
 
-        for i in 0..count {
-            let mut phy: Value = 0;
-            let sz1 = unsafe { cur.memcpy_deserialize_at(0, &mut phy)? };
-            res[i].1 = phy;
-            cur = unsafe { cur.truncate_header(sz1)? };
+            let phy : Value = unsafe {cur.read_unaligned_at_head()  };
+            cur = unsafe { cur.truncate_header(core::mem::size_of::<Value>())? };
+
+            res.push((virt, phy));
         }
 
         Some(CompactPageTable {
@@ -186,14 +184,16 @@ impl os_network::serialize::Serialize for ParentDescriptor {
                 .unwrap()
         };
 
-        // 2. page table (size)
+        // 2. vmas & page table (size)
         let sz = unsafe { cur.memcpy_serialize_at(0, &self.page_table.len()).unwrap() };
         let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
+        assert_eq!(self.vma.len(), self.page_table.len());
+
         //   page table (vec)
-        for vma_pg_table in &self.page_table {
-            // size of each VMA page table.
-            // let sz = unsafe { cur.memcpy_serialize_at(0, &vma_pg_table.inner_pg_table.len()).unwrap() };
-            // cur = unsafe { cur.truncate_header(sz).unwrap() };
+        for (i, vma_pg_table) in self.page_table.iter().enumerate() {
+            let vma = self.vma[i];
+            vma.serialize(&mut cur);
+            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };            
 
             vma_pg_table.serialize(&mut cur);
             cur = unsafe {
@@ -202,49 +202,39 @@ impl os_network::serialize::Serialize for ParentDescriptor {
             };
         }
 
-        // 3. vmas
-        let sz = unsafe { cur.memcpy_serialize_at(0, &self.vma.len()).unwrap() };
-        let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
-
-        for vma in &self.vma {
-            vma.serialize(&mut cur);
-            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };
-        }
-        // 4. finally, machine info
+        // 3. finally, machine info
         self.machine_info.serialize(&mut cur);
 
         true
     }
 
+    /// **TODO**
+    /// - Currently, we don't check the buf len, so this function is **unsafe**
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
         let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
         // regs
         let regs = RegDescriptor::deserialize(&cur)?;
         cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
 
-        // vma pt
-        let mut pt = Vec::new_in(VmallocAllocator);
-        // VMA page table count
+        // VMA page counts
         let mut count: usize = 0;
         let off = unsafe { cur.memcpy_deserialize(&mut count)? };
         cur = unsafe { cur.truncate_header(off)? };
 
-        for _ in 0..count {
-            let vma_pg_table = CompactPageTable::deserialize(&cur)?;
-            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
-            pt.push(vma_pg_table);
-        }
-        // vmas
+        // VMA & its corresponding page table
+        let mut pt = Vec::new_in(VmallocAllocator);
         let mut vmas = Vec::new();
-        let mut count: usize = 0;
-        let off = unsafe { cur.memcpy_deserialize(&mut count)? };
-        cur = unsafe { cur.truncate_header(off)? };
 
         for _ in 0..count {
             let vma = VMADescriptor::deserialize(&cur)?;
             cur = unsafe { cur.truncate_header(vma.serialization_buf_len())? };
-            vmas.push(vma);
+            vmas.push(vma);            
+
+            let vma_pg_table = CompactPageTable::deserialize(&cur)?;
+            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
+            pt.push(vma_pg_table);
         }
+
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
         Some(Self {

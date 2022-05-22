@@ -1,12 +1,15 @@
-use os_network::bytes::BytesMut;
-use alloc::vec::Vec;
 use crate::linux_kernel_module;
+use alloc::vec::Vec;
+use os_network::bytes::BytesMut;
 
-use super::vma::VMADescriptor;
-use super::reg::RegDescriptor;
 use super::rdma::RDMADescriptor;
+use super::reg::RegDescriptor;
+use super::vma::VMADescriptor;
 
 use super::page_table::FlatPageTable;
+
+#[allow(unused_imports)]
+use super::parent::{Offset, Value, CompactPageTable};
 
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::kern_wrappers::task::Task;
@@ -19,7 +22,7 @@ use crate::remote_paging::AccessInfo;
 pub struct ChildDescriptor {
     pub regs: RegDescriptor,
 
-    pub page_table: FlatPageTable, 
+    pub page_table: FlatPageTable,
 
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
@@ -117,77 +120,82 @@ impl ChildDescriptor {
 }
 
 impl os_network::serialize::Serialize for ChildDescriptor {
-    /// Serialization format:
-    /// ```
-    /// | RegDescriptor <-sizeof(RegDescriptor)-> | PageMap
-    /// | VMA descriptor length in bytes <-8 bytes-> | VMA descriptor | RDMADescriptor |
-    /// ```
     fn serialize(&self, bytes: &mut BytesMut) -> bool {
-        if bytes.len() < self.serialization_buf_len() {
-            crate::log::error!(
-                "failed to serialize: buffer space not enough. Need {}, actual {}",
-                self.serialization_buf_len(),
-                bytes.len()
-            );
-            return false;
-        }
-
-        // registers
-        let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
-        self.regs.serialize(&mut cur);
-
-        let mut cur = unsafe {
-            cur.truncate_header(self.regs.serialization_buf_len())
-                .unwrap()
-        };
-
-        // page table
-        self.page_table.serialize(&mut cur);
-        let mut cur = unsafe {
-            cur.truncate_header(self.page_table.serialization_buf_len())
-                .unwrap()
-        };
-
-        // vmas
-        let sz = unsafe { cur.memcpy_serialize_at(0, &self.vma.len()).unwrap() };
-        let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
-
-        for &vma in &self.vma {
-            vma.serialize(&mut cur);
-            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };
-        }
-
-        // finally, machine info
-        self.machine_info.serialize(&mut cur);
-
-        // done
-        true
+        // Note, since we currently don't support multi-fork, so child serialize is not implemented
+        unimplemented!();
     }
 
+    /// De-serialize from a message buffer
+    /// **Warning**
+    /// - The buffer to be serialized must be generated from the ParentDescriptor.
+    ///
+    /// **TODO**
+    /// - Currently, we don't check the buf len, so this function is **unsafe**
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
-        let cur = unsafe { bytes.truncate_header(0).unwrap() };
+        // FIXME: check buf len
+
+        let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
 
         // regs
         let regs = RegDescriptor::deserialize(&cur)?;
-        let cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
+        cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
 
-        // page table
-        let pt = FlatPageTable::deserialize(&cur)?;
-        let cur = unsafe { cur.truncate_header(pt.serialization_buf_len())? };
-
-        // vmas
-        let mut vmas = Vec::new();
+        // VMA page counts
         let mut count: usize = 0;
         let off = unsafe { cur.memcpy_deserialize(&mut count)? };
-        let mut cur = unsafe { cur.truncate_header(off)? };
+        cur = unsafe { cur.truncate_header(off)? };
+
+        crate::log::info!("!!!!! start to deserialize vma, count: {}", count);
+
+        // VMA & its corresponding page table
+        let mut pt = FlatPageTable::new();
+        let mut vmas = Vec::new();
 
         for _ in 0..count {
             let vma = VMADescriptor::deserialize(&cur)?;
             cur = unsafe { cur.truncate_header(vma.serialization_buf_len())? };
+
+            let vma_start = vma.get_start();
             vmas.push(vma);
+            
+            /* 
+            let vma_pg_table = CompactPageTable::deserialize(&cur)?;
+            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
+            crate::log::info!("vma_pg_table len: {}", vma_pg_table.table_len()); */
+            
+            // now, deserialize the page table of this VMA
+            // we don't use the `deserialize` method in the compact page table, 
+            // because it will incur unnecessary memory copies that is not optimal for the performance
+            let mut page_num: usize = 0;
+            let off = unsafe { cur.memcpy_deserialize(&mut page_num)? };
+
+            cur = unsafe { cur.truncate_header(off)? };
+
+            // crate::log::debug!("check page_num: {}", page_num);
+            /* 
+            if page_num > 1024 { 
+                return None;
+            }*/
+
+            if core::mem::size_of::<Offset>() < core::mem::size_of::<VirtAddrType>()
+                && page_num % 2 == 1
+            {
+                let mut pad: u32 = 0;
+                let off = unsafe { cur.memcpy_deserialize(&mut pad)? };
+                cur = unsafe { cur.truncate_header(off)? };
+            }
+
+            for _ in 0..page_num {
+                let virt: Offset = unsafe { cur.read_unaligned_at_head() };
+                cur = unsafe { cur.truncate_header(core::mem::size_of::<Offset>())? };
+
+                let phy: Value = unsafe { cur.read_unaligned_at_head() };
+                cur = unsafe { cur.truncate_header(core::mem::size_of::<Value>())? };
+
+                pt.add_one(virt as VirtAddrType + vma_start, phy); 
+            } 
         }
 
-        // machine info
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
         Some(Self {
