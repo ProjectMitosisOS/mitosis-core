@@ -1,0 +1,29 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'make insmod'
+
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make insmod'
+
+[[template.pass]]
+role = 'parent'
+path = 'exp/fork-functions'
+cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="${micro_func_name}" '
+
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=1'
+
+
+[template.placeholder]
+micro_func_name = ["micro", "dd"]
+
+
