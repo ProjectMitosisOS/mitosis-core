@@ -122,7 +122,48 @@ impl os_network::serialize::Serialize for ChildDescriptor {
         unimplemented!();
     }
 
+    /// De-serialize from a message buffer
+    /// **Warning** 
+    /// - The buffer to be serialized must be generated from the ParentDescriptor. 
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
+
+        /* 
+        let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
+
+        // regs
+        let regs = RegDescriptor::deserialize(&cur)?;
+        cur = unsafe { cur.truncate_header(regs.serialization_buf_len())? };
+
+        let mut page_table = FlatPageTable::new();
+
+        let mut pt = Vec::new_in(VmallocAllocator);
+        // VMA page table count
+        let mut count: usize = 0;
+        let off = unsafe { cur.memcpy_deserialize(&mut count)? };
+        cur = unsafe { cur.truncate_header(off)? };        
+
+        for _ in 0..count {
+            let vma_pg_table = CompactPageTable::deserialize(&cur)?;
+            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
+            pt.push(vma_pg_table);
+        }
+
+        // vmas
+        let mut vmas = Vec::new();
+        let mut count: usize = 0;
+        let off = unsafe { cur.memcpy_deserialize(&mut count)? };
+        cur = unsafe { cur.truncate_header(off)? };
+
+        for _ in 0..count {
+            let vma = VMADescriptor::deserialize(&cur)?;
+            cur = unsafe { cur.truncate_header(vma.serialization_buf_len())? };
+            vmas.push(vma);
+        }
+        let machine_info = RDMADescriptor::deserialize(&cur)?;        
+        */
+        
+        unimplemented!();
+        /* 
         let cur = unsafe { bytes.truncate_header(0).unwrap() };
 
         // regs
@@ -153,7 +194,7 @@ impl os_network::serialize::Serialize for ChildDescriptor {
             page_table: pt,
             vma: vmas,
             machine_info: machine_info,
-        })
+        })*/
     }
 
     fn serialization_buf_len(&self) -> usize {
