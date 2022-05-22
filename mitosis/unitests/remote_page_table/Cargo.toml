@@ -1,0 +1,35 @@
+[workspace]
+
+[package]
+name = "remote_page_table_tests"
+version = "0.1.0"
+authors = ["xmm <wxdwfc@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["staticlib"]
+test = false
+
+[features]
+default = ["mitosis","krdma-test"]
+
+[dependencies]
+krdma-test = {path="../../../deps/rust-kernel-rdma/krdma-test",optional = true}
+mitosis = {path = "../../../mitosis", version="0.1.0", optional = true}
+
+[dev-dependencies]
+mitosis-rust-client = { path = "../../../mitosis-user-libs/mitosis-rust-client" }
+kernel-module-testlib = { path = "../../../deps/rust-kernel-rdma/testlib" }
+
+[profile.dev]
+opt-level = 2
+debug = false
+split-debuginfo = '...'  # Platform-specific.
+debug-assertions = true # Enable debug print in test by default
+overflow-checks = true   # overflow-checks is currently not a bottleneck
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false

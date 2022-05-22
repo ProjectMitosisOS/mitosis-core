@@ -1,8 +1,8 @@
-use core::ptr::NonNull;
 use core::alloc::Layout;
+use core::ptr::NonNull;
 
 use crate::{
-    kern_wrappers::{mm::{PhyAddrType, VirtAddrType}},
+    kern_wrappers::mm::{PhyAddrType, VirtAddrType},
     linux_kernel_module,
 };
 
@@ -22,7 +22,7 @@ unsafe impl hashbrown::raw::Allocator for PageMapAllocator {
                 let raw_ptr = unsafe { crate::bindings::vmalloc(size as u64) } as *mut u8;
                 let ptr = NonNull::new(raw_ptr).expect("vmalloc should not fail");
 
-                // crate::log::debug!("check allocate: {:?}, ptr: {:?}", layout,ptr); 
+                // crate::log::debug!("check allocate: {:?}, ptr: {:?}", layout,ptr);
                 Ok(ptr)
             }
         }
@@ -41,7 +41,7 @@ pub struct FlatPageTable(pub PageMap);
 
 impl FlatPageTable {
     pub fn new() -> Self {
-        let res : PageMap = Default::default();
+        let res: PageMap = Default::default();
         Self(res)
     }
 
@@ -56,6 +56,15 @@ impl FlatPageTable {
 
     pub fn get(&self, vaddr: VirtAddrType) -> core::option::Option<PhyAddrType> {
         self.0.get(&vaddr).map(|v| *v)
+    }
+
+    pub fn iter(&self) -> hashbrown::hash_map::Iter<'_, VirtAddrType, PhyAddrType> {
+        self.0.iter()
+    }
+
+    pub fn calculate_serialization_buf_len(&self, len: usize) -> usize {
+        (core::mem::size_of::<VirtAddrType>() + core::mem::size_of::<PhyAddrType>()) * len
+            + core::mem::size_of_val(&self.0.len())
     }
 }
 
@@ -84,7 +93,7 @@ impl os_network::serialize::Serialize for FlatPageTable {
     }
 
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
-        let mut res : PageMap = Default::default();
+        let mut res: PageMap = Default::default();
         let mut count: usize = 0;
         let off = unsafe { bytes.memcpy_deserialize(&mut count)? };
 
@@ -110,7 +119,6 @@ impl os_network::serialize::Serialize for FlatPageTable {
     }
 
     fn serialization_buf_len(&self) -> usize {
-        (core::mem::size_of::<VirtAddrType>() + core::mem::size_of::<PhyAddrType>()) * self.0.len()
-            + core::mem::size_of_val(&self.0.len())
+        self.calculate_serialization_buf_len(self.len())
     }
 }
