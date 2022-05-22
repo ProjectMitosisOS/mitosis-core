@@ -33,7 +33,7 @@ impl FileOperations for MySyscallHandler {
             0 => self.test_reg_descriptor(arg),
             1 => self.test_page_table(arg),
             3 => self.test_rdma_descriptor(arg),
-            4 => self.test_mitosis_descriptor(arg),
+            4 => 0, // self.test_mitosis_descriptor(arg),
             5 => self.test_vma_page_table(arg),
             6 => self.test_mitosis_parent_descriptor(arg),
             _ => {
@@ -215,58 +215,6 @@ impl MySyscallHandler {
         }
 
         crate::log::info!("pass RDMADescriptor (de)serialization test\n");
-        0
-    }
-
-    /// Test the (de)serialization of mitosis Descriptor
-    #[inline(always)]
-    fn test_mitosis_descriptor(&self, _arg: c_ulong) -> c_long {
-        crate::log::info!("test mitosis descriptor");
-
-        let mut mac_info: RDMADescriptor = Default::default();
-        mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
-
-        let descriptor = ChildDescriptor::new(&Task::new(), mac_info);
-
-        log::debug!(
-            "sanity check descriptor serialization sz: {}",
-            descriptor.serialization_buf_len()
-        );
-
-        let mut memory = vec![0; descriptor.serialization_buf_len()];
-        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
-
-        let result = descriptor.serialize(&mut bytes);
-        if !result {
-            crate::log::error!("fail to serialize process descriptor");
-            return 0;
-        }
-
-        let result = ChildDescriptor::deserialize(&bytes);
-        if result.is_none() {
-            crate::log::error!("fail to deserialize process descriptor");
-            return 0;
-        }
-
-        let result = result.unwrap();
-        if result.page_table != descriptor.page_table {
-            log::error!(
-                "failed to deserialize page table, {}, {}",
-                result.page_table.len(),
-                descriptor.page_table.len(),
-            );
-        }
-
-        crate::log::debug!(
-            "check mac_info {:?}\n {:?}",
-            result.machine_info,
-            descriptor.machine_info
-        );
-
-        assert_eq!(result.regs, descriptor.regs);
-
-        crate::log::info!("pass process Descriptor (de)serialization test\n");
-
         0
     }
 

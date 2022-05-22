@@ -1,10 +1,10 @@
-use os_network::bytes::BytesMut;
-use alloc::vec::Vec;
 use crate::linux_kernel_module;
+use alloc::vec::Vec;
+use os_network::bytes::BytesMut;
 
-use super::vma::VMADescriptor;
-use super::reg::RegDescriptor;
 use super::rdma::RDMADescriptor;
+use super::reg::RegDescriptor;
+use super::vma::VMADescriptor;
 
 use super::page_table::FlatPageTable;
 
@@ -19,7 +19,7 @@ use crate::remote_paging::AccessInfo;
 pub struct ChildDescriptor {
     pub regs: RegDescriptor,
 
-    pub page_table: FlatPageTable, 
+    pub page_table: FlatPageTable,
 
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
@@ -117,51 +117,9 @@ impl ChildDescriptor {
 }
 
 impl os_network::serialize::Serialize for ChildDescriptor {
-    /// Serialization format:
-    /// ```
-    /// | RegDescriptor <-sizeof(RegDescriptor)-> | PageMap
-    /// | VMA descriptor length in bytes <-8 bytes-> | VMA descriptor | RDMADescriptor |
-    /// ```
     fn serialize(&self, bytes: &mut BytesMut) -> bool {
-        if bytes.len() < self.serialization_buf_len() {
-            crate::log::error!(
-                "failed to serialize: buffer space not enough. Need {}, actual {}",
-                self.serialization_buf_len(),
-                bytes.len()
-            );
-            return false;
-        }
-
-        // registers
-        let mut cur = unsafe { bytes.truncate_header(0).unwrap() };
-        self.regs.serialize(&mut cur);
-
-        let mut cur = unsafe {
-            cur.truncate_header(self.regs.serialization_buf_len())
-                .unwrap()
-        };
-
-        // page table
-        self.page_table.serialize(&mut cur);
-        let mut cur = unsafe {
-            cur.truncate_header(self.page_table.serialization_buf_len())
-                .unwrap()
-        };
-
-        // vmas
-        let sz = unsafe { cur.memcpy_serialize_at(0, &self.vma.len()).unwrap() };
-        let mut cur = unsafe { cur.truncate_header(sz).unwrap() };
-
-        for &vma in &self.vma {
-            vma.serialize(&mut cur);
-            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };
-        }
-
-        // finally, machine info
-        self.machine_info.serialize(&mut cur);
-
-        // done
-        true
+        // Note, since we currently don't support multi-fork, so child serialize is not implemented
+        unimplemented!();
     }
 
     fn deserialize(bytes: &BytesMut) -> core::option::Option<Self> {
