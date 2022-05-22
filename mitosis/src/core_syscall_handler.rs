@@ -1,7 +1,9 @@
 use alloc::string::String;
 use core::option::Option;
 
-use crate::descriptors::ParentDescriptor;
+#[allow(unused_imports)]
+use crate::descriptors::{ParentDescriptor, ChildDescriptor};
+
 use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
@@ -313,14 +315,25 @@ impl MitosisSysCallHandler {
                         }
 
                         // deserialize
-                        let des = {
+                        let des = {                            
+                            /* 
                             let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
                             if des.is_none() {
                                 crate::log::error!("failed to deserialize descriptor");
                                 return -1;
                             }
-                            des.unwrap().to_descriptor()
+                            des.unwrap().to_descriptor() */
+
+                            // optimized version
+                            ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
                         };
+
+                        if des.is_none() { 
+                            crate::log::error!("failed to deserialize the child descriptor");
+                            return -1;
+                        }
+
+                        let des = des.unwrap();
 
                         let access_info = AccessInfo::new(&des.machine_info);
                         if access_info.is_none() {

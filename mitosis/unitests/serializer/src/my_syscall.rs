@@ -33,7 +33,7 @@ impl FileOperations for MySyscallHandler {
             0 => self.test_reg_descriptor(arg),
             1 => self.test_page_table(arg),
             3 => self.test_rdma_descriptor(arg),
-            4 => self.test_mitosis_descriptor(arg),
+            4 => self.test_mitosis_child_descriptor(arg),
             5 => self.test_vma_page_table(arg),
             6 => self.test_mitosis_parent_descriptor(arg),
             _ => {
@@ -218,58 +218,6 @@ impl MySyscallHandler {
         0
     }
 
-    /// Test the (de)serialization of mitosis Descriptor
-    #[inline(always)]
-    fn test_mitosis_descriptor(&self, _arg: c_ulong) -> c_long {
-        crate::log::info!("test mitosis descriptor");
-
-        let mut mac_info: RDMADescriptor = Default::default();
-        mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
-
-        let descriptor = ChildDescriptor::new(&Task::new(), mac_info);
-
-        log::debug!(
-            "sanity check descriptor serialization sz: {}",
-            descriptor.serialization_buf_len()
-        );
-
-        let mut memory = vec![0; descriptor.serialization_buf_len()];
-        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
-
-        let result = descriptor.serialize(&mut bytes);
-        if !result {
-            crate::log::error!("fail to serialize process descriptor");
-            return 0;
-        }
-
-        let result = ChildDescriptor::deserialize(&bytes);
-        if result.is_none() {
-            crate::log::error!("fail to deserialize process descriptor");
-            return 0;
-        }
-
-        let result = result.unwrap();
-        if result.page_table != descriptor.page_table {
-            log::error!(
-                "failed to deserialize page table, {}, {}",
-                result.page_table.len(),
-                descriptor.page_table.len(),
-            );
-        }
-
-        crate::log::debug!(
-            "check mac_info {:?}\n {:?}",
-            result.machine_info,
-            descriptor.machine_info
-        );
-
-        assert_eq!(result.regs, descriptor.regs);
-
-        crate::log::info!("pass process Descriptor (de)serialization test\n");
-
-        0
-    }
-
     fn test_vma_page_table(&self, _arg: c_ulong) -> c_long {
         let mut pg_table = CompactPageTable::default();
         for i in 0..100 {
@@ -303,7 +251,7 @@ impl MySyscallHandler {
         mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
 
         let task = Task::new();
-        let (vma, pt) = task.generate_mm();
+        let (vma, _) = task.generate_mm();
         let mut pg_table = Vec::new_in(VmallocAllocator);
         for vm in vma.iter() {
             let mut vma_pg_table = CompactPageTable::default();
@@ -312,12 +260,14 @@ impl MySyscallHandler {
             }
             pg_table.push(vma_pg_table);
         }
+
         let descriptor = ParentDescriptor {
             regs: task.generate_reg_descriptor(),
             page_table: pg_table,
             vma,
             machine_info: mac_info.clone(),
         };
+
         log::debug!(
             "sanity check parent descriptor serialization sz: {}",
             descriptor.serialization_buf_len()
@@ -331,6 +281,7 @@ impl MySyscallHandler {
             crate::log::error!("fail to serialize process descriptor");
             return 0;
         }
+
         // deserialize
         let result = ParentDescriptor::deserialize(&bytes);
         if result.is_none() {
@@ -355,9 +306,64 @@ impl MySyscallHandler {
             result.machine_info,
             descriptor.machine_info
         );
-
+        
         crate::log::info!("pass process ParentDescriptor (de)serialization test\n");
 
+        0
+    }
+
+    fn test_mitosis_child_descriptor(&self, _arg: c_ulong) -> c_long { 
+        
+       crate::log::info!("test mitosis parent descriptor");
+        let mut mac_info: RDMADescriptor = Default::default();
+        mac_info.set_rkey(0xdeadbeaf).set_service_id(73);
+
+        let task = Task::new();
+        let (vma, _) = task.generate_mm();
+        let mut pg_table = Vec::new_in(VmallocAllocator);
+        for vm in vma.iter() {
+            let mut vma_pg_table = CompactPageTable::default();
+            {
+                vma_pg_table.add_one((0x10 + vm.get_start()) as _, 4);
+            }
+            pg_table.push(vma_pg_table);
+        }
+
+        let descriptor = ParentDescriptor {
+            regs: task.generate_reg_descriptor(),
+            page_table: pg_table,
+            vma,
+            machine_info: mac_info.clone(),
+        };
+
+        log::debug!(
+            "sanity check parent descriptor serialization sz: {}",
+            descriptor.serialization_buf_len()
+        );
+        let mut memory = vec![0; descriptor.serialization_buf_len()];
+        let mut bytes = unsafe { BytesMut::from_raw(memory.as_mut_ptr(), memory.len()) };
+
+        // serialize
+        let result = descriptor.serialize(&mut bytes);
+        if !result {
+            crate::log::error!("fail to serialize process descriptor");
+            return 0;
+        }
+
+        // deserialize
+        let result = ChildDescriptor::deserialize(&bytes);
+        if result.is_none() {
+            crate::log::error!("fail to deserialize process descriptor");
+            return 0;
+        }
+        
+        let result = result.unwrap();
+        if result.vma.len() != descriptor.vma.len() { 
+            crate::log::error!("the vam length not match"); 
+        }
+        crate::log::info!("de-serialized VMA count {}", result.vma.len());
+
+        crate::log::info!("pass process ChildDescriptor (de)serialization test\n");
         0
     }
 }

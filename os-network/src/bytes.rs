@@ -75,6 +75,22 @@ impl BytesMut {
         }
     }
 
+    /// Write T to the current header, return the size of T
+    /// This function is unsafe, because we don't check whether the 
+    /// buffer has enough capacity to hold the data 
+    pub unsafe fn write_unaligned_at_head<T>(&mut self, src : T) -> usize {     
+        core::ptr::write_unaligned(self.ptr as *mut T, src);
+        core::mem::size_of::<T>()
+    }
+
+
+    /// Read T at the current header
+    /// This function is unsafe, because we don't check whether the 
+    /// buffer has enough capacity to hold the data 
+    pub unsafe fn read_unaligned_at_head<T>(&self) -> T {     
+        core::ptr::read_unaligned(self.ptr as *const T)
+    }
+
     pub unsafe fn get_ptr(&self) -> *mut u8 {
         self.ptr
     }
