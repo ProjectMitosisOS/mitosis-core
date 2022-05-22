@@ -18,6 +18,7 @@ default = ["os-network", "rust-kernel-linux-util"]
 cow = []           # use CoW strategy when prepare parent VMA ; or else copying user pages into kernel.
 eager-resume = [] # use eager page-fetching strategy instead of fetching while page fault
 resume-profile = [] # peak resume running profile
+prefetch = [] # whether to open prefetch
 
 [dependencies]
 mitosis-protocol = { path = "../mitosis-user-libs/mitosis-protocol" }
@@ -27,6 +28,7 @@ mitosis-macros = { path = "../mitosis-macros" }
 bitflags = "1"
 hashbrown = {features=["raw"], path="../deps/hashbrown"}
 x86_64 = {}
+cfg-if = "0.1"
 
 [dependencies.lazy_static]
 version = "1.0"

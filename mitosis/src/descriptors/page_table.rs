@@ -61,6 +61,11 @@ impl FlatPageTable {
     pub fn iter(&self) -> hashbrown::hash_map::Iter<'_, VirtAddrType, PhyAddrType> {
         self.0.iter()
     }
+
+    pub fn calculate_serialization_buf_len(&self, len: usize) -> usize {
+        (core::mem::size_of::<VirtAddrType>() + core::mem::size_of::<PhyAddrType>()) * len
+            + core::mem::size_of_val(&self.0.len())
+    }
 }
 
 impl os_network::serialize::Serialize for FlatPageTable {
@@ -114,7 +119,6 @@ impl os_network::serialize::Serialize for FlatPageTable {
     }
 
     fn serialization_buf_len(&self) -> usize {
-        (core::mem::size_of::<VirtAddrType>() + core::mem::size_of::<PhyAddrType>()) * self.0.len()
-            + core::mem::size_of_val(&self.0.len())
+        self.calculate_serialization_buf_len(self.len())
     }
 }

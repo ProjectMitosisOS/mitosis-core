@@ -1,13 +1,5 @@
-pub mod vma;
-
 pub use vma::*;
-
-pub mod page_table;
-
 pub use page_table::*;
-
-pub mod page;
-
 pub use page::*;
 
 use crate::descriptors::{FastDescriptor, VMAPageTable};
@@ -113,3 +105,8 @@ impl ShadowProcess {
         }
     }
 }
+
+pub mod vma;
+pub mod page_table;
+pub mod page;
+

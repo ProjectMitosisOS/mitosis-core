@@ -4,35 +4,20 @@ use os_network::bytes::BytesMut;
 
 use crate::linux_kernel_module;
 
-// sub descriptors
-pub mod reg;
-
 pub use reg::*;
-
-pub mod page_table;
-
 pub use page_table::*;
-
-pub mod rdma;
-
-pub use rdma::*;
-
-pub mod vma;
-
-pub mod fast_descriptors;
-
+pub use rdma::RDMADescriptor;
 pub use fast_descriptors::*;
 
 pub use vma::*;
-
-pub mod pair;
-
 pub use pair::*;
-// pub mod factory;
-// pub use factory::DescriptorFactoryService;
+
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::kern_wrappers::task::Task;
 use crate::remote_paging::AccessInfo;
+
+// RemotePageTable uses 4-level page table in x86_64
+// FlatPageTable uses a Hashtable
 
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
@@ -40,7 +25,9 @@ use crate::remote_paging::AccessInfo;
 #[derive(Default, Clone)]
 pub struct Descriptor {
     pub regs: RegDescriptor,
-    pub page_table: FlatPageTable,
+
+    pub page_table: FlatPageTable, 
+
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
 }
@@ -226,3 +213,11 @@ impl os_network::serialize::Serialize for Descriptor {
             + self.machine_info.serialization_buf_len()
     }
 }
+
+pub mod reg;
+pub mod page_table;
+pub mod vma;
+pub mod fast_descriptors;
+pub mod pair;
+pub mod rdma;
+
