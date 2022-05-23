@@ -1,7 +1,7 @@
 ### configurations ###
 
-USER=
-PWD=
+USER=lfm
+PWD=20170150lfm-IPADS
 PROJECT_PATH=projects/mos
 PARENT_GID=fe80:0000:0000:0000:248a:0703:009c:7ca0
 PARENT_HOST=val06
@@ -78,8 +78,9 @@ build-cpp:
 
 build-mitosis: build-cpp
 	$(call builder, $(template-build-mitosis))
-	$(call builder, $(template-build-lean-container))
 
+mount:
+	$(call builder, $(template-build-lean-container))
 
 clean: gen-clean
 	pkill python; sleep 0.1
