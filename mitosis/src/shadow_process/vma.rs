@@ -28,13 +28,6 @@ impl<'a> ShadowVMA<'a> {
         }
 
         // toggle the VM map flag
-        /*
-        let mut vm_flag = vma.get_flags();
-        if (vm_flag.contains(VMFlags::WRITE) || vm_flag.contains(VMFlags::MAY_WRITE)) && is_cow {
-            // vm_flag.insert(VMFlags::SHARED);
-            // vma.set_raw_flags(vm_flag.bits());
-        } */
-
         Self {
             vma_inner: vma,
             is_cow: is_cow,
