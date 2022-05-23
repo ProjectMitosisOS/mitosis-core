@@ -24,79 +24,67 @@
 #endif
 
 // handles inline functions
-struct thread_info*
+struct thread_info *
 pmem_get_current_thread_info(void);
 
-struct task_struct*
+struct task_struct *
 pmem_get_current_task(void);
 
-pte_t*
-pmem_get_pte(struct mm_struct* mm, unsigned long addr);
+pte_t *
+pmem_get_pte(struct mm_struct *mm, unsigned long addr);
 
-int
-pmem_call_walk_range(unsigned long addr,
-                     unsigned long end,
-                     struct mm_walk* walk);
+int pmem_call_walk_range(unsigned long addr,
+                         unsigned long end,
+                         struct mm_walk *walk);
 
-int
-pmem_call_walk_vma(struct vm_area_struct* vm, struct mm_walk* walk);
+int pmem_call_walk_vma(struct vm_area_struct *vm, struct mm_walk *walk);
 
 unsigned long
-pmem_get_phy_from_pte(pte_t* pte);
+pmem_get_phy_from_pte(pte_t *pte);
 
 unsigned long
-pmem_vm_mmap(struct file* file,
+pmem_vm_mmap(struct file *file,
              unsigned long addr,
              unsigned long len,
              unsigned long prot,
              unsigned long flag,
              unsigned long offset);
 
-int
-pmem_do_munmap(struct mm_struct* mm,
-               unsigned long start,
-               size_t len,
-               struct list_head* uf);
+int pmem_do_munmap(struct mm_struct *mm,
+                   unsigned long start,
+                   size_t len,
+                   struct list_head *uf);
 
 unsigned long
-pmem_mmap_region(struct file* file,
+pmem_mmap_region(struct file *file,
                  unsigned long addr,
                  unsigned long len,
                  vm_flags_t vm_flags,
                  unsigned long pgoff);
 
-void
-pmem_flush_tlb_range(struct vm_area_struct *vma, unsigned long start, unsigned long end);
+void pmem_flush_tlb_range(struct vm_area_struct *vma, unsigned long start, unsigned long end);
 
-void
-pmem_flush_tlb_all(void);
+void pmem_flush_tlb_all(void);
 
-void
-pmem_flush_tlb_mm(struct mm_struct *mm);
+void pmem_flush_tlb_mm(struct mm_struct *mm);
 
-void
-pmem_clear_pte_present(pte_t* pte);
+void pmem_clear_pte_present(pte_t *pte);
 
-struct pt_regs*
+struct pt_regs *
 pmem_get_current_pt_regs(void);
 
-struct page*
+struct page *
 pmem_alloc_page(gfp_t gfp_mask);
 
-void
-pmem_free_page(struct page* p);
+void pmem_free_page(struct page *p);
 
+int pmem_vm_insert_page(struct vm_area_struct *vma, unsigned long addr,
+                        struct page *page);
+u64 pmem_page_to_phy(struct page *page);
 
-int
-pmem_vm_insert_page(struct vm_area_struct *vma, unsigned long addr,
-                    struct page *page);
-u64
-pmem_page_to_phy(struct page* page);
+u64 pmem_page_to_virt(struct page *page);
 
-u64
-pmem_page_to_virt(struct page* page);
-
-void*
+void *
 pmem_phys_to_virt(u64 p);
 
 unsigned int
@@ -124,8 +112,8 @@ const unsigned long PMEM_VM_MIXEDMAP = VM_MIXEDMAP;
 const unsigned long PMEM_VM_GROWSDOWN = VM_GROWSDOWN;
 const unsigned long PMEM_VM_GROWSUP = VM_GROWSUP;
 
-// forbidden 
-const unsigned long PMEM_VM_RESERVE = 0x00000000; // This flags seems not used by the Linux, use it 
+// forbidden
+const unsigned long PMEM_VM_RESERVE = 0x00000000; // This flags seems not used by the Linux, use it
 
 /*
  MMap flags
@@ -173,10 +161,11 @@ void pmem_get_file(struct file *f);
 
 void pmem_put_file(struct file *f);
 
+void print_file_path(struct file *file);
 
 /*
- page related 
- */
+  page related
+*/
 void pmem_get_page(struct page *page);
 void pmem_put_page(struct page *page);
 
@@ -184,8 +173,7 @@ void pmem_page_dup_rmap(struct page *page, bool compound);
 
 void pmem_page_free_rmap(struct page *page, bool compound);
 
-void
-pmem_clear_pte_write(pte_t* pte);
+void pmem_clear_pte_write(pte_t *pte);
 
 struct page *
 pmem_pte_to_page(pte_t *pte);

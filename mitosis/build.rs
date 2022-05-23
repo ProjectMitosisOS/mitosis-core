@@ -24,6 +24,7 @@ const INCLUDED_KERNEL_TYPES: &[&str] = &[
     "file_system_type",
 ];
 const INCLUDED_KERNEL_FUNCS: &[&str] = &[
+    "print_file_path",
     "pmem_mmap_region",
     "pmem_vm_mmap",
     "pmem_get_phy_from_pte",

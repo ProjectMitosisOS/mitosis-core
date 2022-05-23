@@ -1,0 +1,18 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = 'make -j && cp lean_child fork-functions/child/.'
+
+[[template.pass]]
+role = 'child'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'make export mount_dev COMMAND_ABS_PATH=/app/lean_child PATH_TO_APP=app/simple_child'
+
+
+[template.placeholder]
+name = ["build"]
+
+

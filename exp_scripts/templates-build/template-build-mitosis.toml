@@ -1,0 +1,12 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'builder'
+path = ''
+cmd = 'source $HOME/.cargo/env; make km ; make insmod'
+
+[template.placeholder]
+name = ["build"]
+
+

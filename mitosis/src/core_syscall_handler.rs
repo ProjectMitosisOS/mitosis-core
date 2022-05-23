@@ -209,7 +209,16 @@ impl MitosisSysCallHandler {
         crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
 
         // code for sanity checks
-        /*
+        /* 
+        let mm = crate::kern_wrappers::task::Task::new().get_memory_descriptor();
+        let vma = mm.find_vma(0x5bf000);        
+        if vma.is_none() { 
+            crate::log::debug!("failed to lookup vma"); 
+        }
+        vma.map(|vma| { 
+            crate::log::info!("sanity check vma {:?}", vma);
+            unsafe { crate::bindings::print_file_path(vma.vm_file) };
+        });
         use crate::bindings::VMFlags;
         let mm = Task::new().get_memory_descriptor();
         for mut vma in mm.get_vma_iter() {
@@ -316,24 +325,25 @@ impl MitosisSysCallHandler {
 
                         // deserialize
                         let des = {                            
-                            /* 
+                            /*  legacy version
                             let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
                             if des.is_none() {
                                 crate::log::error!("failed to deserialize descriptor");
                                 return -1;
                             }
-                            des.unwrap().to_descriptor() */
+                            des.unwrap().to_descriptor() 
+                            */
 
                             // optimized version
                             ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
                         };
-
+                        
                         if des.is_none() { 
                             crate::log::error!("failed to deserialize the child descriptor");
                             return -1;
                         }
 
-                        let des = des.unwrap();
+                        let des = des.unwrap(); 
 
                         let access_info = AccessInfo::new(&des.machine_info);
                         if access_info.is_none() {
