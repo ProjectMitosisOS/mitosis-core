@@ -1,0 +1,44 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'make insmod'
+
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make insmod'
+
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = './connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
+
+[[template.pass]]
+role = 'parent'
+path = 'exp/fork-functions'
+cmd = 'cd ${micro_func_name} && python function.py -working_set=${working_set} -pin=1 -profile=0 -handler_id=73'
+
+[[template.pass]]
+role = 'child'
+path = 'exp/scripts'
+cmd = 'sh run_lean_container.sh' # TODO：Could be further refined
+
+
+[template.placeholder]
+working_set = [1048576,
+    4194304,
+    8388608,
+    16777216,
+    33554432,
+    67108864,
+    134217728,
+    268435456,
+    536870912,
+    1073741824]
+micro_func_name = "micro"
+
+
