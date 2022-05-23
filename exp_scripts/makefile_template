@@ -42,9 +42,14 @@ template-build-lean-container=templates-build/template-build-lean-container.toml
 
 
 # Evaluation runner templates
+
+# Micro for functions
 template-run-micro-func-startup=templates-run/micro-func/template-run-micro-startup.toml
 template-run-micro-func-execution-prepare=templates-run/micro-func/template-run-micro-execution-prepare.toml
 
+
+## Micro with working set
+template-run-micro-startup=templates-run/micro-c/template-run-micro-startup.toml
 template-run-micro-execution-prepare=templates-run/micro-c/template-run-micro-execution-prepare.toml
 
 run_out=out
@@ -79,6 +84,10 @@ micro-function-execution-prepare:
 
 micro-c-execution-prepare:
 	$(call runner, $(template-run-micro-execution-prepare), ${run_out}/$@)
+
+micro-c-startup:
+	$(call runner, $(template-run-micro-startup), ${run_out}/$@)
+
 
 micro-function: micro-function-startup micro-function-execution-prepare
 
