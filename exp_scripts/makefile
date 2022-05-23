@@ -42,9 +42,10 @@ template-build-lean-container=templates-build/template-build-lean-container.toml
 
 
 # Evaluation runner templates
-template-run-micro-startup=templates-run/micro-func/template-run-micro-startup.toml
-template-run-micro-execution-prepare=templates-run/micro-func/template-run-micro-execution-prepare.toml
+template-run-micro-func-startup=templates-run/micro-func/template-run-micro-startup.toml
+template-run-micro-func-execution-prepare=templates-run/micro-func/template-run-micro-execution-prepare.toml
 
+template-run-micro-execution-prepare=templates-run/micro-c/template-run-micro-execution-prepare.toml
 
 run_out=out
 build_out=run-build.toml
@@ -59,18 +60,27 @@ define builder
 	python bootstrap.py -f $(build_out) ${RUNNER_FLAG}
 endef
 
+
+## TODO: plot the figure in AE stage
 define runner
 	rm -rf $(2)
 	python toml_generator.py -f $(1) -o $(2) -d ${template_args}
 	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}"
 endef
 
+
+
+# Tests
 micro-function-startup:
-	$(call runner, $(template-run-micro-startup), ${run_out}/$@)
+	$(call runner, $(template-run-micro-func-startup), ${run_out}/$@)
 
 micro-function-execution-prepare:
+	$(call runner, $(template-run-micro-func-execution-prepare), ${run_out}/$@)
+
+micro-c-execution-prepare:
 	$(call runner, $(template-run-micro-execution-prepare), ${run_out}/$@)
 
+micro-function: micro-function-startup micro-function-execution-prepare
 
 
 # Built all cpp
@@ -79,8 +89,6 @@ build-cpp:
 
 build-mitosis: build-cpp
 	$(call builder, $(template-build-mitosis))
-
-mount:
 	$(call builder, $(template-build-lean-container))
 
 clean: gen-clean
