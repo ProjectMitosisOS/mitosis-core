@@ -7,6 +7,7 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/../deps/gflags gflags_dir)
 
 include_directories(../include)
 include_directories(../mitosis-user-libs/mitosis-lean-container/lib)
+
 set(samples
         connector       ## Init connector
         simple_child    ## simple child demo
@@ -14,7 +15,9 @@ set(samples
         bench_exe_time_parent ## get execution time
         bench_prepare_time  ## get prepare time
         bench_lean_container
+        bench_workingset ## C++ version of parent of the microbenchmark
         )
+
 add_executable(connector common/connector.cc)
 add_executable(simple_child common/simple_child.cc)
 add_executable(simple_parent common/simple_parent.cc)
@@ -23,6 +26,8 @@ add_executable(bench_lean_container fork-functions/benchmark_lean_container.c
         )
 add_executable(bench_exe_time_parent fork-micro/bench_exe_time_parent.cc)
 add_executable(bench_prepare_time fork-micro/bench_prepare_time.cc)
+
+add_executable(bench_workingset fork-functions/micro/workingset.cc)
 
 foreach (s ${samples})
     target_link_libraries(${s} gflags)

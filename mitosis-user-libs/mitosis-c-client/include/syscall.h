@@ -1,3 +1,5 @@
+#pragma once
+
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
