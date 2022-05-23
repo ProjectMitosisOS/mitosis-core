@@ -65,7 +65,6 @@ int set_namespace(int namespace) {
 
         fd = open(buf, O_RDONLY);
         if (fd < 0) {
-            printf("%s:%d\n", __FILE__, __LINE__);
             perror("open");
             return -1;
         }
@@ -96,7 +95,6 @@ int write_pid(pid_t pid, const char* cgroupfs_path) {
     
     int fd = open(cgroupfs_path, O_WRONLY);
     if (fd < 0) {
-            printf("%s:%d\n", __FILE__, __LINE__);
         perror("open");
         return -1;
     }
@@ -122,7 +120,6 @@ int set_numa_cpuset(char* cpuset_root, int numa_start, int numa_end) {
     // echo 0-1 > /sys/fs/cgroup/.../cpuset.mems # process is allowed to run on numa node 0 and 1
     int fd = open(path_buf, O_WRONLY);
     if (fd < 0) {
-            printf("%s:%d\n", __FILE__, __LINE__);
         perror("open");
         return -1;
     }
@@ -153,7 +150,6 @@ int set_cpu_number_cpuset(char* cpuset_root, int cpu_start, int cpu_end) {
     // echo 0-1 > /sys/fs/cgroup/.../cpuset.cpus # process is allowed to run on cpu 0 and 1
     int fd = open(path_buf, O_WRONLY);
     if (fd < 0) {
-            printf("%s:%d\n", __FILE__, __LINE__);
         perror("open");
         return -1;
     }
@@ -233,7 +229,6 @@ int write_memory_limit(char* memory_cgroup_root, long memory_in_bytes) {
     // echo 134217728 > /sys/fs/cgroup/.../memory.limit_in_bytes # process is allowed to use 128MB memory
     int fd = open(path_buf, O_WRONLY);
     if (fd < 0) {
-            printf("%s:%d\n", __FILE__, __LINE__);
         perror("open");
         return -1;
     }
@@ -549,7 +544,6 @@ int pause_container(char* name) {
 
     int fd = open(freezer_state, O_WRONLY);
     if (fd < 0) {
-            printf("%s:%d\n", __FILE__, __LINE__);
         perror("open");
         return -1;
     }
@@ -577,7 +571,6 @@ int unpause_container(char* name) {
 
     int fd = open(freezer_state, O_WRONLY);
     if (fd < 0) {
-            printf("%s:%d\n", __FILE__, __LINE__);
         perror("open");
         return -1;
     }
