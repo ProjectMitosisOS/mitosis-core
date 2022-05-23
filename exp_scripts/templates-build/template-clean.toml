@@ -4,16 +4,13 @@
 [[template.pass]]
 role = 'builder'
 path = ''
-cmd = 'source $HOME/.cargo/env; make rmmod'
+cmd = 'source $HOME/.cargo/env; rm -rf mitosis-kms/target ; make rmmod'
 
 [[template.pass]]
 role = 'parent'
 path = 'mitosis-user-libs/mitosis-lean-container'
 cmd = 'make clean_fs COMMAND_ABS_PATH=/app/lean_child PATH_TO_APP=../../exp/fork-functions/child'
 
-
-
 [template.placeholder]
 name = ["build"]
-
 

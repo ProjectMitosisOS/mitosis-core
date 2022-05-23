@@ -263,11 +263,14 @@ void unshare_and_fork(int* pipefd, char* rootfs) {
     // close the read end of pipe
     close(pipefd[0]);
     pid_t pid = -1;
+    int ret;
 
-    int ret = chroot(rootfs);
-    if (ret < 0) {
-        perror("chroot");
-        return;
+    if (rootfs) {
+        ret = chroot(rootfs);
+        if (ret < 0) {
+            perror("chroot");
+            return;
+        }
     }
 
     if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
@@ -285,9 +288,11 @@ void unshare_and_fork(int* pipefd, char* rootfs) {
         goto end;
     } else {
         close(pipefd[1]);
-        ret = mount("proc", "/proc", "proc", 0, NULL);
-        if (ret < 0) {
-            perror("mount");
+        if (rootfs) {
+            ret = mount("proc", "/proc", "proc", 0, NULL);
+            if (ret < 0) {
+                perror("mount");
+            }
         }
         while (1) {
             pause();

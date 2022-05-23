@@ -1,4 +1,4 @@
-exe_path=../bench_lean_container
+exe_path=../exp/bench_lean_container
 
 bench_sec=5
 name=bench_lean_container
