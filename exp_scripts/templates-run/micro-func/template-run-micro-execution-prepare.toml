@@ -15,10 +15,10 @@ cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=0 -handler
 [[template.pass]]
 role = 'parent'
 path = 'exp'
-cmd = './simple_child -mac_id=0 -wait_finish_sec=1'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=3'
 
 
 [template.placeholder]
-micro_func_name = ["micro", "json"]
+micro_func_name = ["micro", "json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
 
 

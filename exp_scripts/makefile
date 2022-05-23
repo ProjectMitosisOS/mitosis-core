@@ -42,8 +42,8 @@ template-build-lean-container=templates-build/template-build-lean-container.toml
 
 
 # Evaluation runner templates
-template-run-micro-startup=templates-run/template-run-micro-startup.toml
-template-run-micro-execution-prepare=templates-run/template-run-micro-execution-prepare.toml
+template-run-micro-startup=templates-run/micro-func/template-run-micro-startup.toml
+template-run-micro-execution-prepare=templates-run/micro-func/template-run-micro-execution-prepare.toml
 
 
 run_out=out
@@ -62,6 +62,7 @@ endef
 define runner
 	rm -rf $(2)
 	python toml_generator.py -f $(1) -o $(2) -d ${template_args}
+	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}"
 endef
 
 micro-function-startup:
