@@ -4,7 +4,7 @@
 [[template.pass]]
 role = 'parent'
 path = ''
-cmd = 'make insmod'
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
 
 
 [[template.pass]]
