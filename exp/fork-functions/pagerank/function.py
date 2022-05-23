@@ -8,7 +8,7 @@ from mitosis_wrapper import *
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 
-size = 100000
+size = 50000
 
 graph = igraph.Graph.Barabasi(size, 10)
 
