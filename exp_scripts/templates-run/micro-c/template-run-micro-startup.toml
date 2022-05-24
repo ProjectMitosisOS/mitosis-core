@@ -6,7 +6,6 @@ role = 'parent'
 path = ''
 cmd = 'make insmod'
 
-
 [[template.pass]]
 role = 'child'
 path = ''
@@ -15,18 +14,18 @@ cmd = 'make insmod'
 [[template.pass]]
 role = 'child'
 path = 'exp'
-cmd = './connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
+cmd = 'sleep 1 && ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
 
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
-cmd = 'cd ${micro_func_name} && python function.py -working_set=${working_set} -pin=1 -profile=0 -handler_id=73'
+cmd = 'sleep 2 && cd ${micro_func_name} && python function.py -working_set=${working_set} -pin=1 -profile=0 -handler_id=73'
 
 [[template.pass]]
-role = 'child'
-path = 'exp/scripts'
-cmd = 'sh run_lean_container.sh' # TODO：Could be further refined
-
+role = 'child'#path = 'exp/scripts'
+cmd = 'sleep 3 && sh run_lean_container.sh' # TODO：Could be further refined
+#path = 'exp'
+#cmd = 'sleep 3 && ./simple_child --mac_id=1 --handler_id=73'
 
 [template.placeholder]
 working_set = [1048576,
