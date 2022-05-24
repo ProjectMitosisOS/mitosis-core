@@ -19,9 +19,6 @@
 #define PAGE_SIZE 4096
 
 DEFINE_int64(working_set, 16777216, "working set size");
-DEFINE_int64(run_sec, 10, "running seconds");
-DEFINE_string(lock_file, "lock", "lock file name");
-DEFINE_int32(lock_string, '0', "lock string");
 DEFINE_int64(handler_id, 73, "rfork handler id");
 DEFINE_int32(whether_prepare, 0, "whether to prepare");
 
@@ -77,7 +74,6 @@ static void __attribute__((optimize("O2"))) handler()
 
 int main(int argc, char **argv)
 {
-
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     printf("working set %d, mb: %lluMB\n", FLAGS_working_set, FLAGS_working_set / (1024 * 1024));
 

@@ -9,14 +9,15 @@ cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
 
 [[template.pass]]
 role = 'parent'
-path = 'exp/fork-functions'
-cmd = 'cd ${micro_func_name} && python function.py -working_set=${working_set} -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="${micro_func_name}" '
+#path = 'exp/fork-functions' ## python version
+#cmd = 'sleep 3; cd ${micro_func_name} && python function.py -working_set=${working_set} -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="${micro_func_name}" '
+path='exp' ## c-version
+cmd='sleep 3 && ./bench_workingset --working_set=${working_set} --whether_prepare=1'
 
 [[template.pass]]
 role = 'parent'
 path = 'exp'
-cmd = './simple_child -mac_id=0 -wait_finish_sec=3'
-
+cmd = './simple_child -mac_id=0 -wait_finish_sec=5'
 
 [template.placeholder]
 working_set = [1048576,
