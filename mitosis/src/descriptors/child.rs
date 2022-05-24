@@ -13,7 +13,7 @@ use super::page_table::FlatPageTable;
 use super::remote_mapping::RemotePageTable;
 
 #[allow(unused_imports)]
-use super::parent::{Offset, Value, CompactPageTable};
+use super::parent::{CompactPageTable, Offset, Value};
 
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::kern_wrappers::task::Task;
@@ -30,8 +30,8 @@ pub struct ChildDescriptor {
     pub page_table: FlatPageTable,
 
     #[cfg(feature = "prefetch")]
-    pub page_table : RemotePageTable,
-    
+    pub page_table: RemotePageTable,
+
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
 }
@@ -49,6 +49,14 @@ impl ChildDescriptor {
 
     #[inline]
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
+        #[cfg(feature = "prefetch")]
+        {
+            use crate::remote_mapping::VirtAddr;
+            self.page_table
+                .translate(VirtAddr::new(virt))
+        }
+
+        #[cfg(not(feature = "prefetch"))]
         self.page_table.translate(virt)
     }
 
@@ -153,7 +161,7 @@ impl os_network::serialize::Serialize for ChildDescriptor {
         let off = unsafe { cur.memcpy_deserialize(&mut count)? };
         cur = unsafe { cur.truncate_header(off)? };
 
-        crate::log::info!("!!!!! start to deserialize vma, count: {}", count);
+        crate::log::debug!("!!!!! start to deserialize vma, count: {}", count);
 
         // VMA & its corresponding page table
         let mut pt = FlatPageTable::new();
@@ -165,14 +173,14 @@ impl os_network::serialize::Serialize for ChildDescriptor {
 
             let vma_start = vma.get_start();
             vmas.push(vma);
-            
-            /* 
+
+            /*
             let vma_pg_table = CompactPageTable::deserialize(&cur)?;
             cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
             crate::log::info!("vma_pg_table len: {}", vma_pg_table.table_len()); */
-            
+
             // now, deserialize the page table of this VMA
-            // we don't use the `deserialize` method in the compact page table, 
+            // we don't use the `deserialize` method in the compact page table,
             // because it will incur unnecessary memory copies that is not optimal for the performance
             let mut page_num: usize = 0;
             let off = unsafe { cur.memcpy_deserialize(&mut page_num)? };
@@ -180,8 +188,8 @@ impl os_network::serialize::Serialize for ChildDescriptor {
             cur = unsafe { cur.truncate_header(off)? };
 
             // crate::log::debug!("check page_num: {}", page_num);
-            /* 
-            if page_num > 1024 { 
+            /*
+            if page_num > 1024 {
                 return None;
             }*/
 
@@ -200,8 +208,8 @@ impl os_network::serialize::Serialize for ChildDescriptor {
                 let phy: Value = unsafe { cur.read_unaligned_at_head() };
                 cur = unsafe { cur.truncate_header(core::mem::size_of::<Value>())? };
 
-                pt.add_one(virt as VirtAddrType + vma_start, phy); 
-            } 
+                pt.add_one(virt as VirtAddrType + vma_start, phy);
+            }
         }
 
         let machine_info = RDMADescriptor::deserialize(&cur)?;
