@@ -19,6 +19,12 @@ pub fn check_global_configurations() {
     } else {
         crate::log::info!("[check]: Parent is using copy to dump the image.")
     }
+
+    if cfg!(feature = "prefetch") {
+        crate::log::info!("[check]: Prefetch optimization is enabled.")
+    } else { 
+        crate::log::info!("[check]: Disable prefetching.")
+    }
 }
 
 pub fn start_instance(config: crate::Config) -> core::option::Option<()> {

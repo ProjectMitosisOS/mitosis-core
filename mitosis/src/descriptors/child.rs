@@ -10,7 +10,7 @@ use super::vma::VMADescriptor;
 use super::page_table::FlatPageTable;
 
 #[cfg(feature = "prefetch")]
-use super::remote_mapping::RemotePageTable;
+use crate::remote_mapping::{RemotePageTable,VirtAddr,PhysAddr};
 
 #[allow(unused_imports)]
 use super::parent::{CompactPageTable, Offset, Value};
@@ -22,7 +22,7 @@ use crate::remote_paging::AccessInfo;
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
 #[allow(dead_code)]
-#[derive(Default, Clone)]
+#[derive(Default)]
 pub struct ChildDescriptor {
     pub regs: RegDescriptor,
 
@@ -37,23 +37,28 @@ pub struct ChildDescriptor {
 }
 
 impl ChildDescriptor {
-    pub fn new(task: &crate::kern_wrappers::task::Task, mac_info: RDMADescriptor) -> Self {
+
+    /// # Warning: Deperacted
+    /// The ChildDescriptor can only be built from the ParentDescriptor's 
+    /// serialzied buffer
+    pub fn new(_task: &crate::kern_wrappers::task::Task, _mac_info: RDMADescriptor) -> Self {
+        unimplemented!();
+        /* 
         let (vma, pt) = task.generate_mm();
         Self {
             regs: task.generate_reg_descriptor(),
             page_table: pt,
             vma: vma,
             machine_info: mac_info,
-        }
+        }*/
     }
 
     #[inline]
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
         #[cfg(feature = "prefetch")]
         {
-            use crate::remote_mapping::VirtAddr;
             self.page_table
-                .translate(VirtAddr::new(virt))
+                .translate(VirtAddr::new(virt)).map(|v| v.as_u64())
         }
 
         #[cfg(not(feature = "prefetch"))]
@@ -164,7 +169,12 @@ impl os_network::serialize::Serialize for ChildDescriptor {
         crate::log::debug!("!!!!! start to deserialize vma, count: {}", count);
 
         // VMA & its corresponding page table
+        #[cfg(not(feature = "prefetch"))]
         let mut pt = FlatPageTable::new();
+
+        #[cfg(feature = "prefetch")]
+        let mut pt = RemotePageTable::new();
+
         let mut vmas = Vec::new();
 
         for _ in 0..count {
@@ -208,7 +218,11 @@ impl os_network::serialize::Serialize for ChildDescriptor {
                 let phy: Value = unsafe { cur.read_unaligned_at_head() };
                 cur = unsafe { cur.truncate_header(core::mem::size_of::<Value>())? };
 
+                #[cfg(not(feature = "prefetch"))]
                 pt.add_one(virt as VirtAddrType + vma_start, phy);
+
+                #[cfg(feature = "prefetch")]
+                pt.map(VirtAddr::new(virt as VirtAddrType + vma_start), PhysAddr::new(phy));
             }
         }
 
@@ -223,10 +237,12 @@ impl os_network::serialize::Serialize for ChildDescriptor {
     }
 
     fn serialization_buf_len(&self) -> usize {
+        unimplemented!();
+        /* 
         self.regs.serialization_buf_len()
             + self.page_table.serialization_buf_len()
             + core::mem::size_of::<usize>() // the number of VMA descriptors 
             + self.vma.len() * core::mem::size_of::<VMADescriptor>()
-            + self.machine_info.serialization_buf_len()
+            + self.machine_info.serialization_buf_len() */
     }
 }

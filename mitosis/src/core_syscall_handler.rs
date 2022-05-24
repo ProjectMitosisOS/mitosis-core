@@ -241,8 +241,13 @@ impl MitosisSysCallHandler {
         return 0;
     }
 
+    /// # Warning: Deperacted
+    /// This function is only used for testing
+    /// will be removed in the future
     #[inline]
     fn syscall_local_resume(&mut self, handler_id: c_ulong) -> c_long {
+        unimplemented!();
+        /* 
         if self.caller_status.resume_related.is_some() {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
@@ -261,8 +266,8 @@ impl MitosisSysCallHandler {
             });
             descriptor.apply_to(self.my_file);
             return 0;
-        }
-        return -1;
+        } 
+        return -1; */
     }
 
     /// This is just a sample test function
