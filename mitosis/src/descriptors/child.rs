@@ -108,6 +108,7 @@ impl ChildDescriptor {
 }
 
 impl ChildDescriptor {
+    #[cfg(not(feature = "prefetch"))]
     /// Resume one page at remote side
     ///
     /// @param remote_va: remote virt-addr
@@ -118,10 +119,12 @@ impl ChildDescriptor {
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
+        
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
             return None;
         }
+
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
         let res = crate::remote_paging::RemotePagingService::remote_read(
@@ -138,6 +141,44 @@ impl ChildDescriptor {
             }
         };
     }
+
+    #[cfg(feature = "prefetch")]
+    /// Resume one page at remote side
+    /// It will also prefetch adjacent pages if necessary
+    /// 
+    /// @param remote_va: remote virt-addr
+    /// @param access_info: remote network meta info
+    #[inline]
+    pub unsafe fn read_remote_page(
+        &self,
+        remote_va: VirtAddrType,
+        access_info: &AccessInfo,
+    ) -> Option<*mut crate::bindings::page> {
+        
+        let remote_pa = self.lookup_pg_table(remote_va);
+        if remote_pa.is_none() {
+            return None;
+        }
+
+        crate::log::info!("In prefetcher!");
+
+        let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
+        let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
+        let res = crate::remote_paging::RemotePagingService::remote_read(
+            new_page_pa,
+            remote_pa.unwrap(),
+            4096,
+            access_info,
+        );
+        return match res {
+            Ok(_) => Some(new_page_p),
+            Err(e) => {
+                crate::log::error!("Failed to read the remote page {:?}", e);
+                None
+            }
+        };
+    }    
+
 }
 
 impl os_network::serialize::Serialize for ChildDescriptor {

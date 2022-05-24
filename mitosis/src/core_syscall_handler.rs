@@ -415,14 +415,19 @@ unsafe extern "C" fn page_fault_handler(vmf: *mut crate::bindings::vm_fault) -> 
 }
 
 impl MitosisSysCallHandler {
+
+    /// Core logic of handling the page faults
     #[inline(always)]
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
+
         let fault_addr = (*vmf).address;
         self.incr_fault_page_cnt();
+
         let resume_related = self.caller_status.resume_related.as_ref().unwrap();
         let new_page = resume_related
             .descriptor
             .read_remote_page(fault_addr, &resume_related.access_info);
+            
         match new_page {
             Some(new_page_p) => {
                 (*vmf).page = new_page_p as *mut _;

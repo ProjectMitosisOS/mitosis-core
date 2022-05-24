@@ -9,6 +9,7 @@
 )]
 
 extern crate alloc;
+extern crate static_assertions;
 
 use mitosis_macros::declare_global;
 
@@ -229,9 +230,20 @@ pub mod remote_paging;
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
 
+/// The prefetcher uses a different QP than the sync page fault handle
+/// This design is intend to simplfiy coding & backward compatability 
+#[cfg(feature = "prefetch")]
+declare_global!(dc_pool_service_async, crate::dc_pool::DCPool<'static>);
+
 #[inline]
 pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_ref()
+}
+
+#[cfg(feature = "prefetch")]
+#[inline]
+pub unsafe fn get_dc_pool_async_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
+    crate::dc_pool_service_async::get_ref()
 }
 
 #[inline]
@@ -298,3 +310,5 @@ pub mod shadow_process_service;
 pub mod descriptors;
 
 pub mod mem_pools;
+
+pub mod prefetcher;

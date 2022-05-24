@@ -22,7 +22,7 @@ pub fn check_global_configurations() {
 
     if cfg!(feature = "prefetch") {
         crate::log::info!("[check]: Prefetch optimization is enabled.")
-    } else { 
+    } else {
         crate::log::info!("[check]: Disable prefetching.")
     }
 }
@@ -88,6 +88,13 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
         crate::dc_pool_service::init(
             crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool"),
         );
+
+        if cfg!(feature = "prefetch") {
+            crate::dc_pool_service_async::init(
+                crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool for the async ops"),
+            );
+        }
+
         crate::dc_target_service::init(
             crate::dc_pool::DCTargetPool::new(&config).expect("Failed to create DC Target pool"),
         )
@@ -130,12 +137,18 @@ pub fn end_instance() {
     unsafe {
         crate::dc_target_service::drop();
         crate::dc_pool_service::drop();
+
+        #[cfg(not(feature = "prefetch"))]        
+        crate::dc_pool_service_async::drop();
+
         crate::service_caller_pool::drop();
         crate::service_rpc::drop();
         crate::sp_service::drop();
         crate::mem_pool::drop();
     };
     end_rdma();
+
+    crate::log::info!("MITOSIS instance stopped, byte~")
 }
 
 /// calculate the session ID of the remote end handler
