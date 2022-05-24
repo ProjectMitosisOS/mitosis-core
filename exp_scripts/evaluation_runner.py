@@ -42,7 +42,6 @@ def sys_command_outstatuserr(cmd, timeout=30):
             return out, exitcode, err
         time.sleep(0.1)
 
-
 def trigger_bootstrap(dictory):
     data = []
     for root, dirs, files in os.walk(dictory):
@@ -56,7 +55,7 @@ def trigger_bootstrap(dictory):
                 sys_command_outstatuserr(cmd, timeout=60)
 
                 if len(filter) > 0: 
-                    trace = f.split("-")[1].split(".")[0]
+                    trace = int(f.split("-")[1].split(".")[0])
                     print("trace {}".format(trace))
 
                     print_process = Popen(("cat {}".format(os.path.join(root,f + ".txt")).split()), stdout=subprocess.PIPE)
@@ -69,7 +68,7 @@ def trigger_bootstrap(dictory):
 
                 print('finish\n-------\n', f)
 
-    print(tabulate(data, headers=["trace","data"]))
+    print(tabulate(sorted(data), headers=["trace","data"]))
 
 if __name__ == '__main__':
     trigger_bootstrap(input_dir)
