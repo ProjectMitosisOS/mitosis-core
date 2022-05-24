@@ -2,6 +2,7 @@
 //!
 //! Credits: https://github.com/rust-osdev/x86_64/blob/master/src/structures/paging/page_table.rs
 
+use alloc::boxed::Box;
 use core::fmt;
 use core::ops::{Index, IndexMut};
 
@@ -19,7 +20,7 @@ pub use x86_64::{
 pub struct PhysAddr(u64);
 
 /// The number of entries in a page table.
-const ENTRY_COUNT: usize = 512;
+pub const ENTRY_COUNT: usize = 512;
 
 pub type PageTableEntry = u64;
 
@@ -35,6 +36,8 @@ pub type PageTableEntry = u64;
 pub struct PageTable {
     entries: [PageTableEntry; ENTRY_COUNT],
     level: PageTableLevel,
+    upper_level: *mut PageTable,
+    upper_level_index: usize,
 }
 
 impl Drop for PageTable {
@@ -57,18 +60,46 @@ impl Drop for PageTable {
 impl PageTable {
     /// Creates an empty page table.
     #[inline]
-    pub const fn new(level: PageTableLevel) -> Self {
+    pub const fn new(level: PageTableLevel, upper: *mut Self, idx: usize) -> Self {
         const EMPTY: PageTableEntry = 0;
         PageTable {
             entries: [EMPTY; ENTRY_COUNT],
-            level,
+            level: level,
+            upper_level: upper,
+            upper_level_index: idx,
         }
+    }
+
+    /// Create an empty page table from upper layers
+    /// Return the pointer to the PageTable
+    /// The pointer is allocated from the heap,
+    /// i.e., can recovery to Box via `Box::from_raw`
+    #[inline]
+    pub unsafe fn new_from_upper(src: *mut Self, idx: usize) -> *mut Self {
+        let pt: &mut PageTable = &mut (*src);
+        Box::into_raw(Box::new(PageTable::new(
+            pt.get_level().next_lower_level().unwrap(),
+            src,
+            idx,
+        )))
     }
 
     /// Get the page table level
     #[inline]
     pub fn get_level(&self) -> PageTableLevel {
         self.level
+    }
+
+    /// Get the upper page
+    #[inline]
+    pub fn get_upper_level_page(&self) -> *mut Self { 
+        self.upper_level
+    }
+
+    /// Get the upper page index
+    #[inline]
+    pub fn get_upper_level_page_index(&self) -> usize { 
+        self.upper_level_index
     }
 
     /// Returns an iterator over the entries of the page table.
@@ -81,6 +112,17 @@ impl PageTable {
     #[inline]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut PageTableEntry> {
         self.entries.iter_mut()
+    }
+
+    /// Return a valid non-null index
+    #[inline]
+    pub fn find_valid_entry(&self, start_idx : usize) -> core::option::Option<usize> { 
+        for i in start_idx..ENTRY_COUNT { 
+            if self.entries[i] != 0 { 
+                return Some(i);
+            }
+        }
+        None
     }
 }
 
@@ -118,7 +160,7 @@ impl IndexMut<PageTableIndex> for PageTable {
 
 impl Default for PageTable {
     fn default() -> Self {
-        Self::new(PageTableLevel::One)
+        Self::new(PageTableLevel::Four, core::ptr::null_mut(),0)
     }
 }
 
