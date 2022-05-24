@@ -89,11 +89,11 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
             crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool"),
         );
 
-        if cfg!(feature = "prefetch") {
-            crate::dc_pool_service_async::init(
-                crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool for the async ops"),
-            );
-        }
+        #[cfg(feature = "prefetch")]
+        crate::dc_pool_service_async::init(
+            crate::dc_pool::DCPool::new(&config)
+                .expect("Failed to create DCQP pool for the async ops"),
+        );
 
         crate::dc_target_service::init(
             crate::dc_pool::DCTargetPool::new(&config).expect("Failed to create DC Target pool"),
@@ -138,7 +138,7 @@ pub fn end_instance() {
         crate::dc_target_service::drop();
         crate::dc_pool_service::drop();
 
-        #[cfg(not(feature = "prefetch"))]        
+        #[cfg(feature = "prefetch")]
         crate::dc_pool_service_async::drop();
 
         crate::service_caller_pool::drop();

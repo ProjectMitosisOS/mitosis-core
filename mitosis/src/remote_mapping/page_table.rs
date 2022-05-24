@@ -33,7 +33,7 @@ impl RemotePageTable {
     /// Create an empty page table
     pub fn new() -> Self {
         Self {
-            l4_page_table: Box::new(PageTable::new(PageTableLevel::Four)),
+            l4_page_table: Box::new(Default::default()),
             cnt: 0,
         }
     }
@@ -57,19 +57,12 @@ impl RemotePageTable {
     pub fn translate(&self, addr: VirtAddr) -> core::option::Option<PhysAddr> {
         let entry = RemotePage::containing_address(addr);
         let l3_pt =
-            unsafe { lookup_table(usize::from(entry.p4_index()), (&(*self.l4_page_table)) as _) };
+            unsafe { lookup_table(usize::from(entry.p4_index()), (&(*self.l4_page_table)) as _) }?;
 
-        if l3_pt.is_some() {
-            let l2_pt = unsafe { lookup_table(usize::from(entry.p3_index()), l3_pt.unwrap()) };
-            if l2_pt.is_some() {
-                let l1_pt = unsafe { lookup_table(usize::from(entry.p2_index()), l2_pt.unwrap()) };
-                if l1_pt.is_some() {
-                    return unsafe { lookup_table(usize::from(entry.p1_index()), l1_pt.unwrap()) }
-                        .map(|a| PhysAddr::new(a as _));
-                }
-            }
-        }
-        return None;
+        let l2_pt = unsafe { lookup_table(usize::from(entry.p3_index()), l3_pt) }?;
+        let l1_pt = unsafe { lookup_table(usize::from(entry.p2_index()), l2_pt) }?;
+        return unsafe { lookup_table(usize::from(entry.p1_index()), l1_pt) }
+            .map(|a| PhysAddr::new(a as _));
     }
 
     /// Add a (addr, phy) mapping to the page table.
@@ -100,6 +93,79 @@ impl RemotePageTable {
     }
 }
 
+/// PageTable iterator
+pub struct RemotePageTableIter {
+    // invariants: the cur page must be a valid level-4 page
+    cur_page: *mut PageTable,
+    cur_idx: usize,
+}
+
+impl RemotePageTableIter {
+    pub fn new(pt: &mut RemotePageTable) -> core::option::Option<Self> {
+        let mut res = Self {
+            cur_page: &mut (*pt.l4_page_table) as _,
+            cur_idx: 0,
+        };
+
+        res.cur_page = unsafe { Self::find_the_first_level_one_page(res.cur_page)? };
+        match unsafe { res.seek_to_next_valid() } { 
+            True => Some(res), 
+            False => None,
+        }
+    }
+
+    /// Find the next valid entry in the PTE
+    /// Return true if the current is valid
+    unsafe fn seek_to_next_valid(&mut self) -> bool {
+        let mut cur: &mut PageTable = &mut (*self.cur_page);
+        while cur[self.cur_idx] == 0 {
+            self.cur_idx += 1;
+            if self.cur_idx >= ENTRY_COUNT {
+                // find the next page
+            }
+        }
+        unimplemented!();
+    }
+
+    /// Find the first level one page
+    unsafe fn find_the_first_level_one_page(src : *mut PageTable) -> core::option::Option<*mut PageTable> { 
+        let mut cur = &mut (*src);
+        while cur.get_level() != PageTableLevel::One { 
+            let idx = cur.find_valid_entry(0)?;
+            cur = &mut *(cur[idx] as *mut PageTable);
+        }
+        Some(cur)
+    }
+
+    /// Find the next level page
+    /// For example, suppose our pages are:
+    ///    A
+    /// B<-  -> C
+    /// 
+    /// find_the_next_level_page(B) will return C
+    /// 
+    unsafe fn find_the_next_level_page(src : *mut PageTable) -> core::option::Option<*mut PageTable> { 
+
+        // recursive done
+        let src = &mut (*src);
+        if src.get_upper_level_page().is_null() { 
+            return None;
+        }
+
+        // this is level-one page, so the upper level page cannot be null
+        let upper = &mut (*src.get_upper_level_page());
+
+        let idx = upper.find_valid_entry(src.get_upper_level_page_index() + 1);
+        if idx.is_some() { 
+            // we are done
+        } else {
+            
+        }
+        unimplemented!();
+    }
+
+}
+
 /// Helper function to create or lookup the next-level page table
 #[inline]
 unsafe fn create_table(index: usize, src: *mut PageTable) -> *mut PageTable {
@@ -107,10 +173,7 @@ unsafe fn create_table(index: usize, src: *mut PageTable) -> *mut PageTable {
     let mut next_level = pt[index] as *mut PageTable;
 
     if next_level.is_null() {
-        next_level = Box::into_raw(Box::new(PageTable::new(
-            pt.get_level().next_lower_level().unwrap(),
-        )));
-        // crate::log::debug!("created next level {:?}", next_level);
+        next_level = PageTable::new_from_upper(src, index);
         pt[index] = next_level as _;
     }
     next_level
