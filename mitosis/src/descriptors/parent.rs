@@ -1,5 +1,5 @@
 use crate::descriptors::{
-    ChildDescriptor, FlatPageTable, RDMADescriptor, RegDescriptor, VMADescriptor,
+    ChildDescriptor, RDMADescriptor, RegDescriptor, VMADescriptor,
 };
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::{linux_kernel_module, VmallocAllocator};
@@ -44,12 +44,23 @@ impl ParentDescriptor {
     /// Transform into the flat descriptor.
     #[inline]
     pub fn to_descriptor(&self) -> ChildDescriptor {
-        let mut page_table = FlatPageTable::new();
+        #[cfg(feature = "prefetch")]
+        let mut page_table = crate::remote_mapping::RemotePageTable::new();
+
+        #[cfg(not(feature = "prefetch"))]
+        let mut page_table = super::page_table::FlatPageTable::new();
 
         for (vma_idx, vma_pg_table) in self.page_table.iter().enumerate() {
             let start = self.vma[vma_idx].get_start();
             for (offset, phy_addr) in &vma_pg_table.inner_pg_table {
+                #[cfg(not(feature = "prefetch"))]
                 page_table.add_one((*offset as VirtAddrType + start) as _, *phy_addr as _);
+
+                #[cfg(feature = "prefetch")]
+                page_table.map(
+                    crate::remote_mapping::VirtAddr::new(*offset as VirtAddrType + start),
+                    crate::remote_mapping::PhysAddr::new(*phy_addr),
+                );
             }
         }
 
@@ -133,7 +144,7 @@ impl os_network::serialize::Serialize for CompactPageTable {
             let virt: Offset = unsafe { cur.read_unaligned_at_head() };
             cur = unsafe { cur.truncate_header(core::mem::size_of::<Offset>())? };
 
-            let phy : Value = unsafe {cur.read_unaligned_at_head()  };
+            let phy: Value = unsafe { cur.read_unaligned_at_head() };
             cur = unsafe { cur.truncate_header(core::mem::size_of::<Value>())? };
 
             res.push((virt, phy));
@@ -193,7 +204,7 @@ impl os_network::serialize::Serialize for ParentDescriptor {
         for (i, vma_pg_table) in self.page_table.iter().enumerate() {
             let vma = self.vma[i];
             vma.serialize(&mut cur);
-            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };            
+            cur = unsafe { cur.truncate_header(vma.serialization_buf_len()).unwrap() };
 
             vma_pg_table.serialize(&mut cur);
             cur = unsafe {
@@ -228,7 +239,7 @@ impl os_network::serialize::Serialize for ParentDescriptor {
         for _ in 0..count {
             let vma = VMADescriptor::deserialize(&cur)?;
             cur = unsafe { cur.truncate_header(vma.serialization_buf_len())? };
-            vmas.push(vma);            
+            vmas.push(vma);
 
             let vma_pg_table = CompactPageTable::deserialize(&cur)?;
             cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };

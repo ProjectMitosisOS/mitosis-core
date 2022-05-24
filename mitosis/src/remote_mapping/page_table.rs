@@ -24,14 +24,23 @@ pub struct RemotePageTable {
     // note: we use the box as the inner data type/
     // otherwise, this data structure can easily overflow the kernel stack
     l4_page_table: Box<PageTable>,
+
+    // number of mapped PTE in the page table
+    cnt: usize,
 }
 
 impl RemotePageTable {
-    /// create an empty page table
+    /// Create an empty page table
     pub fn new() -> Self {
         Self {
             l4_page_table: Box::new(PageTable::new(PageTableLevel::Four)),
+            cnt: 0,
         }
+    }
+
+    /// Return the number of mapped PTEs i nthe page table
+    pub fn len(&self) -> usize {
+        self.cnt
     }
 
     /// check whether all entries in the pagetable is zero
@@ -83,6 +92,7 @@ impl RemotePageTable {
         let res = l1_pt[usize::from(entry.p1_index())];
         if res == 0 {
             l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
+            self.cnt += 1;
             return None;
         }
 
@@ -118,4 +128,10 @@ unsafe fn lookup_table(
         return None;
     }
     Some(res)
+}
+
+impl Default for RemotePageTable {
+    fn default() -> Self {
+        Self::new()
+    }
 }
