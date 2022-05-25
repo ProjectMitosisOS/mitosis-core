@@ -105,6 +105,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 
     //  Memory pool for the shadow process service
     unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size)) };
+    unsafe { crate::global_page_cache::init(crate::remote_mapping::PageCache::default()) };
 
     // TODO: other services
 
@@ -145,6 +146,7 @@ pub fn end_instance() {
         crate::service_rpc::drop();
         crate::sp_service::drop();
         crate::mem_pool::drop();
+        crate::global_page_cache::drop();
     };
     end_rdma();
 

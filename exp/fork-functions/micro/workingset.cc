@@ -95,6 +95,11 @@ int main(int argc, char **argv)
         printf("first execution (cold start) done\n");
     }
 
+    {
+        handler();
+        printf("second execution (warm start) done\n");
+    }
+
     // prepare 
     if (FLAGS_whether_prepare > 0) {
         Timer<std::chrono::milliseconds, std::chrono::steady_clock> clock;
@@ -107,7 +112,7 @@ int main(int argc, char **argv)
     // warm start 
     {
         handler();
-        printf("second execution (warm start) done\n");
+        printf("second execution after prepare (warm start) done\n");
     }
 
     // free(buffer);
