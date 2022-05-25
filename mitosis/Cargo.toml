@@ -19,6 +19,7 @@ cow = []           # use CoW strategy when prepare parent VMA ; or else copying 
 eager-resume = [] # use eager page-fetching strategy instead of fetching while page fault
 resume-profile = [] # peak resume running profile
 prefetch = [] # whether to open prefetch
+page-cache=[]
 
 [dependencies]
 mitosis-protocol = { path = "../mitosis-user-libs/mitosis-protocol" }

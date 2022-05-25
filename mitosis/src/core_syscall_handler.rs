@@ -2,7 +2,7 @@ use alloc::string::String;
 use core::option::Option;
 
 #[allow(unused_imports)]
-use crate::descriptors::{ParentDescriptor, ChildDescriptor};
+use crate::descriptors::{ChildDescriptor, ParentDescriptor};
 
 use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
@@ -20,6 +20,7 @@ use crate::startup::probe_remote_rpc_end;
 #[allow(dead_code)]
 struct ResumeDataStruct {
     handler_id: usize,
+    remote_mac_id: usize,
     descriptor: crate::descriptors::ChildDescriptor,
     access_info: crate::remote_paging::AccessInfo,
 }
@@ -209,13 +210,13 @@ impl MitosisSysCallHandler {
         crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
 
         // code for sanity checks
-        /* 
+        /*
         let mm = crate::kern_wrappers::task::Task::new().get_memory_descriptor();
-        let vma = mm.find_vma(0x5bf000);        
-        if vma.is_none() { 
-            crate::log::debug!("failed to lookup vma"); 
+        let vma = mm.find_vma(0x5bf000);
+        if vma.is_none() {
+            crate::log::debug!("failed to lookup vma");
         }
-        vma.map(|vma| { 
+        vma.map(|vma| {
             crate::log::info!("sanity check vma {:?}", vma);
             unsafe { crate::bindings::print_file_path(vma.vm_file) };
         });
@@ -260,6 +261,7 @@ impl MitosisSysCallHandler {
             let descriptor = descriptor.unwrap().to_descriptor();
             self.caller_status.resume_related = Some(ResumeDataStruct {
                 handler_id: handler_id as _,
+                remote_mac_id: 0,
                 descriptor: descriptor.clone(),
                 // access info cannot failed to create
                 access_info: AccessInfo::new(&descriptor.machine_info).unwrap(),
@@ -329,26 +331,26 @@ impl MitosisSysCallHandler {
                         }
 
                         // deserialize
-                        let des = {                            
+                        let des = {
                             /*  legacy version
                             let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
                             if des.is_none() {
                                 crate::log::error!("failed to deserialize descriptor");
                                 return -1;
                             }
-                            des.unwrap().to_descriptor() 
+                            des.unwrap().to_descriptor()
                             */
 
                             // optimized version
                             ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
                         };
-                        
-                        if des.is_none() { 
+
+                        if des.is_none() {
                             crate::log::error!("failed to deserialize the child descriptor");
                             return -1;
                         }
 
-                        let des = des.unwrap(); 
+                        let des = des.unwrap();
 
                         let access_info = AccessInfo::new(&des.machine_info);
                         if access_info.is_none() {
@@ -360,6 +362,7 @@ impl MitosisSysCallHandler {
 
                         self.caller_status.resume_related = Some(ResumeDataStruct {
                             handler_id: handler_id as _,
+                            remote_mac_id: machine_id as _,
                             descriptor: des,
                             // access info cannot failed to create
                             access_info: access_info.unwrap(),
@@ -424,13 +427,70 @@ impl MitosisSysCallHandler {
         self.incr_fault_page_cnt();
 
         let resume_related = self.caller_status.resume_related.as_ref().unwrap();
-        let new_page = resume_related
-            .descriptor
-            .read_remote_page(fault_addr, &resume_related.access_info);
-            
+        let resume_info = self.caller_status.resume_related.as_ref().unwrap();
+
+        #[cfg(feature = "page-cache")]
+        let mut hit_page_cache = false;
+        let phy_addr = resume_related.descriptor.lookup_pg_table(fault_addr);
+
+        let new_page = {
+            if phy_addr.is_none() {
+                None
+            } else {
+                let phy_addr = phy_addr.unwrap();
+                #[cfg(feature = "page-cache")]
+                {
+                    // if let Some(page) = crate::get_page_cache_mut().lookup_mut(
+                    if let Some(page) = crate::get_page_cache_ref().lookup(
+                        resume_info.remote_mac_id,
+                        resume_info.handler_id,
+                        phy_addr,
+                    ) {
+                        // TODO: check whether the page is READ only.
+                        hit_page_cache = true;
+                        crate::log::debug!(
+                            "Hit Cache ! page cache len:{}",
+                            crate::get_page_cache_ref().entry_len()
+                        );
+                        let new_page_p =
+                            crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
+
+                        crate::remote_mapping::page_cache::copy_kernel_page(
+                            new_page_p,
+                            page.get_kva() as _,
+                        );
+                        Some(new_page_p)
+                        // let p = page.inner as *mut crate::bindings::page;
+                        // crate::remote_mapping::page_cache::cow_page(p);
+                        // Some(p)
+                    } else {
+                        resume_related
+                            .descriptor
+                            .read_remote_page(phy_addr, &resume_related.access_info)
+                    }
+                }
+                #[cfg(not(feature = "page-cache"))]
+                resume_related
+                    .descriptor
+                    .read_remote_page(phy_addr, &resume_related.access_info)
+            }
+        };
         match new_page {
             Some(new_page_p) => {
                 (*vmf).page = new_page_p as *mut _;
+                // update cache
+                #[cfg(feature = "page-cache")]
+                if core::intrinsics::unlikely(!hit_page_cache && phy_addr.is_some()) {
+                    let cow4k_page = crate::shadow_process::COW4KPage::new(new_page_p);
+                    if core::intrinsics::likely(cow4k_page.is_some()) {
+                        crate::get_page_cache_mut().insert(
+                            resume_info.remote_mac_id,
+                            resume_info.handler_id,
+                            phy_addr.unwrap(),
+                            cow4k_page.unwrap(),
+                        );
+                    }
+                }
                 0
             }
             None => {

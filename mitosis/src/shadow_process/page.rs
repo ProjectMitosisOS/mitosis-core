@@ -72,7 +72,7 @@ impl Drop for Copy4KPage {
 /// A wrapper over the original linux's page data structure
 /// It will mark the original page using COW
 pub struct COW4KPage {
-    inner: &'static mut page, // linux data structure wrapper always use the 'static lifetime
+    pub inner: &'static mut page, // linux data structure wrapper always use the 'static lifetime
 }
 
 impl COW4KPage {
@@ -83,6 +83,10 @@ impl COW4KPage {
         Some(Self {
             inner: &mut (*page),
         })
+    }
+
+    pub fn get_kva(&self) -> *mut crate::linux_kernel_module::c_types::c_void {
+        unsafe { pmem_phys_to_virt(pmem_page_to_phy(self.inner as *const _ as _)) }
     }
 }
 

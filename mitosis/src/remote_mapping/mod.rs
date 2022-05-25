@@ -6,6 +6,8 @@
 
 pub use page_structures::*;
 pub use page_table::{RemotePage, RemotePageTable, RemotePageTableIter};
+pub use page_cache::{PageCache};
 
 pub mod page_structures;
 pub mod page_table;
+pub mod page_cache;

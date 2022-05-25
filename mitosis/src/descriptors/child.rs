@@ -92,12 +92,18 @@ impl ChildDescriptor {
             if cfg!(feature = "eager-resume") {
                 let (size, start) = (m.get_sz(), m.get_start());
                 for addr in (start..start + size).step_by(4096) {
-                    if let Some(new_page_p) = unsafe { self.read_remote_page(addr, &access_info) } {
-                        // FIXME: 52 is hard-coded
-                        vma.vm_page_prot.pgprot =
-                            vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
-                        let _ =
-                            unsafe { crate::bindings::pmem_vm_insert_page(vma, addr, new_page_p) };
+                    let pa = self.lookup_pg_table(addr);
+                    if pa.is_some() {
+                        if let Some(new_page_p) =
+                            unsafe { self.read_remote_page(pa.unwrap(), &access_info) }
+                        {
+                            // FIXME: 52 is hard-coded
+                            vma.vm_page_prot.pgprot =
+                                vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
+                            let _ = unsafe {
+                                crate::bindings::pmem_vm_insert_page(vma, addr, new_page_p)
+                            };
+                        }
                     }
                 }
             }
@@ -116,20 +122,18 @@ impl ChildDescriptor {
     #[inline]
     pub unsafe fn read_remote_page(
         &self,
-        remote_va: VirtAddrType,
+        remote_pa: PhyAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
-        
-        let remote_pa = self.lookup_pg_table(remote_va);
-        if remote_pa.is_none() {
-            return None;
-        }
-
+        // let remote_pa = self.lookup_pg_table(remote_va);
+        // if remote_pa.is_none() {
+        //     return None;
+        // }
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
         let res = crate::remote_paging::RemotePagingService::remote_read(
             new_page_pa,
-            remote_pa.unwrap(),
+            remote_pa,
             4096,
             access_info,
         );

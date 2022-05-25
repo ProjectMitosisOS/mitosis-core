@@ -297,6 +297,18 @@ pub unsafe fn get_mem_pool_mut() -> &'static mut crate::mem_pools::MemPool {
     crate::mem_pool::get_mut()
 }
 
+declare_global!(global_page_cache, crate::remote_mapping::PageCache);
+
+#[inline]
+pub unsafe fn get_page_cache_ref() -> &'static crate::remote_mapping::PageCache {
+    crate::global_page_cache::get_ref()
+}
+
+#[inline]
+pub unsafe fn get_page_cache_mut() -> &'static mut crate::remote_mapping::PageCache {
+    crate::global_page_cache::get_mut()
+}
+
 // pub mod resume;
 pub mod core_syscall_handler;
 pub mod syscalls;
