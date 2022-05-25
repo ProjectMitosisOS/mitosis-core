@@ -101,6 +101,24 @@ impl MySyscallHandler {
         );
 
         // finally, we test the case when the keys are sorted
+        keys.sort();
+
+        temp = new_pt
+            .find_l1_page_idx(VirtAddr::new(*(keys[keys.len() / 2])))
+            .unwrap();
+
+        let iter1 = unsafe { RemotePageTableIter::new_from_l1(temp.0, temp.1) };
+
+        let mut counter3 = 0;
+        for _addr in iter1 {
+            // crate::log::info!("check addr {:?}", addr);
+            counter3 += 1;
+        }
+        crate::log::info!(
+            "The counter3 ({}) should be roughly half of {}",
+            counter3,
+            keys.len()
+        );
         0
     }
 }
