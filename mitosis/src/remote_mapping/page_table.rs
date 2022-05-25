@@ -94,43 +94,58 @@ impl RemotePageTable {
 }
 
 /// PageTable iterator
+#[derive(Debug)]
 pub struct RemotePageTableIter {
     // invariants: the cur page must be a valid level-4 page
     cur_page: *mut PageTable,
-    cur_idx: usize,
+    cur_idx: isize,
+}
+
+impl Iterator for RemotePageTableIter {
+    type Item = PhysAddr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut cur_page = unsafe { &mut (*self.cur_page) };
+        loop {
+            self.cur_idx += 1;
+
+            if self.cur_idx >= (ENTRY_COUNT as isize) { 
+                // we need to find another page
+            } else { 
+                let idx = cur_page.find_valid_entry(self.cur_idx as _); 
+                if idx.is_some() { 
+                    // done
+                    self.cur_idx = idx.unwrap() as isize;
+                    return Some(PhysAddr::new(cur_page[idx.unwrap()]));
+                }                
+            }
+
+            // we should go to the next page 
+            self.cur_idx = -1; 
+            let next_page = unsafe { Self::find_the_next_neighbour(self.cur_page)? };
+            self.cur_page = next_page;
+            cur_page = unsafe { &mut (*next_page) };
+        }
+    }
 }
 
 impl RemotePageTableIter {
     pub fn new(pt: &mut RemotePageTable) -> core::option::Option<Self> {
         let mut res = Self {
             cur_page: &mut (*pt.l4_page_table) as _,
-            cur_idx: 0,
+            cur_idx: -1,
         };
 
         res.cur_page = unsafe { Self::find_the_first_level_one_page(res.cur_page)? };
-        match unsafe { res.seek_to_next_valid() } { 
-            r#true => Some(res), 
-            r#false => None,
-        }
-    }
-
-    /// Find the next valid entry in the PTE
-    /// Return true if the current is valid
-    unsafe fn seek_to_next_valid(&mut self) -> bool {
-        let mut cur: &mut PageTable = &mut (*self.cur_page);
-        while cur[self.cur_idx] == 0 {
-            self.cur_idx += 1;
-            if self.cur_idx >= ENTRY_COUNT {
-                // find the next page
-            }
-        }
-        unimplemented!();
+        Some(res)
     }
 
     /// Find the first level one page
-    unsafe fn find_the_first_level_one_page(src : *mut PageTable) -> core::option::Option<*mut PageTable> { 
+    unsafe fn find_the_first_level_one_page(
+        src: *mut PageTable,
+    ) -> core::option::Option<*mut PageTable> {
         let mut cur = &mut (*src);
-        while cur.get_level() != PageTableLevel::One { 
+        while cur.get_level() != PageTableLevel::One {
             let idx = cur.find_valid_entry(0)?;
             cur = &mut *(cur[idx] as *mut PageTable);
         }
@@ -141,14 +156,13 @@ impl RemotePageTableIter {
     /// For example, suppose our pages are:
     ///    A
     /// B<-  -> C
-    /// 
+    ///
     /// find_the_next_level_page(B) will return C
-    /// 
-    unsafe fn find_the_next_level_page(src : *mut PageTable) -> core::option::Option<*mut PageTable> { 
-
-        // recursive done
+    ///
+    unsafe fn find_the_next_neighbour(src: *mut PageTable) -> core::option::Option<*mut PageTable> {
+        // recursion done
         let src = &mut (*src);
-        if src.get_upper_level_page().is_null() { 
+        if src.get_upper_level_page().is_null() {
             return None;
         }
 
@@ -156,14 +170,19 @@ impl RemotePageTableIter {
         let upper = &mut (*src.get_upper_level_page());
 
         let idx = upper.find_valid_entry(src.get_upper_level_page_index() + 1);
-        if idx.is_some() { 
-            // we are done
+        if idx.is_some() {
+            // we are done, simple case
+            Some(upper[idx.unwrap()] as _)
         } else {
-            
-        }
-        unimplemented!();
-    }
+            // we need find another neighbour of the upper
+            let upper = Self::find_the_next_neighbour(src.get_upper_level_page())?;
+            let upper = &mut (*upper);
 
+            // there must be a valid one according to the nature of
+            let idx = upper.find_valid_entry(0)?;
+            Some(upper[idx] as _)
+        }
+    }
 }
 
 /// Helper function to create or lookup the next-level page table
