@@ -10,7 +10,7 @@ use super::vma::VMADescriptor;
 use super::page_table::FlatPageTable;
 
 #[cfg(feature = "prefetch")]
-use crate::remote_mapping::{RemotePageTable,VirtAddr,PhysAddr};
+use crate::remote_mapping::{PhysAddr, RemotePageTable, RemotePageTableIter, VirtAddr};
 
 #[allow(unused_imports)]
 use super::parent::{CompactPageTable, Offset, Value};
@@ -37,13 +37,12 @@ pub struct ChildDescriptor {
 }
 
 impl ChildDescriptor {
-
     /// # Warning: Deperacted
-    /// The ChildDescriptor can only be built from the ParentDescriptor's 
+    /// The ChildDescriptor can only be built from the ParentDescriptor's
     /// serialzied buffer
     pub fn new(_task: &crate::kern_wrappers::task::Task, _mac_info: RDMADescriptor) -> Self {
         unimplemented!();
-        /* 
+        /*
         let (vma, pt) = task.generate_mm();
         Self {
             regs: task.generate_reg_descriptor(),
@@ -58,7 +57,8 @@ impl ChildDescriptor {
         #[cfg(feature = "prefetch")]
         {
             self.page_table
-                .translate(VirtAddr::new(virt)).map(|v| v.as_u64())
+                .translate(VirtAddr::new(virt))
+                .map(|v| v.as_u64())
         }
 
         #[cfg(not(feature = "prefetch"))]
@@ -119,7 +119,6 @@ impl ChildDescriptor {
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
-        
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
             return None;
@@ -145,7 +144,10 @@ impl ChildDescriptor {
     #[cfg(feature = "prefetch")]
     /// Resume one page at remote side
     /// It will also prefetch adjacent pages if necessary
-    /// 
+    ///
+    /// This function is a little complex.
+    /// It will handle prefetch stuffs during the polling process
+    ///
     /// @param remote_va: remote virt-addr
     /// @param access_info: remote network meta info
     #[inline]
@@ -154,27 +156,84 @@ impl ChildDescriptor {
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
-        
-        /* 
-        let remote_pa = self.lookup_pg_table(remote_va);
-        if remote_pa.is_none() {
-            return None;
-        } */
-
         crate::log::info!("In prefetcher!");
         let (pt, idx) = self.page_table.find_l1_page_idx(VirtAddr::new(remote_va))?;
         let l1_page = &mut (*pt);
-        
+
         let remote_pa = l1_page[idx];
 
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
+
+        /*
         let res = crate::remote_paging::RemotePagingService::remote_read(
             new_page_pa,
             remote_pa,
             4096,
             access_info,
-        );
+        ); */
+
+        // FIXME: currently this code is from the remote_mapping.rs
+        // But we need to trigger much code in it
+        let res = {
+            use crate::remote_paging::{DCReqPayload, TIMEOUT_USEC};
+            use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
+            use core::pin::Pin;
+            use os_network::timeout::TimeoutWRef;
+            use os_network::{block_on, Conn};
+
+            let pool_idx = crate::bindings::pmem_get_current_cpu() as usize;
+            let (dc_qp, lkey) = crate::get_dc_pool_service_mut()
+                .get_dc_qp_key(pool_idx)
+                .expect("failed to get DCQP");
+
+            let mut payload = DCReqPayload::default()
+                .set_laddr(new_page_pa)
+                .set_raddr(remote_pa) // copy from src into dst
+                .set_sz(4096)
+                .set_lkey(*lkey)
+                .set_rkey(access_info.rkey)
+                .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
+                .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
+                .set_ah_ptr(access_info.ah.get_inner())
+                .set_dc_access_key(access_info.dct_key as _)
+                .set_dc_num(access_info.dct_num);
+
+            let mut payload = Pin::new_unchecked(&mut payload);
+            os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+
+            // now sending the RDMA request
+            dc_qp.post(&payload.as_ref()).unwrap(); // FIXME: it should never fail
+
+            // Note, we do the prefetch things here
+            // This can overlap with the networking requests latency
+            // find prefetch pages
+            let page_iter = RemotePageTableIter::new_from_l1(pt, idx);
+            for (i, page) in page_iter.enumerate() {
+                if i >= 2 {
+                    break;
+                }
+                crate::log::info!("Test prefetch physical address {:?}", page);
+            }
+
+            // wait for the request to complete
+            let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
+            match block_on(&mut timeout_dc) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    if e.is_elapsed() {
+                        // The fallback path? DC cannot distinguish from failures
+                        // unimplemented!();
+                        crate::log::error!("fatal, timeout on reading the DC QP");
+                        Err(os_network::rdma::Err::Timeout)
+                        //Ok(())
+                    } else {
+                        Err(e.into_inner().unwrap())
+                    }
+                }
+            }
+        };
+
         return match res {
             Ok(_) => Some(new_page_p),
             Err(e) => {
@@ -182,8 +241,7 @@ impl ChildDescriptor {
                 None
             }
         };
-    }    
-
+    }
 }
 
 impl os_network::serialize::Serialize for ChildDescriptor {
@@ -268,7 +326,10 @@ impl os_network::serialize::Serialize for ChildDescriptor {
                 pt.add_one(virt as VirtAddrType + vma_start, phy);
 
                 #[cfg(feature = "prefetch")]
-                pt.map(VirtAddr::new(virt as VirtAddrType + vma_start), PhysAddr::new(phy));
+                pt.map(
+                    VirtAddr::new(virt as VirtAddrType + vma_start),
+                    PhysAddr::new(phy),
+                );
             }
         }
 
@@ -284,10 +345,10 @@ impl os_network::serialize::Serialize for ChildDescriptor {
 
     fn serialization_buf_len(&self) -> usize {
         unimplemented!();
-        /* 
+        /*
         self.regs.serialization_buf_len()
             + self.page_table.serialization_buf_len()
-            + core::mem::size_of::<usize>() // the number of VMA descriptors 
+            + core::mem::size_of::<usize>() // the number of VMA descriptors
             + self.vma.len() * core::mem::size_of::<VMADescriptor>()
             + self.machine_info.serialization_buf_len() */
     }
