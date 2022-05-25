@@ -55,14 +55,28 @@ impl RemotePageTable {
 
     /// Lookup the physical address using the $addr$
     pub fn translate(&self, addr: VirtAddr) -> core::option::Option<PhysAddr> {
+        let (pt, index) = self.find_l1_page_idx(addr)?;
+        let pt = unsafe { &mut (*pt) } ;
+        if pt[index] != 0 { 
+            Some(PhysAddr::new(pt[index])) 
+        } else { 
+            None
+        }
+    }
+
+    /// Lookup the last-level page of the requested address
+    /// Return: 
+    /// - Page ptr, Entry index
+    /// 
+    #[inline]
+    pub fn find_l1_page_idx(&self, addr : VirtAddr) -> core::option::Option<(*mut PageTable, usize)> { 
         let entry = RemotePage::containing_address(addr);
         let l3_pt =
             unsafe { lookup_table(usize::from(entry.p4_index()), (&(*self.l4_page_table)) as _) }?;
 
         let l2_pt = unsafe { lookup_table(usize::from(entry.p3_index()), l3_pt) }?;
-        let l1_pt = unsafe { lookup_table(usize::from(entry.p2_index()), l2_pt) }?;
-        return unsafe { lookup_table(usize::from(entry.p1_index()), l1_pt) }
-            .map(|a| PhysAddr::new(a as _));
+        let l1_pt = unsafe { lookup_table(usize::from(entry.p2_index()), l2_pt) }?;        
+        return Some((l1_pt, usize::from(entry.p1_index())))
     }
 
     /// Add a (addr, phy) mapping to the page table.
@@ -138,6 +152,16 @@ impl RemotePageTableIter {
 
         res.cur_page = unsafe { Self::find_the_first_level_one_page(res.cur_page)? };
         Some(res)
+    }
+
+    /// Directly initialize from a l4 page.
+    /// Note that we don't check the correctness of the passed arguments,
+    /// So this function is unsafe. 
+    pub unsafe fn new_from_l1(l4_page : *mut PageTable, index : usize) -> Self { 
+        Self { 
+            cur_page : l4_page, 
+            cur_idx : index as _,
+        }
     }
 
     /// Find the first level one page
