@@ -1,5 +1,7 @@
 use core::fmt::Debug;
 
+pub use strategies::StepPrefetcher;
+
 /// The maximum number of pages to prefetch
 /// To achieve a better performance, we must restrict it to a small number
 pub const K_MAX_PREFETCH_NUM : usize = 4;
@@ -48,3 +50,5 @@ where T :  Copy + Debug + Default
         Self::new()
     }
 }
+
+pub mod strategies;
