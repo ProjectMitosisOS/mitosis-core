@@ -155,18 +155,23 @@ impl ChildDescriptor {
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
         
+        /* 
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
             return None;
-        }
+        } */
 
         crate::log::info!("In prefetcher!");
+        let (pt, idx) = self.page_table.find_l1_page_idx(VirtAddr::new(remote_va))?;
+        let l1_page = &mut (*pt);
+        
+        let remote_pa = l1_page[idx];
 
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
         let res = crate::remote_paging::RemotePagingService::remote_read(
             new_page_pa,
-            remote_pa.unwrap(),
+            remote_pa,
             4096,
             access_info,
         );
