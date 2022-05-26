@@ -55,7 +55,7 @@ static void __attribute__((optimize("O2"))) handler()
 {
     uint64_t sum = 0;
     int count = 0;
-    Timer<std::chrono::milliseconds, std::chrono::steady_clock> clock;
+    Timer<std::chrono::microseconds , std::chrono::steady_clock> clock;
     auto random = clock.duration();
 
     clock.tick();
@@ -68,8 +68,9 @@ static void __attribute__((optimize("O2"))) handler()
     }
 
     clock.tock();
-    std::cout << "Run time = " << clock.duration().count() << " ms\n";    
-    printf("check final output %llu, count %d\n", sum, count);
+    double time = double(clock.duration().count()) / 1000;
+    std::cout << "Run time = " << time << " ms\n";
+//    printf("check final output %llu, count %d\n", sum, count);
 }
 
 int main(int argc, char **argv)
@@ -102,11 +103,11 @@ int main(int argc, char **argv)
 
     // prepare 
     if (FLAGS_whether_prepare > 0) {
-        Timer<std::chrono::milliseconds, std::chrono::steady_clock> clock;
+        Timer<std::chrono::microseconds , std::chrono::steady_clock> clock;
         clock.tick();
         fork_prepare_ping(sd, FLAGS_handler_id);    
         clock.tock();
-        std::cout << "prepare time = " << clock.duration().count() << " ms\n";    
+        std::cout << "prepare time = " << double(clock.duration().count())/1000 << " ms\n";
     }
 
     // warm start 
