@@ -90,7 +90,7 @@ impl RemotePagingService {
 
     /// read the remote physical addr `dst` to `src`, both expressed in physical address
     #[inline]
-    pub(crate) fn remote_read(
+    pub fn remote_read(
         dst: PhyAddrType,
         src: PhyAddrType,
         sz: usize,

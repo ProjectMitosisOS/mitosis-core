@@ -20,3 +20,9 @@ impl<T: Copy + Debug + Default, const N: usize> StepPrefetcher<T, N> {
         self.inner        
     }
 }
+
+impl<T: Copy + Debug + Default, const N: usize> StepPrefetcher<T, N> {
+    pub fn new() -> Self { 
+        Default::default()
+    }
+}

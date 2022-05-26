@@ -15,7 +15,7 @@ pub use x86_64::{
 /// We cannot use the PhysAddr in x86_64
 /// This is because it will raise a
 /// "physical addresses must not have any bits in the range 52 to 64 set" error
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(transparent)]
 pub struct PhysAddr(u64);
 

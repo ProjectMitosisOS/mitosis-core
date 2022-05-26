@@ -443,12 +443,7 @@ impl MitosisSysCallHandler {
                         //crate::bindings::get_zeroed_page(crate::bindings::PMEM_GFP_HIGHUSER);
 
                         (*vmf).page = new_page_p as *mut _;
-                        // crate::log::error!("in handle expand page {:?}", new_page_p);
-                        // crate::log::error!("check vma {:?}", vma);
-                        // crate::log::error!("check vma descriptor {:?}", vd);
                         return 0;
-                        // return crate::bindings::FaultFlags::SIGSEGV.bits()
-                        //   as linux_kernel_module::c_types::c_int;
                     }
                 }
 
