@@ -19,6 +19,9 @@ use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::kern_wrappers::task::Task;
 use crate::remote_paging::AccessInfo;
 
+#[cfg(feature = "prefetch")]
+use crate::prefetcher::*;
+
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
 #[allow(dead_code)]
@@ -156,6 +159,8 @@ impl ChildDescriptor {
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
+        use crate::remote_mapping::PhysAddr;
+
         crate::log::info!("In prefetcher!");
         let (pt, idx) = self.page_table.find_l1_page_idx(VirtAddr::new(remote_va))?;
         let l1_page = &mut (*pt);
@@ -208,13 +213,10 @@ impl ChildDescriptor {
             // Note, we do the prefetch things here
             // This can overlap with the networking requests latency
             // find prefetch pages
-            let page_iter = RemotePageTableIter::new_from_l1(pt, idx);
-            for (i, page) in page_iter.enumerate() {
-                if i >= 2 {
-                    break;
-                }
-                crate::log::info!("Test prefetch physical address {:?}", page);
-            }
+
+            let req = StepPrefetcher::<PhysAddr, 2>::new()
+                .generate_request(&mut RemotePageTableIter::new_from_l1(pt, idx));
+            crate::log::info!("Test prefetch req: {:?}", req);
 
             // wait for the request to complete
             let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
