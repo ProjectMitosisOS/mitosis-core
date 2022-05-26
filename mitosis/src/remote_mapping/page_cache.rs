@@ -38,7 +38,8 @@ pub unsafe fn copy_kernel_page(dst: *mut page, src_va: VirtAddrType) {
     );
 }
 
-pub unsafe fn cow_page(page: *mut page) {
+/// Mark the target page as COW mode
+pub unsafe fn mark_cow(page: *mut page) {
     crate::bindings::pmem_get_page(page);
     crate::bindings::pmem_page_dup_rmap(page, false);
 }
