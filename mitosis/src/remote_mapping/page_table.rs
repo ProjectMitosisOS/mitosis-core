@@ -93,8 +93,8 @@ impl RemotePageTable {
         let res = l1_pt[usize::from(entry.p1_index())];
         if res == 0 {
             // The bottom bit of a physical page cannot be 1 (4KB aligned)
-            // We will encode the remote information in this bit 
-            assert!(phy.bottom_bit() != 1); 
+            // We will encode the remote information in this bit
+            assert!(phy.bottom_bit() != 1);
             l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
             self.cnt += 1;
             return None;
@@ -124,7 +124,7 @@ pub struct RemotePageTableIter {
 }
 
 impl Iterator for RemotePageTableIter {
-    type Item = PhysAddr;
+    type Item = (*mut PageTable, PhysAddr);
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut cur_page = unsafe { &mut (*self.cur_page) };
@@ -138,7 +138,7 @@ impl Iterator for RemotePageTableIter {
                 if idx.is_some() {
                     // done
                     self.cur_idx = idx.unwrap() as isize;
-                    return Some(PhysAddr::new(cur_page[idx.unwrap()]));
+                    return Some((self.cur_page, PhysAddr::new(cur_page[idx.unwrap()])));
                 }
             }
 
