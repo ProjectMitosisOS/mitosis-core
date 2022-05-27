@@ -17,11 +17,17 @@ fn test_basic() {
     log::info!("in test basic page_table: {:?}, is empty {}", pt, pt.is_empty());
         
     // map a single page
-    assert!(pt.map(VirtAddr::new(4096), PhysAddr::new(73)).is_none());
+    assert!(pt.map(VirtAddr::new(4096), PhysAddr::new(72)).is_none());
     log::info!("in test basic page_table: {:?}, is empty {}", pt, pt.is_empty());
 
-    log::info!("check lookup result {:?}", pt.translate(VirtAddr::new(0xdeadbeaf)));
     log::info!("check lookup result {:?}", pt.translate(VirtAddr::new(4096)));
+
+    // test paging data structures 
+    let zero = PhysAddr::new(0xdeadbeaf);     
+    log::info!("top bit: {}", zero.bottom_bit()); 
+
+    let one = PhysAddr::new(0x73 << 2);
+    log::info!("top bit: {}", one.bottom_bit()); 
 }
 
 #[allow(dead_code)]

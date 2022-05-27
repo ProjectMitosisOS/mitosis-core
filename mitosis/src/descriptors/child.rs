@@ -167,6 +167,14 @@ impl ChildDescriptor {
 
         let remote_pa = l1_page[idx];
 
+        // check whether it has been prefetched to local 
+        { 
+            // we need to do the prefetch
+            if PhysAddr::new(remote_pa).bottom_bit() == 1 { 
+                unimplemented!();
+            }
+        }
+
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
 
@@ -216,7 +224,6 @@ impl ChildDescriptor {
 
             let req = StepPrefetcher::<PhysAddr, 2>::new()
                 .generate_request(&mut RemotePageTableIter::new_from_l1(pt, idx));
-            crate::log::info!("Test prefetch req: {:?}", req);
 
             // wait for the request to complete
             let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);

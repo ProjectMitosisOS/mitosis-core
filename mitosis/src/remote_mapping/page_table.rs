@@ -93,6 +93,9 @@ impl RemotePageTable {
 
         let res = l1_pt[usize::from(entry.p1_index())];
         if res == 0 {
+            // The bottom bit of a physical page cannot be 1 (4KB aligned)
+            // We will encode the remote information in this bit 
+            assert!(phy.bottom_bit() != 1); 
             l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
             self.cnt += 1;
             return None;
