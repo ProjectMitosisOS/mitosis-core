@@ -1,6 +1,7 @@
 use core::fmt::Debug;
 
 pub use strategies::StepPrefetcher;
+pub use executor::DCAsyncPrefetcher;
 
 /// The maximum number of pages to prefetch
 /// To achieve a better performance, we must restrict it to a small number
@@ -54,3 +55,4 @@ where
 }
 
 pub mod strategies;
+pub mod executor;
