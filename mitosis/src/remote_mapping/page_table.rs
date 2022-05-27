@@ -67,7 +67,6 @@ impl RemotePageTable {
     /// Lookup the last-level page of the requested address
     /// Return:
     /// - Page ptr, Entry index
-    ///
     #[inline]
     pub fn find_l1_page_idx(
         &self,
@@ -102,13 +101,6 @@ impl RemotePageTable {
         }
 
         return Some(PhysAddr::new(res));
-    }
-
-    /// Similar to map.
-    /// The differences are:
-    /// - If the existing entry has a value, then overwrite it
-    pub fn map_and_overwrite(&mut self, addr: VirtAddr, phy: PhysAddr) {
-        unimplemented!();
     }
 
     fn map_to_the_l1(&mut self, entry: &RemotePageAddr) -> *mut PageTable {

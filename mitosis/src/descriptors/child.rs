@@ -171,6 +171,13 @@ impl ChildDescriptor {
         { 
             // we need to do the prefetch
             if PhysAddr::new(remote_pa).bottom_bit() == 1 { 
+
+                /*
+                Two cases. 
+                1. the page is prefetched. then we can directly return 
+                2. the page is prefetched, but the content has not ready. 
+                In this case, we need to poll the connection to wait for it ready. 
+                 */
                 unimplemented!();
             }
         }
