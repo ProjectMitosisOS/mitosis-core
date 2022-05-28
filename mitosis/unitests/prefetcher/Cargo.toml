@@ -20,6 +20,7 @@ mitosis = {path = "../../../mitosis", version="0.1.0", optional = true, features
 
 [dev-dependencies]
 kernel-module-testlib = { path = "../../../deps/rust-kernel-rdma/testlib" }
+mitosis-rust-client = { path = "../../../mitosis-user-libs/mitosis-rust-client" }
 
 [profile.dev]
 opt-level = 2

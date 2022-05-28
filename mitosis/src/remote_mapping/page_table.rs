@@ -1,3 +1,4 @@
+use x86_64::structures::paging::page::PageRange;
 pub use x86_64::{
     structures::paging::{Page, Size4KiB},
     VirtAddr,
@@ -123,8 +124,37 @@ pub struct RemotePageTableIter {
     cur_idx: isize,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PageEntry {
+    pub page: *mut PageTable,
+    pub index: usize,
+    pub addr: PhysAddr,
+}
+
+impl PageEntry {
+    #[inline]
+    fn new(p: *mut PageTable, index: usize, addr: PhysAddr) -> Self {
+        Self {
+            page: p,
+            index: index,
+            addr: addr,
+        }
+    }
+}
+
+impl Default for PageEntry {
+    fn default() -> Self {
+        Self {
+            page: core::ptr::null_mut(),
+            index: 0,
+            addr: PhysAddr::new(0),
+        }
+    }
+}
+
 impl Iterator for RemotePageTableIter {
-    type Item = (*mut PageTable, PhysAddr);
+    // pointer to the page table, page table entry index, the physical page
+    type Item = PageEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut cur_page = unsafe { &mut (*self.cur_page) };
@@ -138,7 +168,11 @@ impl Iterator for RemotePageTableIter {
                 if idx.is_some() {
                     // done
                     self.cur_idx = idx.unwrap() as isize;
-                    return Some((self.cur_page, PhysAddr::new(cur_page[idx.unwrap()])));
+                    return Some(PageEntry::new(
+                        self.cur_page,
+                        idx.unwrap(),
+                        PhysAddr::new(cur_page[idx.unwrap()]),
+                    ));
                 }
             }
 
