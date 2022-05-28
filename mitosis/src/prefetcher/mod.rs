@@ -1,7 +1,9 @@
 use core::fmt::Debug;
 
-pub use strategies::StepPrefetcher;
+use core::ops::{Index, IndexMut};
+
 pub use executor::DCAsyncPrefetcher;
+pub use strategies::StepPrefetcher;
 
 /// The maximum number of pages to prefetch
 /// To achieve a better performance, we must restrict it to a small number
@@ -25,6 +27,11 @@ where
         }
     }
 
+    /// Return the number of valid entries
+    pub fn len(&self) -> usize {
+        self.sz
+    }
+
     /// Add an entry to the prefetcher.
     /// If the request has capcaity, then it succeeds.
     /// Otherwise, it fails silently.
@@ -45,6 +52,28 @@ where
     }
 }
 
+impl<T> Index<usize> for PrefetchRequests<T>
+where
+    T: Copy + Debug + Default,
+{
+    type Output = T;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.inner[index]
+    }
+}
+
+impl<T> IndexMut<usize> for PrefetchRequests<T>
+where
+    T: Copy + Debug + Default,
+{
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.inner[index]
+    }
+}
+
 impl<T> Default for PrefetchRequests<T>
 where
     T: Copy + Debug + Default,
@@ -54,5 +83,5 @@ where
     }
 }
 
-pub mod strategies;
 pub mod executor;
+pub mod strategies;
