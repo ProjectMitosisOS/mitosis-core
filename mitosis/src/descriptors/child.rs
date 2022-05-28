@@ -161,7 +161,6 @@ impl ChildDescriptor {
     ) -> Option<*mut crate::bindings::page> {
         use crate::remote_mapping::PhysAddr;
 
-        crate::log::info!("In prefetcher!");
         let (pt, idx) = self.page_table.find_l1_page_idx(VirtAddr::new(remote_va))?;
         let l1_page = &mut (*pt);
 
@@ -229,8 +228,8 @@ impl ChildDescriptor {
             // This can overlap with the networking requests latency
             // find prefetch pages
 
-            let req = StepPrefetcher::<PhysAddr, 2>::new()
-                .generate_request(&mut RemotePageTableIter::new_from_l1(pt, idx));
+//            let req = StepPrefetcher::<PhysAddr, 2>::new()
+//                .generate_request(&mut RemotePageTableIter::new_from_l1(pt, idx));
 
             // wait for the request to complete
             let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);

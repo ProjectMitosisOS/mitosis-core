@@ -135,14 +135,19 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
+        crate::log::debug!("drop dc targets"); 
         crate::dc_target_service::drop();
+
+        crate::log::debug!("drop dc pool"); 
         crate::dc_pool_service::drop();
 
         #[cfg(feature = "prefetch")]
         crate::dc_pool_service_async::drop();
-
+        
         crate::service_caller_pool::drop();
         crate::service_rpc::drop();
+
+        crate::log::debug!("drop shadow process service"); 
         crate::sp_service::drop();
         crate::mem_pool::drop();
     };

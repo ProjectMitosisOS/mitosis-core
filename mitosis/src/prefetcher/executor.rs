@@ -1,7 +1,13 @@
 use alloc::collections::VecDeque;
 
 use crate::remote_mapping::PageTable;
-use os_network::rdma::dc::DCConn;
+use os_network::{
+    rdma::{
+        dc::{DCConn, DCFactory},
+        ConnErr,
+    },
+    Factory,
+};
 
 use crate::bindings::page;
 
@@ -15,7 +21,20 @@ pub struct ReplyEntry {
 }
 
 /// Each DCAsyncPrefetcher has a DCConn responsible for executing the async RDMA requests
-pub struct DCAsyncPrefetcher {
-    conn: DCConn<'static>,
+pub struct DCAsyncPrefetcher<'a> {
+    conn: DCConn<'a>,
+    lkey: u32,
     pending_queues: VecDeque<ReplyEntry>,
+}
+
+impl<'a> DCAsyncPrefetcher<'a> {
+    pub fn new(fact: &'a DCFactory) -> Result<Self, ConnErr> {
+        let lkey = unsafe { fact.get_context().get_lkey() };
+        let conn = fact.create(())?;
+        Ok(Self {
+            conn: conn,
+            lkey: lkey,
+            pending_queues: Default::default(),
+        })
+    }
 }
