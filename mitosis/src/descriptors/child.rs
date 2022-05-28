@@ -159,8 +159,6 @@ impl ChildDescriptor {
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
-        use crate::remote_mapping::PhysAddr;
-
         let (pt, idx) = self.page_table.find_l1_page_idx(VirtAddr::new(remote_va))?;
         let l1_page = &mut (*pt);
 
