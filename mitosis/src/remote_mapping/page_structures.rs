@@ -327,8 +327,9 @@ impl PhysAddr {
     }
 
     /// Set the bottom bit of this physical address.
-    pub fn set_bottom_bit_as_one(&mut self) { 
-        self.0 = self.0 | 1
+    pub fn set_bottom_bit_as_one(&mut self) -> u64 { 
+        self.0 = self.0 | 1;
+        self.0
     }
 
     /// Tries to create a new physical address.
