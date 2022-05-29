@@ -230,8 +230,6 @@ pub mod remote_paging;
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
 
-/// The prefetcher uses a different QP than the sync page fault handle
-/// This design is intend to simplfiy coding & backward compatability 
 #[cfg(feature = "prefetch")]
 declare_global!(dc_pool_service_async, crate::dc_pool::DCPool<'static>);
 
