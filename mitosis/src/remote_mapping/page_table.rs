@@ -142,6 +142,12 @@ impl PageEntry {
     }
 }
 
+impl crate::prefetcher::NeedPrefetch for PageEntry {
+    fn need_prefetch(&self) -> bool {
+        self.addr.bottom_bit() == 0
+    }
+}
+
 impl Default for PageEntry {
     fn default() -> Self {
         Self {
@@ -194,6 +200,13 @@ impl RemotePageTableIter {
 
         res.cur_page = unsafe { Self::find_the_first_level_one_page(res.cur_page)? };
         Some(res)
+    }
+
+    pub unsafe fn clone(&self) -> Self {
+        Self {
+            cur_page: self.cur_page,
+            cur_idx: self.cur_idx,
+        }
     }
 
     /// Directly initialize from a l4 page.
