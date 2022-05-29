@@ -1,4 +1,3 @@
-use x86_64::structures::paging::page::PageRange;
 pub use x86_64::{
     structures::paging::{Page, Size4KiB},
     VirtAddr,

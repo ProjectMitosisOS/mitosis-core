@@ -23,7 +23,7 @@ use crate::remote_mapping::RemotePageTableIter;
 use crate::bindings::page;
 use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 
-use super::{PrefetchRequests, StepPrefetcher};
+use super::{Prefetch, PrefetchRequests, StepPrefetcher};
 
 /// This struct is really, really, unsafe
 /// Since I currently don't know how to do it right in rust
@@ -71,11 +71,10 @@ impl<'a> DCAsyncPrefetcher<'a> {
     /// Currently, we assume that the remote PA will not change.
     /// If this is not the case, we need to 2 bits to identify
     /// whether the remote page is in the prefetch state.
-    pub fn execute_reqs(
-        &mut self,
-        mut iter: RemotePageTableIter,
-        strategy: StepPrefetcher<PrefetchReq>,
-    ) {
+    pub fn execute_reqs<P>(&mut self, mut iter: RemotePageTableIter, strategy: P)
+    where
+        P: Prefetch<Item = PrefetchReq>,
+    {
         let reqs = strategy.generate_request(&mut iter);
         for i in 0..reqs.len() {
             // process this entry
