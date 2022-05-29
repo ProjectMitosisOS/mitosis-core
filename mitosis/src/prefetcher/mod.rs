@@ -3,22 +3,32 @@ use core::fmt::Debug;
 use core::ops::{Index, IndexMut};
 
 pub use executor::DCAsyncPrefetcher;
-pub use strategies::StepPrefetcher;
+pub use strategies::{ConstPrefetcher, StepPrefetcher};
 
 /// The maximum number of pages to prefetch
 /// To achieve a better performance, we must restrict it to a small number
 pub const K_MAX_PREFETCH_NUM: usize = 4;
 
-/// Check whether myself needs to be prefetch. 
-/// 
-/// This trait is used to define when we need prefetch a request. 
+/// Check whether myself needs to be prefetch.
+///
+/// This trait is used to define when we need prefetch a request.
 /// In MITOSIS, we physical address with the 1st bottom bit as 0
-/// need to be prefetch. 
+/// need to be prefetch.
 /// see [`crate::remote_mapping::PhysAddr`],
 /// [`crate::remote_mapping::PageEntry`]
-pub trait NeedPrefetch { 
+pub trait NeedPrefetch {
     /// Return whether myself needs prefetch
-    fn need_prefetch(&self) -> bool; 
+    fn need_prefetch(&self) -> bool;
+}
+
+/// Generate prefetch request given an iterator
+pub trait Prefetch {
+    type Item;
+
+    fn generate_request<I>(self, src: &mut I) -> PrefetchRequests<Self::Item>
+    where
+        I: Iterator<Item = Self::Item>, 
+        Self::Item : Copy + Debug + Default;
 }
 
 #[derive(Debug)]
