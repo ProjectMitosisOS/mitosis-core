@@ -175,20 +175,14 @@ impl ChildDescriptor {
                 2. the page is prefetched, but the content has not ready. 
                 In this case, we need to poll the connection to wait for it ready. 
                  */
+                loop { 
+                }
                 unimplemented!();
             }
         }
 
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
-
-        /*
-        let res = crate::remote_paging::RemotePagingService::remote_read(
-            new_page_pa,
-            remote_pa,
-            4096,
-            access_info,
-        ); */
 
         // FIXME: currently this code is from the remote_mapping.rs
         // But we need to trigger much code in it
@@ -239,7 +233,6 @@ impl ChildDescriptor {
                         // unimplemented!();
                         crate::log::error!("fatal, timeout on reading the DC QP");
                         Err(os_network::rdma::Err::Timeout)
-                        //Ok(())
                     } else {
                         Err(e.into_inner().unwrap())
                     }

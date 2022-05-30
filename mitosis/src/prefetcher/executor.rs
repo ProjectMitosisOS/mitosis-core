@@ -25,6 +25,8 @@ use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 
 use super::{Prefetch, PrefetchRequests, StepPrefetcher};
 
+pub const K_MAGIC_IN_PREFETCH : u64 = 1;
+
 /// This struct is really, really, unsafe
 /// Since I currently don't know how to do it right in rust
 /// I will come back to this issue later
@@ -91,7 +93,8 @@ impl<'a> DCAsyncPrefetcher<'a> {
             let remote_pa = pte_page[reqs[i].index];
 
             // FIXME: this code assumes the remote PA never changes for this children
-            pte_page[reqs[i].index] = 1;
+            // To fix this, we need to instrumnet another bits in the address
+            pte_page[reqs[i].index] = K_MAGIC_IN_PREFETCH;
 
             // 2. submit the RDMA request to read the page
             let user_page =

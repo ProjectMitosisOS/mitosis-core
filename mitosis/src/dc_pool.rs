@@ -64,6 +64,7 @@ use alloc::sync::Arc;
 use os_network::rdma::dc::DCTarget;
 
 /// The servers(Parents)-side DC targets pool
+/// FIXME: need lock protection
 pub struct DCTargetPool {
     pool: Vec<Arc<DCTarget>>,
     nic_idxs: Vec<usize>,
