@@ -348,7 +348,7 @@ impl MitosisSysCallHandler {
                             return -1;
                         }
 
-                        let des = des.unwrap(); 
+                        let mut des = des.unwrap(); 
 
                         let access_info = AccessInfo::new(&des.machine_info);
                         if access_info.is_none() {
@@ -423,7 +423,7 @@ impl MitosisSysCallHandler {
         let fault_addr = (*vmf).address;
         self.incr_fault_page_cnt();
 
-        let resume_related = self.caller_status.resume_related.as_ref().unwrap();
+        let resume_related = self.caller_status.resume_related.as_mut().unwrap();
         let new_page = resume_related
             .descriptor
             .read_remote_page(fault_addr, &resume_related.access_info);
