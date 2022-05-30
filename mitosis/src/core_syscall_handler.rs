@@ -424,8 +424,9 @@ impl MitosisSysCallHandler {
         let fault_addr = (*vmf).address;
         self.incr_fault_page_cnt();
 
-        let resume_related = self.caller_status.resume_related.as_ref().unwrap();
-        let resume_info = self.caller_status.resume_related.as_ref().unwrap();
+        let resume_related = self.caller_status.resume_related.as_mut().unwrap();
+        // #[cfg(feature = "page-cache")]
+        // let resume_related = self.caller_status.resume_related.as_ref().unwrap();
 
         #[cfg(feature = "page-cache")]
         let mut hit_page_cache = false;
@@ -440,8 +441,8 @@ impl MitosisSysCallHandler {
                 {
                     // if let Some(page) = crate::get_page_cache_mut().lookup_mut(
                     if let Some(page) = crate::get_page_cache_ref().lookup(
-                        resume_info.remote_mac_id,
-                        resume_info.handler_id,
+                        resume_related.remote_mac_id,
+                        resume_related.handler_id,
                         phy_addr,
                     ) {
                         // TODO: check whether the page is READ only.
@@ -464,13 +465,13 @@ impl MitosisSysCallHandler {
                     } else {
                         resume_related
                             .descriptor
-                            .read_remote_page(phy_addr, &resume_related.access_info)
+                            .read_remote_page(fault_addr, &resume_related.access_info)
                     }
                 }
                 #[cfg(not(feature = "page-cache"))]
                 resume_related
                     .descriptor
-                    .read_remote_page(phy_addr, &resume_related.access_info)
+                    .read_remote_page(fault_addr, &resume_related.access_info)
             }
         };
         match new_page {
@@ -482,8 +483,8 @@ impl MitosisSysCallHandler {
                     let cow4k_page = crate::shadow_process::COW4KPage::new(new_page_p);
                     if core::intrinsics::likely(cow4k_page.is_some()) {
                         crate::get_page_cache_mut().insert(
-                            resume_info.remote_mac_id,
-                            resume_info.handler_id,
+                            resume_related.remote_mac_id,
+                            resume_related.handler_id,
                             phy_addr.unwrap(),
                             cow4k_page.unwrap(),
                         );

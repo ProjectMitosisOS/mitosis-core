@@ -109,12 +109,7 @@ impl ChildDescriptor {
 
                     #[cfg(not(feature = "prefetch"))]
                     let new_page_p = {
-                        let pa = self.lookup_pg_table(addr);
-                        if pa.is_none() {
-                            None
-                        } else {
-                            unsafe { self.read_remote_page(pa.unwrap(), &access_info) }
-                        }
+                        unsafe { self.read_remote_page(addr, &access_info) }
                     };
                     // let new_page_p = unsafe { self.read_remote_page(addr, &access_info) };
 
@@ -142,13 +137,14 @@ impl ChildDescriptor {
     #[inline]
     pub unsafe fn read_remote_page(
         &self,
-        remote_pa: PhyAddrType,
+        remote_va: PhyAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
-        // let remote_pa = self.lookup_pg_table(remote_va);
-        // if remote_pa.is_none() {
-        //     return None;
-        // }
+        let remote_pa = self.lookup_pg_table(remote_va);
+        if remote_pa.is_none() {
+            return None;
+        }
+        let remote_pa = remote_pa.unwrap();
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
         let res = crate::remote_paging::RemotePagingService::remote_read(
