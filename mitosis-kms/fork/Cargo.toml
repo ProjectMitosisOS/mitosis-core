@@ -24,6 +24,7 @@ krdma-test = {path="../../deps/rust-kernel-rdma/krdma-test",optional = true}
 #mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow"]}
 mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow", "page-cache"]}
 #mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow", "prefetch"]}
+#mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow", "prefetch", "page-cache"]}
 #mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow","eager-resume"]}
 #mitosis = {path = "../../mitosis", version="0.1.0", optional = true, features = ["cow", "resume-profile"]}
 

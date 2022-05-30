@@ -15,7 +15,7 @@ pub use x86_64::{
 /// We cannot use the PhysAddr in x86_64
 /// This is because it will raise a
 /// "physical addresses must not have any bits in the range 52 to 64 set" error
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(transparent)]
 pub struct PhysAddr(u64);
 
@@ -316,6 +316,20 @@ impl PhysAddr {
     /// Panics if a bit in the range 52 to 64 is set.
     pub fn new(addr: u64) -> PhysAddr {
         PhysAddr(addr)
+    }
+
+    /// Get the bottom bit of this physical address.
+    /// Normally, it will never be zero.
+    /// 
+    /// Thus, we will use it to encode additional information 
+    pub fn bottom_bit(&self) -> u64 { 
+        self.0 & (1)
+    }
+
+    /// Set the bottom bit of this physical address.
+    pub fn set_bottom_bit_as_one(&mut self) -> u64 { 
+        self.0 = self.0 | 1;
+        self.0
     }
 
     /// Tries to create a new physical address.
