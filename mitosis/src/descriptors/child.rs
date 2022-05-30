@@ -20,12 +20,11 @@ use crate::kern_wrappers::task::Task;
 use crate::remote_paging::AccessInfo;
 
 #[cfg(feature = "prefetch")]
-use crate::prefetcher::*;
+use crate::prefetcher::DCAsyncPrefetcher;
 
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
 #[allow(dead_code)]
-#[derive(Default)]
 pub struct ChildDescriptor {
     pub regs: RegDescriptor,
 
@@ -37,6 +36,9 @@ pub struct ChildDescriptor {
 
     pub vma: Vec<VMADescriptor>,
     pub machine_info: RDMADescriptor,
+
+    #[cfg(feature = "prefetch")]
+    pub prefetcher: DCAsyncPrefetcher<'static>,
 }
 
 impl ChildDescriptor {
@@ -164,19 +166,17 @@ impl ChildDescriptor {
 
         let remote_pa = l1_page[idx];
 
-        // check whether it has been prefetched to local 
-        { 
+        // check whether it has been prefetched to local
+        {
             // we need to do the prefetch
-            if PhysAddr::new(remote_pa).bottom_bit() == 1 { 
-
+            if PhysAddr::new(remote_pa).bottom_bit() == 1 {
                 /*
-                Two cases. 
-                1. the page is prefetched. then we can directly return 
-                2. the page is prefetched, but the content has not ready. 
-                In this case, we need to poll the connection to wait for it ready. 
+                Two cases.
+                1. the page is prefetched. then we can directly return
+                2. the page is prefetched, but the content has not ready.
+                In this case, we need to poll the connection to wait for it ready.
                  */
-                loop { 
-                }
+                loop {}
                 unimplemented!();
             }
         }
@@ -220,8 +220,8 @@ impl ChildDescriptor {
             // This can overlap with the networking requests latency
             // find prefetch pages
 
-//            let req = StepPrefetcher::<PhysAddr, 2>::new()
-//                .generate_request(&mut RemotePageTableIter::new_from_l1(pt, idx));
+            //            let req = StepPrefetcher::<PhysAddr, 2>::new()
+            //                .generate_request(&mut RemotePageTableIter::new_from_l1(pt, idx));
 
             // wait for the request to complete
             let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
@@ -294,11 +294,6 @@ impl os_network::serialize::Serialize for ChildDescriptor {
             let vma_start = vma.get_start();
             vmas.push(vma);
 
-            /*
-            let vma_pg_table = CompactPageTable::deserialize(&cur)?;
-            cur = unsafe { cur.truncate_header(vma_pg_table.serialization_buf_len())? };
-            crate::log::info!("vma_pg_table len: {}", vma_pg_table.table_len()); */
-
             // now, deserialize the page table of this VMA
             // we don't use the `deserialize` method in the compact page table,
             // because it will incur unnecessary memory copies that is not optimal for the performance
@@ -341,11 +336,21 @@ impl os_network::serialize::Serialize for ChildDescriptor {
 
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
+        #[cfg(feature = "prefetch")]
+        let (prefetch_conn, lkey) =
+            unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.pop_one_qp())? };
+
+        #[cfg(feature = "prefetch")]
+        let access_info = AccessInfo::new(&machine_info).unwrap();
+
         Some(Self {
             regs: regs,
             page_table: pt,
             vma: vmas,
             machine_info: machine_info,
+
+            #[cfg(feature = "prefetch")]
+            prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info),
         })
     }
 
