@@ -1,11 +1,12 @@
-use crate::descriptors::{
-    ChildDescriptor, RDMADescriptor, RegDescriptor, VMADescriptor,
-};
+use crate::descriptors::{ChildDescriptor, RDMADescriptor, RegDescriptor, VMADescriptor};
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::{linux_kernel_module, VmallocAllocator};
 use alloc::vec::Vec;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
+
+#[cfg(feature = "prefetch")]
+use crate::prefetcher::DCAsyncPrefetcher;
 
 pub(crate) type Offset = u32;
 pub(crate) type Value = PhyAddrType;
@@ -41,7 +42,9 @@ impl Default for ParentDescriptor {
 }
 
 impl ParentDescriptor {
-    /// Transform into the flat descriptor.
+    /// Transform the parent descriptor to a child descriptor
+    /// When prefetch is enabled, this function can fail if no sufficient 
+    /// DCQP in the current kernel. 
     #[inline]
     pub fn to_descriptor(&self) -> ChildDescriptor {
         #[cfg(feature = "prefetch")]
@@ -64,11 +67,24 @@ impl ParentDescriptor {
             }
         }
 
+        #[cfg(feature = "prefetch")]
+        let (prefetch_conn, lkey) = unsafe {
+            crate::get_dc_pool_async_service_ref()
+                .lock(|p| p.pop_one_qp())
+                .expect("failed to create prefetcher")
+        };
+
+        #[cfg(feature = "prefetch")]
+        let access_info = crate::remote_paging::AccessInfo::new(&self.machine_info).unwrap();
+
         ChildDescriptor {
             regs: self.regs.clone(),
             page_table,
             vma: self.vma.clone(),
             machine_info: self.machine_info.clone(),
+
+            #[cfg(feature = "prefetch")]
+            prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info),
         }
     }
 }

@@ -24,7 +24,7 @@ pub const VERSION: usize = 0;
 
 use alloc::vec::Vec;
 
-pub mod remote_mapping; 
+pub mod remote_mapping;
 
 // TODO: doc how to use mitosis
 
@@ -230,10 +230,10 @@ pub mod remote_paging;
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
 
-/// The prefetcher uses a different QP than the sync page fault handle
-/// This design is intend to simplfiy coding & backward compatability 
+type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::DCPool<'static>>>;
+
 #[cfg(feature = "prefetch")]
-declare_global!(dc_pool_service_async, crate::dc_pool::DCPool<'static>);
+declare_global!(dc_pool_service_async, crate::AsyncDCPool);
 
 #[inline]
 pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
@@ -242,7 +242,9 @@ pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'stat
 
 #[cfg(feature = "prefetch")]
 #[inline]
-pub unsafe fn get_dc_pool_async_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
+/// The DCQP for async prefetcher is cached in the async servcie pool 
+/// This design avoid creating DCQP on the fly 
+pub unsafe fn get_dc_pool_async_service_ref() -> &'static crate::AsyncDCPool {
     crate::dc_pool_service_async::get_ref()
 }
 
@@ -324,3 +326,5 @@ pub mod descriptors;
 pub mod mem_pools;
 
 pub mod prefetcher;
+
+pub mod lock_bundler;

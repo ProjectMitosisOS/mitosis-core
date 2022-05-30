@@ -10,7 +10,7 @@ use super::page_structures::*;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-pub type RemotePage = Page<Size4KiB>;
+pub type RemotePageAddr = Page<Size4KiB>;
 
 /// Abstracts a (remote) forked page table
 /// We do this by emulating the four-level page table of x86
@@ -56,35 +56,54 @@ impl RemotePageTable {
     /// Lookup the physical address using the $addr$
     pub fn translate(&self, addr: VirtAddr) -> core::option::Option<PhysAddr> {
         let (pt, index) = self.find_l1_page_idx(addr)?;
-        let pt = unsafe { &mut (*pt) } ;
-        if pt[index] != 0 { 
-            Some(PhysAddr::new(pt[index])) 
-        } else { 
+        let pt = unsafe { &mut (*pt) };
+        if pt[index] != 0 {
+            Some(PhysAddr::new(pt[index]))
+        } else {
             None
         }
     }
 
     /// Lookup the last-level page of the requested address
-    /// Return: 
+    /// Return:
     /// - Page ptr, Entry index
-    /// 
     #[inline]
-    pub fn find_l1_page_idx(&self, addr : VirtAddr) -> core::option::Option<(*mut PageTable, usize)> { 
-        let entry = RemotePage::containing_address(addr);
+    pub fn find_l1_page_idx(
+        &self,
+        addr: VirtAddr,
+    ) -> core::option::Option<(*mut PageTable, usize)> {
+        let entry = RemotePageAddr::containing_address(addr);
         let l3_pt =
             unsafe { lookup_table(usize::from(entry.p4_index()), (&(*self.l4_page_table)) as _) }?;
 
         let l2_pt = unsafe { lookup_table(usize::from(entry.p3_index()), l3_pt) }?;
-        let l1_pt = unsafe { lookup_table(usize::from(entry.p2_index()), l2_pt) }?;        
-        return Some((l1_pt, usize::from(entry.p1_index())))
+        let l1_pt = unsafe { lookup_table(usize::from(entry.p2_index()), l2_pt) }?;
+        return Some((l1_pt, usize::from(entry.p1_index())));
     }
 
     /// Add a (addr, phy) mapping to the page table.
     /// Return Some(value) if there is an existing mapping.
     /// Return None means the map is successful.
     pub fn map(&mut self, addr: VirtAddr, phy: PhysAddr) -> core::option::Option<PhysAddr> {
-        let entry = RemotePage::containing_address(addr);
+        let entry = RemotePageAddr::containing_address(addr);
 
+        let l1_pt = self.map_to_the_l1(&entry);
+        let l1_pt: &mut PageTable = unsafe { &mut (*l1_pt) };
+
+        let res = l1_pt[usize::from(entry.p1_index())];
+        if res == 0 {
+            // The bottom bit of a physical page cannot be 1 (4KB aligned)
+            // We will encode the remote information in this bit
+            assert!(phy.bottom_bit() != 1);
+            l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
+            self.cnt += 1;
+            return None;
+        }
+
+        return Some(PhysAddr::new(res));
+    }
+
+    fn map_to_the_l1(&mut self, entry: &RemotePageAddr) -> *mut PageTable {
         let l3_pt = unsafe {
             create_table(
                 usize::from(entry.p4_index()),
@@ -92,18 +111,7 @@ impl RemotePageTable {
             )
         };
         let l2_pt = unsafe { create_table(usize::from(entry.p3_index()), l3_pt) };
-        let l1_pt = unsafe { create_table(usize::from(entry.p2_index()), l2_pt) };
-
-        let l1_pt: &mut PageTable = unsafe { &mut (*l1_pt) };
-
-        let res = l1_pt[usize::from(entry.p1_index())];
-        if res == 0 {
-            l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
-            self.cnt += 1;
-            return None;
-        }
-
-        return Some(PhysAddr::new(res));
+        unsafe { create_table(usize::from(entry.p2_index()), l2_pt) }
     }
 }
 
@@ -115,27 +123,66 @@ pub struct RemotePageTableIter {
     cur_idx: isize,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PageEntry {
+    pub page: *mut PageTable,
+    pub index: usize,
+    pub addr: PhysAddr,
+}
+
+impl PageEntry {
+    #[inline]
+    fn new(p: *mut PageTable, index: usize, addr: PhysAddr) -> Self {
+        Self {
+            page: p,
+            index: index,
+            addr: addr,
+        }
+    }
+}
+
+impl crate::prefetcher::NeedPrefetch for PageEntry {
+    fn need_prefetch(&self) -> bool {
+        self.addr.bottom_bit() == 0
+    }
+}
+
+impl Default for PageEntry {
+    fn default() -> Self {
+        Self {
+            page: core::ptr::null_mut(),
+            index: 0,
+            addr: PhysAddr::new(0),
+        }
+    }
+}
+
 impl Iterator for RemotePageTableIter {
-    type Item = PhysAddr;
+    // pointer to the page table, page table entry index, the physical page
+    type Item = PageEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut cur_page = unsafe { &mut (*self.cur_page) };
         loop {
             self.cur_idx += 1;
 
-            if self.cur_idx >= (ENTRY_COUNT as isize) { 
+            if self.cur_idx >= (ENTRY_COUNT as isize) {
                 // we need to find another page
-            } else { 
-                let idx = cur_page.find_valid_entry(self.cur_idx as _); 
-                if idx.is_some() { 
+            } else {
+                let idx = cur_page.find_valid_entry(self.cur_idx as _);
+                if idx.is_some() {
                     // done
                     self.cur_idx = idx.unwrap() as isize;
-                    return Some(PhysAddr::new(cur_page[idx.unwrap()]));
-                }                
+                    return Some(PageEntry::new(
+                        self.cur_page,
+                        idx.unwrap(),
+                        PhysAddr::new(cur_page[idx.unwrap()]),
+                    ));
+                }
             }
 
-            // we should go to the next page 
-            self.cur_idx = -1; 
+            // we should go to the next page
+            self.cur_idx = -1;
             let next_page = unsafe { Self::find_the_next_neighbour(self.cur_page)? };
             self.cur_page = next_page;
             cur_page = unsafe { &mut (*next_page) };
@@ -154,13 +201,20 @@ impl RemotePageTableIter {
         Some(res)
     }
 
+    pub unsafe fn clone(&self) -> Self {
+        Self {
+            cur_page: self.cur_page,
+            cur_idx: self.cur_idx,
+        }
+    }
+
     /// Directly initialize from a l4 page.
     /// Note that we don't check the correctness of the passed arguments,
-    /// So this function is unsafe. 
-    pub unsafe fn new_from_l1(l4_page : *mut PageTable, index : usize) -> Self { 
-        Self { 
-            cur_page : l4_page, 
-            cur_idx : index as _,
+    /// So this function is unsafe.
+    pub unsafe fn new_from_l1(l4_page: *mut PageTable, index: usize) -> Self {
+        Self {
+            cur_page: l4_page,
+            cur_idx: index as _,
         }
     }
 

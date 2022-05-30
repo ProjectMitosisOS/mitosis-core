@@ -25,6 +25,14 @@ impl<'a> DCPool<'a> {
     pub fn get_ctx_id(&self, idx: usize) -> core::option::Option<usize> {
         self.nic_idxs.get(idx).map(|v| *v)
     }
+
+    /// Pop the DCQP and the lkey corresponding to it
+    /// This function is not **thread-safe**, 
+    /// must be used by a single thread / protected by a mutex
+    #[inline]
+    pub fn pop_one_qp(&mut self) -> core::option::Option<(DCConn<'a>, u32)> {
+        self.pool.pop()
+    }
 }
 
 use os_network::Factory;
@@ -64,6 +72,7 @@ use alloc::sync::Arc;
 use os_network::rdma::dc::DCTarget;
 
 /// The servers(Parents)-side DC targets pool
+/// FIXME: need lock protection
 pub struct DCTargetPool {
     pool: Vec<Arc<DCTarget>>,
     nic_idxs: Vec<usize>,
