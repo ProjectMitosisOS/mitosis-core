@@ -15,7 +15,7 @@ use super::vma::VMADescriptor;
 use super::page_table::FlatPageTable;
 
 #[cfg(feature = "prefetch")]
-use crate::remote_mapping::{PhysAddr, RemotePageTable, RemotePageTableIter, VirtAddr, PageEntry};
+use crate::remote_mapping::{PageEntry, PhysAddr, RemotePageTable, RemotePageTableIter, VirtAddr};
 
 #[allow(unused_imports)]
 use super::parent::{CompactPageTable, Offset, Value};
@@ -102,9 +102,14 @@ impl ChildDescriptor {
             if cfg!(feature = "eager-resume") {
                 let (size, start) = (m.get_sz(), m.get_start());
                 for addr in (start..start + size).step_by(4096) {
-                    if let Some(new_page_p) =
-                        unsafe { self.read_remote_page_wo_prefetch(addr, &access_info) }
-                    {
+                    #[cfg(feature = "prefetch")]
+                    let new_page_p =
+                        unsafe { self.read_remote_page_wo_prefetch(addr, &access_info) };
+
+                    #[cfg(not(feature = "prefetch"))]
+                    let new_page_p = unsafe { self.read_remote_page(addr, &access_info) };
+
+                    if let Some(new_page_p) = new_page_p {
                         // FIXME: 52 is hard-coded
                         vma.vm_page_prot.pgprot =
                             vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
@@ -274,7 +279,8 @@ impl ChildDescriptor {
             // This can overlap with the networking requests latency
             // find prefetch pages
             let pte_iter = RemotePageTableIter::new_from_l1(pt, idx);
-            self.prefetcher.execute_reqs(pte_iter, StepPrefetcher::<PageEntry, 4>::new()); 
+            self.prefetcher
+                .execute_reqs(pte_iter, StepPrefetcher::<PageEntry, 4>::new());
             self.poll_prefetcher();
 
             // wait for the request to complete
@@ -306,7 +312,7 @@ impl ChildDescriptor {
     #[cfg(feature = "prefetch")]
     fn poll_prefetcher(&mut self) {
         loop {
-            #[allow(non_snake_case)]            
+            #[allow(non_snake_case)]
             match self.prefetcher.poll() {
                 Ok(Async::Ready(_)) => {
                     // The second poll is likely to succeed
