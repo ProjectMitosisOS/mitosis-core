@@ -241,8 +241,13 @@ impl MitosisSysCallHandler {
         return 0;
     }
 
+    /// # Warning: Deperacted
+    /// This function is only used for testing
+    /// will be removed in the future
     #[inline]
     fn syscall_local_resume(&mut self, handler_id: c_ulong) -> c_long {
+        unimplemented!();
+        /* 
         if self.caller_status.resume_related.is_some() {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
@@ -261,8 +266,8 @@ impl MitosisSysCallHandler {
             });
             descriptor.apply_to(self.my_file);
             return 0;
-        }
-        return -1;
+        } 
+        return -1; */
     }
 
     /// This is just a sample test function
@@ -343,7 +348,7 @@ impl MitosisSysCallHandler {
                             return -1;
                         }
 
-                        let des = des.unwrap(); 
+                        let mut des = des.unwrap(); 
 
                         let access_info = AccessInfo::new(&des.machine_info);
                         if access_info.is_none() {
@@ -410,14 +415,19 @@ unsafe extern "C" fn page_fault_handler(vmf: *mut crate::bindings::vm_fault) -> 
 }
 
 impl MitosisSysCallHandler {
+
+    /// Core logic of handling the page faults
     #[inline(always)]
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
+
         let fault_addr = (*vmf).address;
         self.incr_fault_page_cnt();
-        let resume_related = self.caller_status.resume_related.as_ref().unwrap();
+
+        let resume_related = self.caller_status.resume_related.as_mut().unwrap();
         let new_page = resume_related
             .descriptor
             .read_remote_page(fault_addr, &resume_related.access_info);
+            
         match new_page {
             Some(new_page_p) => {
                 (*vmf).page = new_page_p as *mut _;
@@ -433,12 +443,7 @@ impl MitosisSysCallHandler {
                         //crate::bindings::get_zeroed_page(crate::bindings::PMEM_GFP_HIGHUSER);
 
                         (*vmf).page = new_page_p as *mut _;
-                        // crate::log::error!("in handle expand page {:?}", new_page_p);
-                        // crate::log::error!("check vma {:?}", vma);
-                        // crate::log::error!("check vma descriptor {:?}", vd);
                         return 0;
-                        // return crate::bindings::FaultFlags::SIGSEGV.bits()
-                        //   as linux_kernel_module::c_types::c_int;
                     }
                 }
 

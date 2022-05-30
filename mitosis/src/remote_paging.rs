@@ -9,7 +9,7 @@ use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-const TIMEOUT_USEC: i64 = 5000; // 5ms
+pub const TIMEOUT_USEC: i64 = 5000; // 5ms
 
 #[derive(Debug)]
 pub struct AccessInfo {
@@ -42,7 +42,7 @@ impl AccessInfo {
 pub struct RemotePagingService;
 
 use os_network::msg::UDMsg as RMemory;
-type DCReqPayload = os_network::rdma::payload::Payload<ib_dc_wr>;
+pub(crate) type DCReqPayload = os_network::rdma::payload::Payload<ib_dc_wr>;
 
 impl RemotePagingService {
     #[inline]
@@ -90,7 +90,7 @@ impl RemotePagingService {
 
     /// read the remote physical addr `dst` to `src`, both expressed in physical address
     #[inline]
-    pub(crate) fn remote_read(
+    pub fn remote_read(
         dst: PhyAddrType,
         src: PhyAddrType,
         sz: usize,

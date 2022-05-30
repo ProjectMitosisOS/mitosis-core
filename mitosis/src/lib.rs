@@ -9,6 +9,7 @@
 )]
 
 extern crate alloc;
+extern crate static_assertions;
 
 use mitosis_macros::declare_global;
 
@@ -23,7 +24,7 @@ pub const VERSION: usize = 0;
 
 use alloc::vec::Vec;
 
-pub mod remote_mapping; 
+pub mod remote_mapping;
 
 // TODO: doc how to use mitosis
 
@@ -229,9 +230,22 @@ pub mod remote_paging;
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
 
+type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::DCPool<'static>>>;
+
+#[cfg(feature = "prefetch")]
+declare_global!(dc_pool_service_async, crate::AsyncDCPool);
+
 #[inline]
 pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_ref()
+}
+
+#[cfg(feature = "prefetch")]
+#[inline]
+/// The DCQP for async prefetcher is cached in the async servcie pool 
+/// This design avoid creating DCQP on the fly 
+pub unsafe fn get_dc_pool_async_service_ref() -> &'static crate::AsyncDCPool {
+    crate::dc_pool_service_async::get_ref()
 }
 
 #[inline]
@@ -298,3 +312,7 @@ pub mod shadow_process_service;
 pub mod descriptors;
 
 pub mod mem_pools;
+
+pub mod prefetcher;
+
+pub mod lock_bundler;
