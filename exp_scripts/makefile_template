@@ -7,6 +7,7 @@ PARENT_GID=fe80:0000:0000:0000:248a:0703:009c:7ca0
 PARENT_HOST=val06
 CHILD_HOSTS=val07
 STR_CHILD_HOSTS='val07'
+FILTER=
 
 #USE_PROXY_COMMAND=false # true or false
 USE_PROXY_COMMAND=true # true or false
@@ -26,7 +27,6 @@ HOSTS={'builder':[$(STR_ALL_HOSTS)] , \
 }
 
 PLACEHOLDER={'parent_gid': '$(PARENT_GID)'}
-
 
 template_args="{\
 'pwd':'$(PWD)','user':'$(USER)',\
@@ -70,7 +70,7 @@ endef
 define runner
 	rm -rf $(2)
 	python toml_generator.py -f $(1) -o $(2) -d ${template_args}
-	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}"
+	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
 endef
 
 

@@ -29,6 +29,7 @@ bitflags = "1"
 hashbrown = {features=["raw"], path="../deps/hashbrown"}
 x86_64 = {}
 cfg-if = "0.1"
+static_assertions = "1.1.0"
 
 [dependencies.lazy_static]
 version = "1.0"
