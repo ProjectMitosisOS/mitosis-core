@@ -25,7 +25,7 @@ use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 
 use super::{Prefetch, PrefetchRequests, StepPrefetcher};
 
-pub const K_MAGIC_IN_PREFETCH : u64 = 1;
+pub const K_MAGIC_IN_PREFETCH: u64 = 1;
 
 /// This struct is really, really, unsafe
 /// Since I currently don't know how to do it right in rust
@@ -56,6 +56,15 @@ impl<'a> DCAsyncPrefetcher<'a> {
             pending_queues: Default::default(),
             access_info: remote_info,
         })
+    }
+
+    pub fn new_from_raw(conn: DCConn<'a>, lkey: u32, access_info: AccessInfo) -> Self {
+        Self {
+            conn: conn,
+            lkey: lkey,
+            pending_queues: Default::default(),
+            access_info: access_info,
+        }
     }
 
     /// Number of pending prefetch requests in the queue

@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 
 use crate::linux_kernel_module::mutex::LinuxMutex;
+use rust_kernel_linux_util::linux_kernel_module::sync::Mutex;
 
 /// A simple wrapper over LinuxMutex to simplifiy creation
 pub struct LockBundler<T> {
@@ -10,7 +11,7 @@ pub struct LockBundler<T> {
 impl<T> LockBundler<T> {
     #[inline]
     pub fn new(inner: T) -> Box<Self> {
-        let mut res = Box::new(Self {
+        let res = Box::new(Self {
             inner: LinuxMutex::new(inner),
         });
 
@@ -22,7 +23,7 @@ impl<T> LockBundler<T> {
 #[allow(dead_code)]
 impl<'a, T: 'a> LockBundler<T> {
     #[inline]
-    pub fn lock<R>(&self, f: impl FnOnce(&'a T) -> R) -> R {
+    pub fn lock<R>(&self, f: impl FnOnce(&'a mut T) -> R) -> R {
         self.inner.lock_f(f)
     }
 }
