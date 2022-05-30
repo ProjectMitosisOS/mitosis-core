@@ -23,7 +23,7 @@ use crate::remote_mapping::RemotePageTableIter;
 use crate::bindings::page;
 use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 
-use super::{Prefetch, PrefetchRequests, StepPrefetcher};
+use super::Prefetch;
 
 pub const K_MAGIC_IN_PREFETCH: u64 = 1;
 
