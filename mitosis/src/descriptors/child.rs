@@ -1,6 +1,11 @@
-use crate::linux_kernel_module;
 use alloc::vec::Vec;
+use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
+
+use crate::bindings::page;
+use crate::linux_kernel_module;
+
 use os_network::bytes::BytesMut;
+use os_network::future::{Async, Future};
 
 use super::rdma::RDMADescriptor;
 use super::reg::RegDescriptor;
@@ -10,7 +15,7 @@ use super::vma::VMADescriptor;
 use super::page_table::FlatPageTable;
 
 #[cfg(feature = "prefetch")]
-use crate::remote_mapping::{PhysAddr, RemotePageTable, RemotePageTableIter, VirtAddr};
+use crate::remote_mapping::{PhysAddr, RemotePageTable, RemotePageTableIter, VirtAddr, PageEntry};
 
 #[allow(unused_imports)]
 use super::parent::{CompactPageTable, Offset, Value};
@@ -20,7 +25,7 @@ use crate::kern_wrappers::task::Task;
 use crate::remote_paging::AccessInfo;
 
 #[cfg(feature = "prefetch")]
-use crate::prefetcher::DCAsyncPrefetcher;
+use crate::prefetcher::{DCAsyncPrefetcher, StepPrefetcher};
 
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
@@ -72,7 +77,7 @@ impl ChildDescriptor {
 
     /// Apply the descriptor into current process
     #[inline]
-    pub fn apply_to(&self, file: *mut crate::bindings::file) {
+    pub fn apply_to(&mut self, file: *mut crate::bindings::file) {
         let mut task = Task::new();
         // 1. Unmap origin vma regions
         task.unmap_self();
@@ -97,7 +102,9 @@ impl ChildDescriptor {
             if cfg!(feature = "eager-resume") {
                 let (size, start) = (m.get_sz(), m.get_start());
                 for addr in (start..start + size).step_by(4096) {
-                    if let Some(new_page_p) = unsafe { self.read_remote_page(addr, &access_info) } {
+                    if let Some(new_page_p) =
+                        unsafe { self.read_remote_page_wo_prefetch(addr, &access_info) }
+                    {
                         // FIXME: 52 is hard-coded
                         vma.vm_page_prot.pgprot =
                             vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
@@ -148,6 +155,39 @@ impl ChildDescriptor {
 
     #[cfg(feature = "prefetch")]
     /// Resume one page at remote side
+    ///
+    /// @param remote_va: remote virt-addr
+    /// @param access_info: remote network meta info
+    #[inline]
+    pub unsafe fn read_remote_page_wo_prefetch(
+        &self,
+        remote_va: VirtAddrType,
+        access_info: &AccessInfo,
+    ) -> Option<*mut crate::bindings::page> {
+        let remote_pa = self.lookup_pg_table(remote_va);
+        if remote_pa.is_none() {
+            return None;
+        }
+
+        let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
+        let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
+        let res = crate::remote_paging::RemotePagingService::remote_read(
+            new_page_pa,
+            remote_pa.unwrap(),
+            4096,
+            access_info,
+        );
+        return match res {
+            Ok(_) => Some(new_page_p),
+            Err(e) => {
+                crate::log::error!("Failed to read the remote page {:?}", e);
+                None
+            }
+        };
+    }
+
+    #[cfg(feature = "prefetch")]
+    /// Resume one page at remote side
     /// It will also prefetch adjacent pages if necessary
     ///
     /// This function is a little complex.
@@ -157,27 +197,41 @@ impl ChildDescriptor {
     /// @param access_info: remote network meta info
     #[inline]
     pub unsafe fn read_remote_page(
-        &self,
+        &mut self,
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
         let (pt, idx) = self.page_table.find_l1_page_idx(VirtAddr::new(remote_va))?;
         let l1_page = &mut (*pt);
 
-        let remote_pa = l1_page[idx];
+        let mut remote_pa = l1_page[idx];
 
         // check whether it has been prefetched to local
+        #[cfg(feature = "prefetch")]
         {
             // we need to do the prefetch
             if PhysAddr::new(remote_pa).bottom_bit() == 1 {
                 /*
                 Two cases.
-                1. the page is prefetched. then we can directly return
-                2. the page is prefetched, but the content has not ready.
-                In this case, we need to poll the connection to wait for it ready.
+                    1. the page is prefetched. then we can directly return
+                    2. the page is prefetched, but the content has not ready.
+                    In this case, we need to poll the connection to wait for it ready.
+
+                FIXME:
+                - Currently, we don't handle the timeout here
                  */
-                loop {}
-                unimplemented!();
+                while remote_pa == crate::prefetcher::executor::K_MAGIC_IN_PREFETCH {
+                    // poll the prefetcher
+                    self.poll_prefetcher();
+                    remote_pa = l1_page[idx];
+                    compiler_fence(SeqCst);
+                }
+
+                // The remote page is encoded in the page table as
+                //     *mut addr | 1
+                // So we minus 1 to get the real address
+                let page = (remote_pa - 1) as *mut page;
+                return Some(page);
             }
         }
 
@@ -219,9 +273,9 @@ impl ChildDescriptor {
             // Note, we do the prefetch things here
             // This can overlap with the networking requests latency
             // find prefetch pages
-
-            //            let req = StepPrefetcher::<PhysAddr, 2>::new()
-            //                .generate_request(&mut RemotePageTableIter::new_from_l1(pt, idx));
+            let pte_iter = unsafe { RemotePageTableIter::new_from_l1(pt, idx) };
+            self.prefetcher.execute_reqs(pte_iter, StepPrefetcher::<PageEntry, 4>::new()); 
+            self.poll_prefetcher();
 
             // wait for the request to complete
             let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
@@ -247,6 +301,22 @@ impl ChildDescriptor {
                 None
             }
         };
+    }
+
+    #[cfg(feature = "prefetch")]
+    fn poll_prefetcher(&mut self) {
+        loop {
+            match self.prefetcher.poll() {
+                Ok(Async::Ready(_)) => {
+                    // The second poll is likely to succeed
+                    // so just continue
+                }
+                Ok(_NotReady) => {
+                    return;
+                }
+                Err(e) => panic!("not implemented"),
+            }
+        }
     }
 }
 
