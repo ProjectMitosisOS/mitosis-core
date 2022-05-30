@@ -25,6 +25,8 @@ pub fn check_global_configurations() {
     } else {
         crate::log::info!("[check]: Disable prefetching.")
     }
+
+    crate::log::info!("********* All configuration check passes !*********");
 }
 
 pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
