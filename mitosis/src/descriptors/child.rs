@@ -273,7 +273,7 @@ impl ChildDescriptor {
             // Note, we do the prefetch things here
             // This can overlap with the networking requests latency
             // find prefetch pages
-            let pte_iter = unsafe { RemotePageTableIter::new_from_l1(pt, idx) };
+            let pte_iter = RemotePageTableIter::new_from_l1(pt, idx);
             self.prefetcher.execute_reqs(pte_iter, StepPrefetcher::<PageEntry, 4>::new()); 
             self.poll_prefetcher();
 
@@ -306,6 +306,7 @@ impl ChildDescriptor {
     #[cfg(feature = "prefetch")]
     fn poll_prefetcher(&mut self) {
         loop {
+            #[allow(non_snake_case)]            
             match self.prefetcher.poll() {
                 Ok(Async::Ready(_)) => {
                     // The second poll is likely to succeed
@@ -314,7 +315,7 @@ impl ChildDescriptor {
                 Ok(_NotReady) => {
                     return;
                 }
-                Err(e) => panic!("not implemented"),
+                Err(_e) => panic!("not implemented"),
             }
         }
     }
