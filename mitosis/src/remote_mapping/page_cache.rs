@@ -18,19 +18,33 @@ impl Clone for Page {
     }
 }
 
-type PageCacheKey = PhyAddrType;
-type PageCacheValue = COW4KPage;
+impl Page {
+    #[inline(always)]
+    pub fn get_kva(&self) -> *mut crate::linux_kernel_module::c_types::c_void {
+        unsafe { pmem_phys_to_virt(pmem_page_to_phy(self.inner as *const _ as _)) }
+    }
+}
+
+// Map from handler id into the whole page table
+type PageCacheKey = u64;
+// #[cfg(not(feature = "prefetch"))]
+type PageCacheValue = crate::descriptors::FlatPageTable;
+// TODO: Integrate with prefetch (RemotePageTable)
+// #[cfg(feature = "prefetch")]
+// type PageCacheValue = crate::descriptors::RemotePageTable;
+
 
 #[derive(Default)]
 pub struct PageCache {
-    store: HashMap<PageCacheKey, COW4KPage, DefaultHashBuilder, PageMapAllocator>,
+    store: HashMap<PageCacheKey, PageCacheValue, DefaultHashBuilder, PageMapAllocator>,
 }
 
-pub unsafe fn copy_kernel_page(dst: *mut page, src_va: VirtAddrType) {
+pub unsafe fn copy_kernel_page(dst: *mut page, src: *mut page) {
     use crate::linux_kernel_module::c_types;
     use rust_kernel_linux_util::bindings::memcpy;
 
     let dst_va = crate::bindings::pmem_page_to_virt(dst) as u64;
+    let src_va = crate::bindings::pmem_page_to_virt(src) as u64;
     memcpy(
         (dst_va as *mut i8).cast::<c_types::c_void>(),
         (src_va as *mut i8).cast::<c_types::c_void>(),
@@ -49,7 +63,6 @@ impl PageCache {
     fn gen_cache_key(
         remote_mac_id: usize,
         handler_id: usize,
-        phy_addr: PhyAddrType,
     ) -> PageCacheKey {
         // let splitter = "@";
         // remote_mac_id.to_string()
@@ -57,38 +70,35 @@ impl PageCache {
         //     + handler_id.to_string().as_str()
         //     + splitter
         //     + phy_addr.to_string().as_str()
-        phy_addr
+        handler_id as PageCacheKey
     }
 
     pub fn lookup_mut(
         &mut self,
         remote_mac_id: usize,
         handler_id: usize,
-        phy_addr: PhyAddrType,
     ) -> Option<&mut PageCacheValue> {
         self.store
-            .get_mut(&Self::gen_cache_key(remote_mac_id, handler_id, phy_addr))
+            .get_mut(&Self::gen_cache_key(remote_mac_id, handler_id))
     }
 
     pub fn lookup(
         &self,
         remote_mac_id: usize,
         handler_id: usize,
-        phy_addr: PhyAddrType,
     ) -> Option<&PageCacheValue> {
         self.store
-            .get(&Self::gen_cache_key(remote_mac_id, handler_id, phy_addr))
+            .get(&Self::gen_cache_key(remote_mac_id, handler_id))
     }
 
     pub fn insert(
         &mut self,
         remote_mac_id: usize,
         handler_id: usize,
-        phy_addr: PhyAddrType,
-        page: PageCacheValue,
+        value: PageCacheValue,
     ) {
-        let key = Self::gen_cache_key(remote_mac_id, handler_id, phy_addr);
-        self.store.insert(key, page);
+        let K = Self::gen_cache_key(remote_mac_id, handler_id);
+        self.store.insert(K, value);
     }
 
     pub fn entry_len(&self) -> usize {
