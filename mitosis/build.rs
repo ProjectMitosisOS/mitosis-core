@@ -38,6 +38,7 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     "pmem_flush_tlb_range",
     "pmem_clear_pte_present",
     "pmem_clear_pte_write",
+    "pmem_check_pte_write",
     "pmem_pte_to_page",
     "find_vma",
     "pmem_alloc_page",

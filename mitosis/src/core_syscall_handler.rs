@@ -14,6 +14,7 @@ use os_network::timeout::TimeoutWRef;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
+use crate::remote_mapping::PhysAddr;
 use crate::rpc_service::HandlerConnectInfo;
 use crate::startup::probe_remote_rpc_end;
 
@@ -439,29 +440,34 @@ impl MitosisSysCallHandler {
                 let phy_addr = phy_addr.unwrap();
                 #[cfg(feature = "page-cache")]
                 {
-                    // if let Some(page) = crate::get_page_cache_mut().lookup_mut(
-                    if let Some(page) = crate::get_page_cache_ref().lookup(
+                    if let Some(page) = crate::get_page_cache_mut().lookup_mut(
+                        // if let Some(page) = crate::get_page_cache_ref().lookup(
                         resume_related.remote_mac_id,
                         resume_related.handler_id,
                         phy_addr,
                     ) {
-                        // TODO: check whether the page is READ only.
                         hit_page_cache = true;
                         crate::log::debug!(
                             "Hit Cache ! page cache len:{}",
                             crate::get_page_cache_ref().entry_len()
                         );
-                        let new_page_p =
-                            crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
+                        let _phys_addr = PhysAddr::new(phy_addr);
 
-                        crate::remote_mapping::page_cache::copy_kernel_page(
-                            new_page_p,
-                            page.get_kva() as _,
-                        );
-                        Some(new_page_p)
-                        // let p = page.inner as *mut crate::bindings::page;
-                        // crate::remote_mapping::page_cache::cow_page(p);
-                        // Some(p)
+                        if core::intrinsics::unlikely(false == _phys_addr.ro_bit()) {
+                            let new_page_p = crate::bindings::pmem_alloc_page(
+                                crate::bindings::PMEM_GFP_HIGHUSER,
+                            );
+
+                            crate::remote_mapping::page_cache::copy_kernel_page(
+                                new_page_p,
+                                page.get_kva() as _,
+                            );
+                            Some(new_page_p)
+                        } else {
+                            let p = page.inner as *mut crate::bindings::page;
+                            crate::remote_mapping::page_cache::mark_cow(p);
+                            Some(p)
+                        }
                     } else {
                         resume_related
                             .descriptor
