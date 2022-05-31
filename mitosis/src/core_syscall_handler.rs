@@ -1,4 +1,5 @@
 use alloc::string::String;
+use core::intrinsics::unlikely;
 use core::option::Option;
 use hashbrown::HashMap;
 
@@ -502,7 +503,7 @@ impl MitosisSysCallHandler {
                 (*vmf).page = new_page_p as *mut _;
                 // update cache
                 #[cfg(feature = "page-cache")]
-                if miss_page_cache && phy_addr.is_some() {
+                if unlikely(miss_page_cache && phy_addr.is_some()) {
                     let _phy_addr = phy_addr.unwrap();
                     // Caching up this page. Just mark as CoW.
                     // We leave the Cache bit setting process to function `caching_pg_table`
