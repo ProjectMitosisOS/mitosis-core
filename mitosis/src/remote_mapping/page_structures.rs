@@ -442,6 +442,17 @@ impl PhysAddr {
     pub fn real_addr(&self) -> u64 {
         Self::decode(self.0)
     }
+
+    /// The address means:
+    /// - Remote physical address, if the prefetch and cache are both 0
+    /// - Local kernel virtual address, if either prefetch or cache is 1
+    #[inline(always)]
+    pub fn get_page(&self) -> *mut crate::bindings::page {
+        let kernel_page_va = self.real_addr();
+
+        kernel_page_va as *mut crate::bindings::page
+    }
+
 }
 
 impl core::fmt::Debug for PhysAddr {
