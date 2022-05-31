@@ -219,7 +219,7 @@ impl ChildDescriptor {
         #[cfg(feature = "prefetch")]
         {
             // we need to do the prefetch
-            if PhysAddr::new(remote_pa).bottom_bit() == 1 {
+            if PhysAddr::new(remote_pa).bottom_bit() {
                 /*
                 Two cases.
                     1. the page is prefetched. then we can directly return
@@ -238,7 +238,6 @@ impl ChildDescriptor {
 
                 // The remote page is encoded in the page table as
                 //     *mut addr | 1
-                // So we minus 1 to get the real address
                 let page = PhysAddr::decode(remote_pa as _) as *mut page;
                 return Some(page);
             }
@@ -263,7 +262,7 @@ impl ChildDescriptor {
 
             let mut payload = DCReqPayload::default()
                 .set_laddr(new_page_pa)
-                .set_raddr(remote_pa) // copy from src into dst
+                .set_raddr(PhysAddr::decode(remote_pa)) // copy from src into dst
                 .set_sz(4096)
                 .set_lkey(*lkey)
                 .set_rkey(access_info.rkey)

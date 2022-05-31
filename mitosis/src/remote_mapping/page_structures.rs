@@ -6,12 +6,12 @@ use alloc::boxed::Box;
 use core::fmt;
 use core::ops::{Index, IndexMut};
 
+use crate::remote_mapping::page_structures::PhysAddrBitFlag::{Cache, Prefetch, ReadOnly};
 pub use x86_64::{
     align_down, align_up,
     structures::paging::{Page, Size4KiB},
     VirtAddr,
 };
-use crate::remote_mapping::page_structures::PhysAddrBitFlag::{Cache, Prefetch, ReadOnly};
 
 /// We cannot use the PhysAddr in x86_64
 /// This is because it will raise a
@@ -310,14 +310,15 @@ impl PageTableLevel {
 }
 
 pub enum PhysAddrBitFlag {
-    Prefetch = 0b001,
-    Cache = 0b010,
-    ReadOnly = 0b100,
+    Empty = 0b0000,
+    Prefetch = 0b0001,
+    Cache = 0b0010,
+    ReadOnly = 0b0100,
 }
 
 impl PhysAddrBitFlag {
-    pub fn default_flag()-> u64 {
-        Prefetch as u64 | Cache as u64  | ReadOnly as u64
+    pub fn default_flag() -> u64 {
+        Prefetch as u64 | Cache as u64 | ReadOnly as u64
     }
 }
 
@@ -328,6 +329,13 @@ impl PhysAddrBitFlag {
 ///
 /// |   *mut page   |   ro bit  |   cache bit   |   prefetch bit    |
 /// |   63          |       1   |       1       |       1           |
+///
+/// - The Prefetch flag is only set at child-side (DCAsyncPreFetcher). It means the
+///   page has already been async fetched.
+///
+/// - The Cache flag is only set at child-side (Child trigger the cache miss and set it as COW)
+///
+/// - The ReadOnly flag is only set at parent-side (walk the whole pte, and set read-only according to page flag)
 impl PhysAddr {
     /// Creates a new physical address.
     ///
@@ -340,7 +348,7 @@ impl PhysAddr {
     /// Normally, it will never be zero.
     ///
     /// Thus, we will use it to encode additional information
-    pub fn bottom_bit(&self) -> u64 {
+    pub fn bottom_bit(&self) -> bool {
         self.prefetch_bit()
     }
 
@@ -407,28 +415,27 @@ impl PhysAddr {
     /// Encode from the give page physical address.
     /// Put the dedicated bits into 1
     #[inline(always)]
-    pub fn encode(page_addr: u64, mut flag: u64) -> u64 {
+    pub fn encode(page_addr: u64, flag: u64) -> u64 {
         // Validate the flags
-        flag = flag & PhysAddrBitFlag::default_flag();
-        page_addr | flag
+        page_addr | (flag & PhysAddrBitFlag::default_flag())
     }
 
     /// Get Prefetch bit value
     #[inline(always)]
-    pub fn prefetch_bit(&self) -> u64 {
-        self.0 & Prefetch as u64
+    pub fn prefetch_bit(&self) -> bool {
+        self.0 & Prefetch as u64 == Prefetch as u64
     }
 
     /// Get Cache bit value
     #[inline(always)]
-    pub fn cache_bit(&self) -> u64 {
-        self.0 & Cache as u64
+    pub fn cache_bit(&self) -> bool {
+        self.0 & Cache as u64 == Cache as u64
     }
 
     /// Get ReadOnly bit value
     #[inline(always)]
-    pub fn ro_bit(&self) -> u64 {
-        self.0 & ReadOnly as u64
+    pub fn ro_bit(&self) -> bool {
+        self.0 & ReadOnly as u64 == ReadOnly as u64
     }
 
     #[inline(always)]

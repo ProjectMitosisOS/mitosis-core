@@ -94,7 +94,7 @@ impl RemotePageTable {
         if res == 0 {
             // The bottom bit of a physical page cannot be 1 (4KB aligned)
             // We will encode the remote information in this bit
-            assert!(phy.bottom_bit() != 1);
+            assert!(phy.bottom_bit() == false);
             l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
             self.cnt += 1;
             return None;
@@ -143,7 +143,7 @@ impl PageEntry {
 
 impl crate::prefetcher::NeedPrefetch for PageEntry {
     fn need_prefetch(&self) -> bool {
-        self.addr.bottom_bit() == 0
+        self.addr.bottom_bit() == false
     }
 }
 
