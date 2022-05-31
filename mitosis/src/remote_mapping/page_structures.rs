@@ -11,6 +11,7 @@ pub use x86_64::{
     structures::paging::{Page, Size4KiB},
     VirtAddr,
 };
+use crate::remote_mapping::page_structures::PhysAddrBitFlag::{Cache, Prefetch, ReadOnly};
 
 /// We cannot use the PhysAddr in x86_64
 /// This is because it will raise a
@@ -92,13 +93,13 @@ impl PageTable {
 
     /// Get the upper page
     #[inline]
-    pub fn get_upper_level_page(&self) -> *mut Self { 
+    pub fn get_upper_level_page(&self) -> *mut Self {
         self.upper_level
     }
 
     /// Get the upper page index
     #[inline]
-    pub fn get_upper_level_page_index(&self) -> usize { 
+    pub fn get_upper_level_page_index(&self) -> usize {
         self.upper_level_index
     }
 
@@ -116,9 +117,9 @@ impl PageTable {
 
     /// Return a valid non-null index
     #[inline]
-    pub fn find_valid_entry(&self, start_idx : usize) -> core::option::Option<usize> { 
-        for i in start_idx..ENTRY_COUNT { 
-            if self.entries[i] != 0 { 
+    pub fn find_valid_entry(&self, start_idx: usize) -> core::option::Option<usize> {
+        for i in start_idx..ENTRY_COUNT {
+            if self.entries[i] != 0 {
                 return Some(i);
             }
         }
@@ -160,7 +161,7 @@ impl IndexMut<PageTableIndex> for PageTable {
 
 impl Default for PageTable {
     fn default() -> Self {
-        Self::new(PageTableLevel::Four, core::ptr::null_mut(),0)
+        Self::new(PageTableLevel::Four, core::ptr::null_mut(), 0)
     }
 }
 
@@ -308,8 +309,25 @@ impl PageTableLevel {
     }
 }
 
-// Credits: most code is from x86_64, just remove unnecessary checks
-// If the crate updates, we can switch back to it
+pub enum PhysAddrBitFlag {
+    Prefetch = 0b001,
+    Cache = 0b010,
+    ReadOnly = 0b100,
+}
+
+impl PhysAddrBitFlag {
+    pub fn default_flag()-> u64 {
+        Prefetch as u64 | Cache as u64  | ReadOnly as u64
+    }
+}
+
+/// Credits: most code is from x86_64, just remove unnecessary checks
+/// If the crate updates, we can switch back to it
+///
+/// Encoding formation:
+///
+/// |   *mut page   |   ro bit  |   cache bit   |   prefetch bit    |
+/// |   63          |       1   |       1       |       1           |
 impl PhysAddr {
     /// Creates a new physical address.
     ///
@@ -320,14 +338,14 @@ impl PhysAddr {
 
     /// Get the bottom bit of this physical address.
     /// Normally, it will never be zero.
-    /// 
-    /// Thus, we will use it to encode additional information 
-    pub fn bottom_bit(&self) -> u64 { 
-        self.0 & (1)
+    ///
+    /// Thus, we will use it to encode additional information
+    pub fn bottom_bit(&self) -> u64 {
+        self.prefetch_bit()
     }
 
     /// Set the bottom bit of this physical address.
-    pub fn set_bottom_bit_as_one(&mut self) -> u64 { 
+    pub fn set_bottom_bit_as_one(&mut self) -> u64 {
         self.0 = self.0 | 1;
         self.0
     }
@@ -375,6 +393,47 @@ impl PhysAddr {
         U: Into<u64>,
     {
         self.align_down(align) == self
+    }
+}
+
+impl PhysAddr {
+    /// Decode to get the real page address.
+    /// Set lower 3 bits into all zero.
+    #[inline(always)]
+    pub fn decode(addr: u64) -> u64 {
+        addr & !PhysAddrBitFlag::default_flag()
+    }
+
+    /// Encode from the give page physical address.
+    /// Put the dedicated bits into 1
+    #[inline(always)]
+    pub fn encode(page_addr: u64, mut flag: u64) -> u64 {
+        // Validate the flags
+        flag = flag & PhysAddrBitFlag::default_flag();
+        page_addr | flag
+    }
+
+    /// Get Prefetch bit value
+    #[inline(always)]
+    pub fn prefetch_bit(&self) -> u64 {
+        self.0 & Prefetch as u64
+    }
+
+    /// Get Cache bit value
+    #[inline(always)]
+    pub fn cache_bit(&self) -> u64 {
+        self.0 & Cache as u64
+    }
+
+    /// Get ReadOnly bit value
+    #[inline(always)]
+    pub fn ro_bit(&self) -> u64 {
+        self.0 & ReadOnly as u64
+    }
+
+    #[inline(always)]
+    pub fn real_addr(&self) -> u64 {
+        Self::decode(self.0)
     }
 }
 

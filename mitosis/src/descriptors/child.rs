@@ -239,7 +239,7 @@ impl ChildDescriptor {
                 // The remote page is encoded in the page table as
                 //     *mut addr | 1
                 // So we minus 1 to get the real address
-                let page = (remote_pa - 1) as *mut page;
+                let page = PhysAddr::decode(remote_pa as _) as *mut page;
                 return Some(page);
             }
         }

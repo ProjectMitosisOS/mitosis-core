@@ -18,7 +18,7 @@ use os_network::{
     Factory, Future,
 };
 
-use crate::remote_mapping::RemotePageTableIter;
+use crate::remote_mapping::{PhysAddrBitFlag, RemotePageTableIter};
 
 use crate::bindings::page;
 use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
@@ -153,7 +153,8 @@ impl<'a> Future for DCAsyncPrefetcher<'a> {
                 let pte_page = unsafe { &mut (*pte_p) };
 
                 assert!(PhysAddr::new(v.user_page as _).bottom_bit() != 1);
-                pte_page[v.idx] = (v.user_page as u64) | 1;
+                pte_page[v.idx] = PhysAddr::encode(v.user_page as u64,
+                                                   PhysAddrBitFlag::Prefetch as _);
 
                 return Ok(Async::Ready(v.user_page));
             }
