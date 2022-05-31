@@ -28,16 +28,25 @@ class RunPrinter:
 
     def print_one(self):
         if self.c.recv_ready():
-            res = self.c.recv(4096).decode().splitlines()
+            res = self.c.recv(8192).decode().splitlines()
             for l in res:
                 print("@%-10s" % self.name,l.strip())
 
         if self.c.recv_stderr_ready():
-            res = self.c.recv_stderr(4096).decode().splitlines()
+            res = self.c.recv_stderr(8192).decode().splitlines()
             for l in res:
                 print("@%-10s" % self.name,l.strip())
 
         if self.c.exit_status_ready():
+#            print("exit status ready: ",self.c.recv_exit_status(), self.c.recv_ready())
+            while self.c.recv_ready():
+                res = self.c.recv(8192).decode().splitlines()
+                for l in res:
+                    print("@%-10s" % self.name,l.strip())                
+            while self.c.recv_stderr_ready():
+                res = self.c.recv_stderr(8192).decode().splitlines()
+                for l in res:
+                    print("@%-10s" % self.name,l.strip())                
             print("exit ",self.name)
             return False
 
@@ -388,7 +397,7 @@ def main():
         ## now execute
         passes = config.get("pass",[])
 
-        for p in passes:
+        for (i,p) in enumerate(passes):
             if runned > num:
                 break
             runned += 1
@@ -405,7 +414,7 @@ def main():
                                            p["host"],
                                            p["path"])
                 if p["host"] not in config.get("null",[]):
-                    printer.append(RunPrinter(p["host"],res))
+                    printer.append(RunPrinter(str(i) + p["host"],res))
             time.sleep(1)
 
     while len(printer) > 0:
