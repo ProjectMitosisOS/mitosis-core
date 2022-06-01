@@ -24,11 +24,7 @@ impl Page {
 
 // Map from handler id into the whole page table
 type PageCacheKey = u64;
-// #[cfg(not(feature = "prefetch"))]
-type PageCacheValue = crate::descriptors::FlatPageTable;
-// TODO: Integrate with prefetch (RemotePageTable)
-// #[cfg(feature = "prefetch")]
-// type PageCacheValue = crate::descriptors::RemotePageTable;
+type PageCacheValue = crate::remote_mapping::RemotePageTable;
 
 
 #[derive(Default)]

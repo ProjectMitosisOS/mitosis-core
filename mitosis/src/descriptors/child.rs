@@ -13,10 +13,10 @@ use super::rdma::RDMADescriptor;
 use super::reg::RegDescriptor;
 use super::vma::VMADescriptor;
 
-#[cfg(not(feature = "prefetch"))]
+#[allow(unused_imports)]
 use super::page_table::FlatPageTable;
 
-#[cfg(feature = "prefetch")]
+#[allow(unused_imports)]
 use crate::remote_mapping::{PageEntry, PhysAddr, RemotePageTable, RemotePageTableIter, VirtAddr};
 
 #[allow(unused_imports)]
@@ -35,10 +35,10 @@ use crate::prefetcher::{DCAsyncPrefetcher, StepPrefetcher};
 pub struct ChildDescriptor {
     pub regs: RegDescriptor,
 
-    #[cfg(not(feature = "prefetch"))]
-    pub page_table: FlatPageTable,
-
-    #[cfg(feature = "prefetch")]
+    // #[cfg(not(feature = "prefetch"))]
+    // pub page_table: FlatPageTable,
+    //
+    // #[cfg(feature = "prefetch")]
     pub page_table: RemotePageTable,
 
     pub vma: Vec<VMADescriptor>,
@@ -66,15 +66,9 @@ impl ChildDescriptor {
 
     #[inline]
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
-        #[cfg(feature = "prefetch")]
-        {
-            self.page_table
-                .translate(VirtAddr::new(virt))
-                .map(|v| v.as_u64())
-        }
-
-        #[cfg(not(feature = "prefetch"))]
-        self.page_table.translate(virt)
+        self.page_table
+            .translate(VirtAddr::new(virt))
+            .map(|v| v.as_u64())
     }
 
     /// Apply the descriptor into current process
@@ -90,7 +84,7 @@ impl ChildDescriptor {
             let vma = unsafe { task.map_one_region(file, m) };
 
             #[allow(dead_code)]
-            let vma = vma.unwrap();
+                let vma = vma.unwrap();
 
             // tune the bits
             let origin_vma_flags =
@@ -104,13 +98,12 @@ impl ChildDescriptor {
             if cfg!(feature = "eager-resume") {
                 let (size, start) = (m.get_sz(), m.get_start());
                 for addr in (start..start + size).step_by(4096) {
-
                     #[cfg(feature = "prefetch")]
-                    let new_page_p =
+                        let new_page_p =
                         unsafe { self.read_remote_page_wo_prefetch(addr, &access_info) };
 
                     #[cfg(not(feature = "prefetch"))]
-                    let new_page_p = {
+                        let new_page_p = {
                         unsafe { self.read_remote_page(addr, &access_info) }
                     };
                     // let new_page_p = unsafe { self.read_remote_page(addr, &access_info) };
@@ -361,10 +354,6 @@ impl os_network::serialize::Serialize for ChildDescriptor {
         crate::log::debug!("!!!!! start to deserialize vma, count: {}", count);
 
         // VMA & its corresponding page table
-        #[cfg(not(feature = "prefetch"))]
-        let mut pt = FlatPageTable::new();
-
-        #[cfg(feature = "prefetch")]
         let mut pt = RemotePageTable::new();
 
         let mut vmas = Vec::new();
@@ -405,10 +394,6 @@ impl os_network::serialize::Serialize for ChildDescriptor {
                 let phy: Value = unsafe { cur.read_unaligned_at_head() };
                 cur = unsafe { cur.truncate_header(core::mem::size_of::<Value>())? };
 
-                #[cfg(not(feature = "prefetch"))]
-                pt.add_one(virt as VirtAddrType + vma_start, phy);
-
-                #[cfg(feature = "prefetch")]
                 pt.map(
                     VirtAddr::new(virt as VirtAddrType + vma_start),
                     PhysAddr::new(phy),
@@ -419,11 +404,11 @@ impl os_network::serialize::Serialize for ChildDescriptor {
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
         #[cfg(feature = "prefetch")]
-        let (prefetch_conn, lkey) =
+            let (prefetch_conn, lkey) =
             unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.pop_one_qp())? };
 
         #[cfg(feature = "prefetch")]
-        let access_info = AccessInfo::new(&machine_info).unwrap();
+            let access_info = AccessInfo::new(&machine_info).unwrap();
 
         Some(Self {
             regs: regs,

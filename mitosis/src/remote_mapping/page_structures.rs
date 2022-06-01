@@ -33,7 +33,7 @@ pub type PageTableEntry = u64;
 /// through index operations. For example, `page_table[15]` returns the 15th page table entry.
 #[repr(align(4096))]
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct PageTable {
     entries: [PageTableEntry; ENTRY_COUNT],
     level: PageTableLevel,
@@ -41,22 +41,23 @@ pub struct PageTable {
     upper_level_index: usize,
 }
 
-impl Drop for PageTable {
-    fn drop(&mut self) {
-        match self.level.next_lower_level() {
-            Some(_) => {
-                for entry in self.iter() {
-                    if *entry != 0 {
-                        // this is a pointer
-                        unsafe { alloc::boxed::Box::from_raw(*entry as *mut PageTable) };
-                    }
-                }
-            }
-            // last page level do nothing
-            None => {}
-        }
-    }
-}
+
+// impl Drop for PageTable {
+//     fn drop(&mut self) {
+//         match self.level.next_lower_level() {
+//             Some(_) => {
+//                 for entry in self.iter() {
+//                     if *entry != 0 {
+//                         // this is a pointer
+//                         unsafe { alloc::boxed::Box::from_raw(*entry as *mut PageTable) };
+//                     }
+//                 }
+//             }
+//             // last page level do nothing
+//             None => {}
+//         }
+//     }
+// }
 
 impl PageTable {
     /// Creates an empty page table.

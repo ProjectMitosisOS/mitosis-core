@@ -30,6 +30,14 @@ pub struct RemotePageTable {
 }
 
 impl RemotePageTable {
+    #[inline]
+    pub fn copy(&self) -> Self {
+        Self {
+            l4_page_table: Box::new(*self.l4_page_table),
+            cnt: 0,
+        }
+    }
+
     /// Create an empty page table
     pub fn new() -> Self {
         Self {

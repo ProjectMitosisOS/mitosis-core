@@ -1,5 +1,6 @@
 use alloc::string::String;
 use core::option::Option;
+use x86_64::VirtAddr;
 
 #[allow(unused_imports)]
 use crate::descriptors::{ChildDescriptor, ParentDescriptor};
@@ -371,7 +372,7 @@ impl MitosisSysCallHandler {
                                 machine_id,
                                 handler_id
                             );
-                            des.page_table = cached_pg_table.clone();
+                            des.page_table = cached_pg_table.copy();
                         }
 
                         self.caller_status.resume_related = Some(ResumeDataStruct {
@@ -511,7 +512,7 @@ impl MitosisSysCallHandler {
                     resume_related
                         .descriptor
                         .page_table
-                        .add_one(fault_addr, kernel_va);
+                        .map(VirtAddr::new(fault_addr), PhysAddr::new(kernel_va));
                 }
                 0
             }
@@ -565,7 +566,7 @@ impl MitosisSysCallHandler {
     fn caching_pg_table(&self) {
         #[cfg(feature = "page-cache")]
         if let Some(resume_related) = self.caller_status.resume_related.as_ref() {
-            let pg_table = resume_related.descriptor.page_table.clone();
+            let pg_table = resume_related.descriptor.page_table.copy();
             unsafe {
                 crate::get_page_cache_mut().insert(
                     resume_related.remote_mac_id,
