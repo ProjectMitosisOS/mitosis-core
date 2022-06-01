@@ -121,7 +121,7 @@ impl Task {
         unsafe { core::ptr::write_volatile(crate::bindings::pmem_get_current_pt_regs(), *regs) };
     }
 
-    /// The below comments are from https://stackoverflow.com/questions/6611346/how-are-the-fs-gs-registers-used-in-linux-amd64
+    /// The below comments are from <https://stackoverflow.com/questions/6611346/how-are-the-fs-gs-registers-used-in-linux-amd64>
     /// "Glibc makes its TLS entry point to a struct pthread that contains some internal structures for threading.
     /// Glibc usually refers to a struct pthread variable as pd, presumably for pthread descriptor."
     /// The following is the getter/setter of the two important points:

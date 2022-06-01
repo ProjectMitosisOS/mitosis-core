@@ -230,6 +230,7 @@ pub mod remote_paging;
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
 
+#[cfg(feature = "prefetch")]
 type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::DCPool<'static>>>;
 
 #[cfg(feature = "prefetch")]

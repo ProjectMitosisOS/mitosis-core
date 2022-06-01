@@ -1,10 +1,12 @@
 use alloc::vec::Vec;
+#[allow(unused_imports)]
 use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
-
+#[allow(unused_imports)]
 use crate::bindings::page;
 use crate::linux_kernel_module;
 
 use os_network::bytes::BytesMut;
+#[allow(unused_imports)]
 use os_network::future::{Async, Future};
 
 use super::rdma::RDMADescriptor;
