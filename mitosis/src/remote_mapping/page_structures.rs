@@ -1,6 +1,6 @@
 //! Abstractions for page tables and page table entries.
 //!
-//! Credits: https://github.com/rust-osdev/x86_64/blob/master/src/structures/paging/page_table.rs
+//! Credits: <https://github.com/rust-osdev/x86_64/blob/master/src/structures/paging/page_table.rs>
 
 use alloc::boxed::Box;
 use core::fmt;

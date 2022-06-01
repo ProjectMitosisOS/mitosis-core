@@ -1,8 +1,5 @@
 use crate::bindings::*;
 use crate::descriptors::PageMapAllocator;
-use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
-use crate::shadow_process::COW4KPage;
-use alloc::string::{String, ToString};
 use hashbrown::hash_map::DefaultHashBuilder;
 use hashbrown::HashMap;
 
@@ -97,8 +94,8 @@ impl PageCache {
         handler_id: usize,
         value: PageCacheValue,
     ) {
-        let K = Self::gen_cache_key(remote_mac_id, handler_id);
-        self.store.insert(K, value);
+        let key = Self::gen_cache_key(remote_mac_id, handler_id);
+        self.store.insert(key, value);
     }
 
     pub fn entry_len(&self) -> usize {

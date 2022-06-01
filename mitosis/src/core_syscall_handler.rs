@@ -1,7 +1,5 @@
 use alloc::string::String;
-use core::intrinsics::unlikely;
 use core::option::Option;
-use hashbrown::HashMap;
 
 #[allow(unused_imports)]
 use crate::descriptors::{ChildDescriptor, ParentDescriptor};
@@ -10,18 +8,13 @@ use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
 
-use crate::descriptors::FlatPageTable;
-use crate::kern_wrappers::mm::VirtAddrType;
 use os_network::block_on;
 use os_network::bytes::ToBytes;
 use os_network::timeout::TimeoutWRef;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
-use crate::remote_mapping::page_cache::mark_cow;
-use crate::remote_mapping::{PhysAddr, PhysAddrBitFlag};
 use crate::rpc_service::HandlerConnectInfo;
-use crate::shadow_process::{COW4KPage, Copy4KPage};
 use crate::startup::probe_remote_rpc_end;
 
 #[allow(dead_code)]
@@ -254,7 +247,7 @@ impl MitosisSysCallHandler {
     /// This function is only used for testing
     /// will be removed in the future
     #[inline]
-    fn syscall_local_resume(&mut self, handler_id: c_ulong) -> c_long {
+    fn syscall_local_resume(&mut self, _handler_id: c_ulong) -> c_long {
         unimplemented!();
         /*
         if self.caller_status.resume_related.is_some() {
@@ -442,6 +435,7 @@ impl MitosisSysCallHandler {
     /// Core logic of handling the page faults
     #[inline(always)]
     unsafe fn handle_page_fault(&mut self, vmf: *mut crate::bindings::vm_fault) -> c_int {
+
         let fault_addr = (*vmf).address;
         #[cfg(feature = "resume-profile")]
         self.incr_fault_page_cnt();
@@ -458,9 +452,10 @@ impl MitosisSysCallHandler {
             if core::intrinsics::unlikely(phy_addr.is_none()) {
                 None
             } else {
-                let phy_addr = phy_addr.unwrap();
                 #[cfg(feature = "page-cache")]
                 {
+                    use crate::remote_mapping::{PhysAddr};
+                    let phy_addr = phy_addr.unwrap();
                     let _phys_addr = PhysAddr::new(phy_addr);
                     if core::intrinsics::likely(_phys_addr.cache_bit()) {
                         // if cache hit
@@ -503,14 +498,15 @@ impl MitosisSysCallHandler {
                 (*vmf).page = new_page_p as *mut _;
                 // update cache
                 #[cfg(feature = "page-cache")]
-                if unlikely(miss_page_cache && phy_addr.is_some()) {
+                if core::intrinsics::unlikely(miss_page_cache && phy_addr.is_some()) {
+                    use crate::remote_mapping::{PhysAddr, PhysAddrBitFlag};
                     let _phy_addr = phy_addr.unwrap();
                     // Caching up this page. Just mark as CoW.
                     // We leave the Cache bit setting process to function `caching_pg_table`
-                    mark_cow(new_page_p);
+                    crate::remote_mapping::page_cache::mark_cow(new_page_p);
 
                     let kernel_va =
-                        PhysAddr::encode(new_page_p as VirtAddrType, PhysAddrBitFlag::Cache as _);
+                        PhysAddr::encode(new_page_p as crate::kern_wrappers::mm::VirtAddrType, PhysAddrBitFlag::Cache as _);
 
                     resume_related
                         .descriptor
@@ -542,6 +538,7 @@ impl MitosisSysCallHandler {
         }
     }
 
+    #[allow(dead_code)]
     #[inline]
     fn incr_fault_page_cnt(&mut self) {
         self.caller_status.fault_page_cnt += 1;
@@ -568,7 +565,7 @@ impl MitosisSysCallHandler {
     fn caching_pg_table(&self) {
         #[cfg(feature = "page-cache")]
         if let Some(resume_related) = self.caller_status.resume_related.as_ref() {
-            let mut pg_table = resume_related.descriptor.page_table.clone();
+            let pg_table = resume_related.descriptor.page_table.clone();
             unsafe {
                 crate::get_page_cache_mut().insert(
                     resume_related.remote_mac_id,
