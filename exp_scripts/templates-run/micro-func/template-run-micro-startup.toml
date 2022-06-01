@@ -6,7 +6,6 @@ role = 'parent'
 path = ''
 cmd = 'make insmod'
 
-
 [[template.pass]]
 role = 'child'
 path = ''

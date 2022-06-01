@@ -55,7 +55,11 @@ def trigger_bootstrap(dictory):
                 sys_command_outstatuserr(cmd, timeout=60)
 
                 if len(filter) > 0: 
-                    trace = int(f.split("-")[1].split(".")[0])
+                    trace = ""
+                    try: 
+                        trace = int(f.split("-")[1].split(".")[0])
+                    except:
+                        trace = str(f.split("-")[1].split(".")[0])
                     print("trace {}".format(trace))
 
                     print_process = Popen(("cat {}".format(os.path.join(root,f + ".txt")).split()), stdout=subprocess.PIPE)
