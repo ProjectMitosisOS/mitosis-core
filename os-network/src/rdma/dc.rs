@@ -86,6 +86,19 @@ impl Future for DCConn<'_> {
     }
 }
 
+impl<'a> Clone for DCConn<'a> {
+    /// Clone is fine for DCQP
+    /// This is because
+    /// 1. it is behind ARC
+    /// 2. the raw QP is thread-safe
+    fn clone(&self) -> Self {
+        Self { 
+            dc : self.dc.clone(), 
+            phantom: PhantomData,    
+        }
+    }
+}
+
 impl crate::conn::Factory for DCFactory<'_> {
     type ConnMeta = ();
     type ConnType<'a>
@@ -105,3 +118,4 @@ impl crate::conn::Factory for DCFactory<'_> {
         }
     }
 }
+

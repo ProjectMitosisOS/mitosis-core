@@ -5,8 +5,6 @@ make build-mitosis  # Build MITOSIS
 make build-mitosis-cache  # Build MITOSIS-cache
 ```
 
-
-
 ## Run C microbenchmark
 
 ```sh
@@ -23,7 +21,6 @@ make micro-function-prepare  # prepare microbench
 make micro-function-execution  # execution microbench
 make micro-function-startup # startup lean-container
 ```
-
 
 ## Run micros at once (MITOSIS)
 
