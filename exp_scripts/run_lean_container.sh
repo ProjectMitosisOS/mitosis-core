@@ -1,6 +1,6 @@
 exe_path=../exp/bench_lean_container
 
-bench_sec=5
+bench_sec=8
 name=bench_lean_container
 rootfs_path=/home/lfm/projects/mos/mitosis-user-libs/mitosis-lean-container/.base/hello/rootfs
 

@@ -23,8 +23,8 @@ cmd = 'cd ${micro_func_name} && python function.py -pin=1 -profile=0 -handler_id
 
 [[template.pass]]
 role = 'child'
-path = 'exp/scripts'
-cmd = 'sh run_lean_container.sh' # TODO：Could be further refined
+path = 'exp_scripts'
+cmd = 'sleep 3 && sh run_lean_container.sh' # TODO：Could be further refined
 
 
 [template.placeholder]

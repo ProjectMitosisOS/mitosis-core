@@ -42,6 +42,8 @@ impl Default for ParentDescriptor {
 }
 
 impl ParentDescriptor {
+    /// Deprecated
+    ///
     /// Transform the parent descriptor to a child descriptor
     /// When prefetch is enabled, this function can fail if no sufficient 
     /// DCQP in the current kernel. 
