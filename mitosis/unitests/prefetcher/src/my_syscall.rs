@@ -40,7 +40,7 @@ impl MySyscallHandler {
             assert!(new_pt.map(VirtAddr::new(*k), PhysAddr::new(*v)).is_none());
         }
 
-        let mut iter = RemotePageTableIter::new(&mut new_pt).unwrap();
+        let mut iter = unsafe { RemotePageTableIter::new(&mut new_pt).unwrap() };
 
         // randomly move the iterator
         for _ in 0..5 {
@@ -98,11 +98,19 @@ impl MySyscallHandler {
         }
 
         log::info!("get initial page size:{}", page_table.len());
-        page_table.print_self();
+        log::debug!("{}", page_table);
 
-        let mut copied_pg_table = page_table.copy();
+        let copied_pg_table = page_table.copy();
         log::info!("get initial page size:{}", copied_pg_table.len());
-        copied_pg_table.print_self();
+        log::debug!("{}", copied_pg_table);
+
+        for i in 0..20 {
+            let u = PhysAddr::encode((i + 1) * 4096, PhysAddrBitFlag::Cache as _);
+            assert_eq!(
+                page_table.translate(VirtAddr::new(i * 4096)).unwrap(),
+                copied_pg_table.translate(VirtAddr::new(i * 4096)).unwrap(),
+            );
+        }
 
         log::info!("===============end test page table self cloning===============");
     }

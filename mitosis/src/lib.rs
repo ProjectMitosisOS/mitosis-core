@@ -302,15 +302,15 @@ pub unsafe fn get_mem_pool_mut() -> &'static mut crate::mem_pools::MemPool {
     crate::mem_pool::get_mut()
 }
 
-declare_global!(global_page_cache, crate::page_cache::PageCache);
+declare_global!(global_page_cache, crate::page_cache::RemotePageTableCache);
 
 #[inline]
-pub unsafe fn get_page_cache_ref() -> &'static crate::page_cache::PageCache {
+pub unsafe fn get_page_cache_ref() -> &'static crate::page_cache::RemotePageTableCache {
     crate::global_page_cache::get_ref()
 }
 
 #[inline]
-pub unsafe fn get_page_cache_mut() -> &'static mut crate::page_cache::PageCache {
+pub unsafe fn get_page_cache_mut() -> &'static mut crate::page_cache::RemotePageTableCache {
     crate::global_page_cache::get_mut()
 }
 

@@ -109,7 +109,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size)) };
 
     // cache for storing the remote page table cache
-    unsafe { crate::global_page_cache::init(crate::page_cache::PageCache::default()) };
+    unsafe { crate::global_page_cache::init(crate::page_cache::RemotePageTableCache::default()) };
 
     // TODO: other services
 
