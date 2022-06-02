@@ -1,7 +1,8 @@
 ##### Build everything
 
 ```sh
-make build-mitosis
+make build-mitosis  # Build MITOSIS
+make build-mitosis-cache  # Build MITOSIS-cache
 ```
 
 
