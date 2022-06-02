@@ -8,11 +8,15 @@ pub type KPageTable = HashMap<VirtAddrType, Page>;
 /// A simple wrapper over the kernel's `struct page`
 pub struct Page {
     page_p: *mut page,
+    raw: bool,
 }
 
 impl Page {
     pub unsafe fn new_from_raw(inner: *mut page) -> Self {
-        Self { page_p: inner }
+        Self {
+            page_p: inner,
+            raw: true,
+        }
     }
 
     pub unsafe fn new_from_upage(
@@ -32,11 +36,13 @@ impl Page {
             // free the page
             Self {
                 page_p: new_page_p as *mut _,
+                raw : false,
             };
             return None;
         }
         Some(Self {
             page_p: new_page_p as *mut _,
+            raw : false,
         })
     }
 
@@ -67,6 +73,7 @@ impl Clone for Page {
     fn clone(&self) -> Self {
         Self {
             page_p: self.page_p,
+            raw : self.raw,
         }
     }
 }
@@ -81,7 +88,10 @@ impl core::fmt::Debug for Page {
 
 impl Drop for Page {
     fn drop(&mut self) {
-        unsafe { crate::bindings::pmem_free_page(self.page_p as *mut _) };
+        // the page is allocated from new page 
+        if !self.raw { 
+            unsafe { crate::bindings::pmem_free_page(self.page_p as *mut _) };
+        }
     }
 }
 

@@ -475,7 +475,7 @@ impl MitosisSysCallHandler {
                             );
                             Some(new_page_p)
                         } else {
-                            // Read only, mark as COW directly
+                            // Read only, mark it as COW directly
                             page.increase_ref_count();
                             Some(page.get_inner())
                         }
@@ -513,7 +513,7 @@ impl MitosisSysCallHandler {
                     resume_related
                         .descriptor
                         .page_table
-                        .force_map(VirtAddr::new(fault_addr), PhysAddr::new(kernel_va));
+                        .force_map(x86_64::VirtAddr::new(fault_addr), PhysAddr::new(kernel_va));
                 }
                 0
             }
