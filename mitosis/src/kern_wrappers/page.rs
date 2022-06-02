@@ -1,16 +1,19 @@
-use hashbrown::HashMap;
 use crate::bindings::page;
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
+use hashbrown::HashMap;
 
 // kernel pages reserved for CoW
 pub type KPageTable = HashMap<VirtAddrType, Page>;
 
+/// A simple wrapper over the kernel's `struct page`
 pub struct Page {
     page_p: *mut page,
 }
 
 impl Page {
-    pub unsafe fn new_from_upage(user_page_va: *mut crate::linux_kernel_module::c_types::c_void) -> Option<Self> {
+    pub unsafe fn new_from_upage(
+        user_page_va: *mut crate::linux_kernel_module::c_types::c_void,
+    ) -> Option<Self> {
         use crate::bindings::{pmem_alloc_page, pmem_page_to_phy, pmem_phys_to_virt};
         use crate::linux_kernel_module::bindings::GFP_KERNEL;
         let new_page_p = pmem_alloc_page(GFP_KERNEL);
@@ -18,7 +21,8 @@ impl Page {
             return None;
         }
         let new_virt = pmem_phys_to_virt(pmem_page_to_phy(new_page_p));
-        let res = crate::linux_kernel_module::bindings::_copy_from_user(new_virt, user_page_va, 4096);
+        let res =
+            crate::linux_kernel_module::bindings::_copy_from_user(new_virt, user_page_va, 4096);
 
         if res != 0 {
             // free the page
@@ -37,6 +41,12 @@ impl Page {
         unsafe { crate::bindings::pmem_page_to_phy(self.page_p as *mut _) }
     }
 
+    #[inline]
+    pub unsafe fn increase_ref_count(&mut self) {
+        crate::bindings::pmem_get_page(self.page_p);
+        crate::bindings::pmem_page_dup_rmap(self.page_p, false);
+    }
+
     #[allow(dead_code)]
     #[inline]
     pub fn get_page(&self) -> *mut page {
@@ -47,6 +57,14 @@ impl Page {
     #[inline]
     pub unsafe fn get_kernel_virt(&self) -> *mut crate::linux_kernel_module::c_types::c_void {
         crate::bindings::pmem_phys_to_virt(self.get_phy())
+    }
+}
+
+impl Clone for Page {
+    fn clone(&self) -> Self {
+        Self {
+            page_p: self.page_p,
+        }
     }
 }
 
@@ -65,3 +83,18 @@ impl Drop for Page {
 }
 
 unsafe impl Sync for Page {}
+
+/// copy the content of src to the dst
+pub unsafe fn copy_page_content_4k(dst: *mut page, src: *mut page) {
+    use crate::linux_kernel_module::c_types;
+    use rust_kernel_linux_util::bindings::memcpy;
+
+    let dst_va = crate::bindings::pmem_page_to_virt(dst) as u64;
+    let src_va = crate::bindings::pmem_page_to_virt(src) as u64;
+
+    memcpy(
+        (dst_va as *mut i8).cast::<c_types::c_void>(),
+        (src_va as *mut i8).cast::<c_types::c_void>(),
+        4096, // 4KB
+    );
+}

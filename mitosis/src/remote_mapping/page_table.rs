@@ -113,7 +113,7 @@ impl RemotePageTable {
     }
 
     /// Add one (addr, phy) mapping into the page table.
-    /// The new pair mapping would override the origin pair (if exist)
+    /// The new pair mapping would **always overwrite** the origin pair (if exist)
     #[inline]
     pub fn force_map(&mut self, addr: VirtAddr, phy: PhysAddr) {
         let entry = RemotePageAddr::containing_address(addr);
