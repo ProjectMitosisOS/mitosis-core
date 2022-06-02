@@ -364,7 +364,7 @@ impl MitosisSysCallHandler {
                         #[cfg(feature = "page-cache")]
                         // Read the cache from kernel cache
                         if let Some(cached_pg_table) = unsafe {
-                            crate::get_page_cache_ref().lookup(machine_id as _, handler_id as _)
+                            crate::get_pt_cache_ref().lookup(machine_id as _, handler_id as _)
                         } {
                             crate::log::debug!(
                                 "Find one cached page cache with mac id: {}, handler id: {}",
@@ -570,7 +570,7 @@ impl MitosisSysCallHandler {
             // copy to the kernel cache
             let pg_table = resume_related.descriptor.page_table.copy();
             unsafe {
-                crate::get_page_cache_mut().insert(
+                crate::get_pt_cache_mut().insert(
                     resume_related.remote_mac_id,
                     resume_related.handler_id,
                     pg_table,

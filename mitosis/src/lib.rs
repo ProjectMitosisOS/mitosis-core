@@ -302,16 +302,16 @@ pub unsafe fn get_mem_pool_mut() -> &'static mut crate::mem_pools::MemPool {
     crate::mem_pool::get_mut()
 }
 
-declare_global!(global_page_cache, crate::page_cache::RemotePageTableCache);
+declare_global!(global_pt_cache, crate::remote_pt_cache::RemotePageTableCache);
 
 #[inline]
-pub unsafe fn get_page_cache_ref() -> &'static crate::page_cache::RemotePageTableCache {
-    crate::global_page_cache::get_ref()
+pub unsafe fn get_pt_cache_ref() -> &'static crate::remote_pt_cache::RemotePageTableCache {
+    crate::global_pt_cache::get_ref()
 }
 
 #[inline]
-pub unsafe fn get_page_cache_mut() -> &'static mut crate::page_cache::RemotePageTableCache {
-    crate::global_page_cache::get_mut()
+pub unsafe fn get_pt_cache_mut() -> &'static mut crate::remote_pt_cache::RemotePageTableCache {
+    crate::global_pt_cache::get_mut()
 }
 
 // pub mod resume;
@@ -332,4 +332,4 @@ pub mod prefetcher;
 
 pub mod lock_bundler;
 
-pub mod page_cache;
+pub mod remote_pt_cache;

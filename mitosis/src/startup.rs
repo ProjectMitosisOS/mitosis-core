@@ -115,7 +115,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size)) };
 
     // cache for storing the remote page table cache
-    unsafe { crate::global_page_cache::init(crate::page_cache::RemotePageTableCache::default()) };
+    unsafe { crate::global_pt_cache::init(crate::remote_pt_cache::RemotePageTableCache::default()) };
 
     // TODO: other services
 
@@ -162,7 +162,7 @@ pub fn end_instance() {
         crate::sp_service::drop();
         crate::mem_pool::drop();
         
-        crate::global_page_cache::drop();
+        crate::global_pt_cache::drop();
     };
     end_rdma();
 
