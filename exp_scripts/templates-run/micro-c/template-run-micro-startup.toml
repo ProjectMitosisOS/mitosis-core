@@ -19,7 +19,8 @@ cmd = 'sleep 1 && ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
-cmd = 'sleep 2 && cd ${micro_func_name} && python function.py -working_set=${working_set} -pin=1 -profile=0 -handler_id=73'
+#cmd = 'sleep 1 && ./bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=1 --profile=0 --touch_ratio=${touch_ratio}'
+cmd = 'cd ${micro_func_name} && python function.py -working_set=${working_set} -pin=1 -profile=0 -handler_id=73 -exclude_execution=1'
 
 [[template.pass]]
 role = 'child'
@@ -39,5 +40,4 @@ working_set = [1048576,
     1073741824,
 ]
 micro_func_name = "micro"
-
-
+touch_ratio=100

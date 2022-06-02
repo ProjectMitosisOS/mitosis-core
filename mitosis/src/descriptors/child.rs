@@ -94,8 +94,8 @@ impl ChildDescriptor {
                 // set the vma
                 crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
             }
-
-            if cfg!(feature = "eager-resume") {
+            #[cfg(feature = "eager-resume")]
+            {
                 let (size, start) = (m.get_sz(), m.get_start());
                 for addr in (start..start + size).step_by(4096) {
                     #[cfg(feature = "prefetch")]

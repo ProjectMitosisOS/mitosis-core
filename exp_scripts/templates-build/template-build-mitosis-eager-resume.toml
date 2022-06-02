@@ -1,0 +1,13 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'builder'
+path = ''
+cmd = 'source $HOME/.cargo/env; cp mitosis-kms/${Kbuild} mitosis-kms/Kbuild && make km ; make insmod'
+
+[template.placeholder]
+name = ["build"]
+Kbuild = "Kbuild-mitosis-eager-resume"
+
+
