@@ -47,19 +47,14 @@ impl ParentDescriptor {
     /// DCQP in the current kernel. 
     #[inline]
     pub fn to_descriptor(&self) -> ChildDescriptor {
-        #[cfg(feature = "prefetch")]
         let mut page_table = crate::remote_mapping::RemotePageTable::new();
 
-        #[cfg(not(feature = "prefetch"))]
-        let mut page_table = super::page_table::FlatPageTable::new();
 
         for (vma_idx, vma_pg_table) in self.page_table.iter().enumerate() {
             let start = self.vma[vma_idx].get_start();
             for (offset, phy_addr) in &vma_pg_table.inner_pg_table {
-                #[cfg(not(feature = "prefetch"))]
-                page_table.add_one((*offset as VirtAddrType + start) as _, *phy_addr as _);
-
-                #[cfg(feature = "prefetch")]
+                // #[cfg(not(feature = "prefetch"))]
+                // page_table.add_one((*offset as VirtAddrType + start) as _, *phy_addr as _);
                 page_table.map(
                     crate::remote_mapping::VirtAddr::new(*offset as VirtAddrType + start),
                     crate::remote_mapping::PhysAddr::new(*phy_addr),

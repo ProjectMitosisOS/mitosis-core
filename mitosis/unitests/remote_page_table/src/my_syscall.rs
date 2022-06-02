@@ -53,7 +53,7 @@ impl MySyscallHandler {
         // now check the iterators
         crate::log::info!("Now check the iterators");
 
-        let iter = RemotePageTableIter::new(&mut new_pt).unwrap();
+        let iter = unsafe { RemotePageTableIter::new(&mut new_pt).unwrap() };
         crate::log::debug!("sanity check iter {:?}", iter);
 
         let mut counter2 = 0;

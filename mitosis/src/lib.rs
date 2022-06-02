@@ -43,6 +43,8 @@ declare_global!(max_cluster_size, usize);
 // same number of RNIC attached to it.
 declare_global!(max_nics_used, usize);
 
+
+/// Global configurations of the MITOSIS kernel
 #[derive(Debug, Clone)]
 pub struct Config {
     pub(crate) num_nics_used: usize,
@@ -230,6 +232,7 @@ pub mod remote_paging;
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
 
+#[cfg(feature = "prefetch")]
 type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::DCPool<'static>>>;
 
 #[cfg(feature = "prefetch")]
@@ -242,8 +245,8 @@ pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'stat
 
 #[cfg(feature = "prefetch")]
 #[inline]
-/// The DCQP for async prefetcher is cached in the async servcie pool 
-/// This design avoid creating DCQP on the fly 
+/// The DCQP for async prefetcher is cached in the async servcie pool
+/// This design avoid creating DCQP on the fly
 pub unsafe fn get_dc_pool_async_service_ref() -> &'static crate::AsyncDCPool {
     crate::dc_pool_service_async::get_ref()
 }
@@ -257,20 +260,6 @@ pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'
 pub unsafe fn get_dc_target_service_mut() -> &'static mut crate::dc_pool::DCTargetPool {
     crate::dc_target_service::get_mut()
 }
-
-/*
-// Descriptor pool, used for container preparation
-declare_global!(descriptor_pool, crate::descriptors::DescriptorFactoryService);
-
-#[inline]
-pub unsafe fn get_descriptor_pool_ref() -> &'static crate::descriptors::DescriptorFactoryService {
-    crate::descriptor_pool::get_ref()
-}
-
-#[inline]
-pub unsafe fn get_descriptor_pool_mut() -> &'static mut crate::descriptors::DescriptorFactoryService {
-    crate::descriptor_pool::get_mut()
-} */
 
 declare_global!(
     sp_service,
@@ -299,6 +288,19 @@ pub unsafe fn get_mem_pool_mut() -> &'static mut crate::mem_pools::MemPool {
     crate::mem_pool::get_mut()
 }
 
+// TODO: need add locks
+declare_global!(global_pt_cache, crate::remote_pt_cache::RemotePageTableCache);
+
+#[inline]
+pub unsafe fn get_pt_cache_ref() -> &'static crate::remote_pt_cache::RemotePageTableCache {
+    crate::global_pt_cache::get_ref()
+}
+
+#[inline]
+pub unsafe fn get_pt_cache_mut() -> &'static mut crate::remote_pt_cache::RemotePageTableCache {
+    crate::global_pt_cache::get_mut()
+}
+
 // pub mod resume;
 pub mod core_syscall_handler;
 pub mod syscalls;
@@ -316,3 +318,5 @@ pub mod mem_pools;
 pub mod prefetcher;
 
 pub mod lock_bundler;
+
+pub mod remote_pt_cache;

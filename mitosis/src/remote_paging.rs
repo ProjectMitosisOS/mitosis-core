@@ -42,6 +42,8 @@ impl AccessInfo {
 pub struct RemotePagingService;
 
 use os_network::msg::UDMsg as RMemory;
+use crate::remote_mapping::PhysAddr;
+
 pub(crate) type DCReqPayload = os_network::rdma::payload::Payload<ib_dc_wr>;
 
 impl RemotePagingService {
@@ -102,7 +104,7 @@ impl RemotePagingService {
 
         let mut payload = DCReqPayload::default()
             .set_laddr(dst)
-            .set_raddr(src) // copy from src into dst
+            .set_raddr(PhysAddr::decode(src)) // copy from src into dst
             .set_sz(sz as _)
             .set_lkey(*lkey)
             .set_rkey(access_info.rkey)

@@ -18,7 +18,7 @@ use os_network::{
     Factory, Future,
 };
 
-use crate::remote_mapping::RemotePageTableIter;
+use crate::remote_mapping::{PhysAddrBitFlag, RemotePageTableIter};
 
 use crate::bindings::page;
 use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
@@ -93,13 +93,14 @@ impl<'a> DCAsyncPrefetcher<'a> {
             let pte_page = unsafe { &mut (*pte_p) };
             let phyaddr = PhysAddr::new(pte_page[reqs[i].index]);
 
-            if phyaddr.bottom_bit() == 1 {
+            if phyaddr.bottom_bit() {
                 // this page has been prefetched, or at least in the list
                 continue;
             }
 
             // 1. set the page table entry's bottom bit to 1 to prevent future prefetch
-            let remote_pa = pte_page[reqs[i].index];
+            let remote_pa = phyaddr.real_addr();
+            // let remote_pa = pte_page[reqs[i].index];
 
             // FIXME: this code assumes the remote PA never changes for this children
             // To fix this, we need to instrumnet another bits in the address
@@ -152,8 +153,9 @@ impl<'a> Future for DCAsyncPrefetcher<'a> {
                 let pte_p = v.pt;
                 let pte_page = unsafe { &mut (*pte_p) };
 
-                assert!(PhysAddr::new(v.user_page as _).bottom_bit() != 1);
-                pte_page[v.idx] = (v.user_page as u64) | 1;
+                assert!(PhysAddr::new(v.user_page as _).bottom_bit() == false);
+                pte_page[v.idx] = PhysAddr::encode(v.user_page as u64,
+                                                   PhysAddrBitFlag::Prefetch as _);
 
                 return Ok(Async::Ready(v.user_page));
             }

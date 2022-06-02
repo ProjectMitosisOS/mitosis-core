@@ -1,11 +1,12 @@
 //! Abstractions for page tables and page table entries.
 //!
-//! Credits: https://github.com/rust-osdev/x86_64/blob/master/src/structures/paging/page_table.rs
+//! Credits: <https://github.com/rust-osdev/x86_64/blob/master/src/structures/paging/page_table.rs>
 
 use alloc::boxed::Box;
 use core::fmt;
 use core::ops::{Index, IndexMut};
 
+use crate::remote_mapping::page_structures::PhysAddrBitFlag::{Cache, Prefetch, ReadOnly};
 pub use x86_64::{
     align_down, align_up,
     structures::paging::{Page, Size4KiB},
@@ -58,6 +59,44 @@ impl Drop for PageTable {
 }
 
 impl PageTable {
+    pub fn deep_copy(&self) -> Box<Self> {
+        const EMPTY: PageTableEntry = 0;
+        let mut result = Box::new(Self {
+            entries: [EMPTY; ENTRY_COUNT],
+            level: self.level,
+            upper_level: self.upper_level,
+            upper_level_index: self.upper_level_index,
+        });
+        let entity = &mut *result;
+
+        for (idx, value) in self.entries.iter().enumerate() {
+            match entity.level {
+                PageTableLevel::One => {
+                    entity[idx] = *value;
+                }
+                _ => {
+                    if *value == 0 {
+                        entity[idx] = 0;
+                    } else {
+                        let next_level = *value as *mut Self;
+                        if !next_level.is_null() {
+                            // deep copy to lower levels
+                            let mut copy_level = unsafe { (&(*next_level) as &Self).deep_copy() };
+                            // update into new upper level
+                            copy_level.upper_level = entity as *mut PageTable;
+                            copy_level.upper_level_index = idx;
+                            entity[idx] = Box::into_raw(copy_level) as _;
+                        }
+                    }
+                }
+            }
+        }
+
+        result
+    }
+}
+
+impl PageTable {
     /// Creates an empty page table.
     #[inline]
     pub const fn new(level: PageTableLevel, upper: *mut Self, idx: usize) -> Self {
@@ -92,13 +131,13 @@ impl PageTable {
 
     /// Get the upper page
     #[inline]
-    pub fn get_upper_level_page(&self) -> *mut Self { 
+    pub fn get_upper_level_page(&self) -> *mut Self {
         self.upper_level
     }
 
     /// Get the upper page index
     #[inline]
-    pub fn get_upper_level_page_index(&self) -> usize { 
+    pub fn get_upper_level_page_index(&self) -> usize {
         self.upper_level_index
     }
 
@@ -116,9 +155,9 @@ impl PageTable {
 
     /// Return a valid non-null index
     #[inline]
-    pub fn find_valid_entry(&self, start_idx : usize) -> core::option::Option<usize> { 
-        for i in start_idx..ENTRY_COUNT { 
-            if self.entries[i] != 0 { 
+    pub fn find_valid_entry(&self, start_idx: usize) -> core::option::Option<usize> {
+        for i in start_idx..ENTRY_COUNT {
+            if self.entries[i] != 0 {
                 return Some(i);
             }
         }
@@ -160,7 +199,7 @@ impl IndexMut<PageTableIndex> for PageTable {
 
 impl Default for PageTable {
     fn default() -> Self {
-        Self::new(PageTableLevel::Four, core::ptr::null_mut(),0)
+        Self::new(PageTableLevel::Four, core::ptr::null_mut(), 0)
     }
 }
 
@@ -308,8 +347,33 @@ impl PageTableLevel {
     }
 }
 
-// Credits: most code is from x86_64, just remove unnecessary checks
-// If the crate updates, we can switch back to it
+pub enum PhysAddrBitFlag {
+    Empty = 0b0000,
+    Prefetch = 0b0001,
+    Cache = 0b0010,
+    ReadOnly = 0b0100,
+}
+
+impl PhysAddrBitFlag {
+    pub fn mask() -> u64 {
+        Prefetch as u64 | Cache as u64 | ReadOnly as u64
+    }
+}
+
+/// Credits: most code is from x86_64, just remove unnecessary checks
+/// If the crate updates, we can switch back to it
+///
+/// Encoding formation:
+///
+/// |   *mut page   |   ro bit  |   cache bit   |   prefetch bit    |
+/// |   63          |       1   |       1       |       1           |
+///
+/// - The Prefetch flag is only set at child-side (DCAsyncPreFetcher). It means the
+///   page has already been async fetched.
+///
+/// - The Cache flag is only set at child-side (Child trigger the cache miss and set it as COW)
+///
+/// - The ReadOnly flag is only set at parent-side (walk the whole pte, and set read-only according to page flag)
 impl PhysAddr {
     /// Creates a new physical address.
     ///
@@ -319,15 +383,15 @@ impl PhysAddr {
     }
 
     /// Get the bottom bit of this physical address.
-    /// Normally, it will never be zero.
-    /// 
-    /// Thus, we will use it to encode additional information 
-    pub fn bottom_bit(&self) -> u64 { 
-        self.0 & (1)
+    /// Normally, it will always be zero.
+    ///
+    /// Thus, we will use it to encode additional information
+    pub fn bottom_bit(&self) -> bool {
+        self.is_prefetch()
     }
 
     /// Set the bottom bit of this physical address.
-    pub fn set_bottom_bit_as_one(&mut self) -> u64 { 
+    pub fn set_bottom_bit_as_one(&mut self) -> u64 {
         self.0 = self.0 | 1;
         self.0
     }
@@ -375,6 +439,56 @@ impl PhysAddr {
         U: Into<u64>,
     {
         self.align_down(align) == self
+    }
+}
+
+impl PhysAddr {
+    /// Decode to get the real page address.
+    /// Set lower 3 bits into all zero.
+    #[inline(always)]
+    pub fn decode(addr: u64) -> u64 {
+        addr & !PhysAddrBitFlag::mask()
+    }
+
+    /// Encode from the give page physical address.
+    /// Put the dedicated bits into 1
+    #[inline(always)]
+    pub fn encode(page_addr: u64, flag: u64) -> u64 {
+        // Validate the flags
+        page_addr | (flag & PhysAddrBitFlag::mask())
+    }
+
+    /// Get Prefetch bit value
+    #[inline(always)]
+    pub fn is_prefetch(&self) -> bool {
+        self.0 & Prefetch as u64 == Prefetch as u64
+    }
+
+    /// Get Cache bit value
+    #[inline(always)]
+    pub fn is_cache(&self) -> bool {
+        self.0 & Cache as u64 == Cache as u64
+    }
+
+    /// Get ReadOnly bit value
+    #[inline(always)]
+    pub fn is_ro(&self) -> bool {
+        self.0 & ReadOnly as u64 == ReadOnly as u64
+    }
+
+    #[inline(always)]
+    pub fn real_addr(&self) -> u64 {
+        Self::decode(self.0)
+    }
+
+    /// The address means:
+    /// - Remote physical address, if the prefetch and cache are both 0
+    /// - Local kernel virtual address, if either prefetch or cache is 1
+    #[inline(always)]
+    pub fn convert_to_page(&self) -> *mut crate::bindings::page {
+        let kernel_page_va = self.real_addr();
+
+        kernel_page_va as *mut crate::bindings::page
     }
 }
 

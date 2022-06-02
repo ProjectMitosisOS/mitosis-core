@@ -26,6 +26,12 @@ pub fn check_global_configurations() {
         crate::log::info!("[check]: Disable prefetching.")
     }
 
+    if cfg!(feature = "page-cache") {
+        crate::log::info!("[check]: Cache remote page table optimization is enabled.")
+    } else {
+        crate::log::info!("[check]: Not cache remote page table.")
+    }    
+
     crate::log::info!("********* All configuration check passes !*********");
 }
 
@@ -108,6 +114,9 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     //  Memory pool for the shadow process service
     unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size)) };
 
+    // cache for storing the remote page table cache
+    unsafe { crate::global_pt_cache::init(crate::remote_pt_cache::RemotePageTableCache::default()) };
+
     // TODO: other services
 
     crate::log::info!("Start waiting for the RPC servers to start...");
@@ -152,6 +161,8 @@ pub fn end_instance() {
         crate::log::debug!("drop shadow process service");
         crate::sp_service::drop();
         crate::mem_pool::drop();
+        
+        crate::global_pt_cache::drop();
     };
     end_rdma();
 

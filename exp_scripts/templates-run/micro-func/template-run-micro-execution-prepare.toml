@@ -15,7 +15,7 @@ cmd = 'sleep 3 && cd ${micro_func_name} && python function.py -exclude_execution
 [[template.pass]]
 role = 'parent'
 path = 'exp'
-cmd = './simple_child -mac_id=0 -wait_finish_sec=5'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=3; ./simple_child -mac_id=0'
 
 
 [template.placeholder]
