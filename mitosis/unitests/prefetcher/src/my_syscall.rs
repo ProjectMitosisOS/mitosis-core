@@ -89,8 +89,6 @@ impl MySyscallHandler {
 
 impl MySyscallHandler {
     fn test_page_table_self_cloning(&self) {
-
-
         log::info!("===============start test page table self cloning===============");
         let mut page_table = RemotePageTable::new();
 
