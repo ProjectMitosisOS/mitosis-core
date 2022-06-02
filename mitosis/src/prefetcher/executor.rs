@@ -57,6 +57,16 @@ impl<'a> DCAsyncPrefetcher<'a> {
             access_info: remote_info,
         })
     }
+
+    /// Clean my prefetch requests
+    pub fn drain_connections(&mut self) -> Result<(DCConn<'a>, u32), <Self as Future>::Error> { 
+        while !self.pending_queues.is_empty() { 
+            self.poll()?;
+        }
+    Ok((self.conn.clone(), self.lkey))
+    }
+
+
     #[inline]
     pub fn new_from_raw(conn: DCConn<'a>, lkey: u32, access_info: AccessInfo) -> Self {
         Self {

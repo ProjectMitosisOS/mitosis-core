@@ -17,6 +17,8 @@ use crate::linux_kernel_module;
 use crate::rpc_service::HandlerConnectInfo;
 use crate::startup::probe_remote_rpc_end;
 
+const TIMEOUT_USEC: i64 = 1000_000; // 1s
+
 #[allow(dead_code)]
 struct ResumeDataStruct {
     handler_id: usize,
@@ -69,11 +71,25 @@ impl Drop for MitosisSysCallHandler {
                 pg_fault_sz
             );
         }
-        self.caching_pg_table();
+        self.cache_my_pt();
+
         #[cfg(feature = "prefetch")]
         if self.caller_status.resume_related.is_some() {
-            unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.push_one_qp()) };
+            let res = self
+                .caller_status
+                .resume_related
+                .as_mut()
+                .unwrap()
+                .descriptor
+                .prefetcher
+                .drain_connections();
+            if res.is_ok() {
+                unsafe {
+                    crate::get_dc_pool_async_service_ref().lock(|p| p.push_one_qp(res.unwrap()))
+                };
+            }
         }
+
         self.caller_status.prepared_key.map(|k| {
             if !self.caller_status.ping_img {
                 crate::log::info!("unregister prepared process {}", k);
@@ -185,8 +201,6 @@ impl FileOperations for MitosisSysCallHandler {
         0
     }
 }
-
-const TIMEOUT_USEC: i64 = 1000_000; // 1s
 
 /// The system call parts
 impl MitosisSysCallHandler {
@@ -565,10 +579,10 @@ impl MitosisSysCallHandler {
         }
     }
 
-    /// Backup self page table into kernel.
+    /// Cache my page table in the kernel
     /// Called only when the process exit
     #[inline]
-    fn caching_pg_table(&self) {
+    fn cache_my_pt(&self) {
         #[cfg(feature = "page-cache")]
         if let Some(resume_related) = self.caller_status.resume_related.as_ref() {
             // copy to the kernel cache
