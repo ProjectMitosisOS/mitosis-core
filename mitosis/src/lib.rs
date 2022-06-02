@@ -261,20 +261,6 @@ pub unsafe fn get_dc_target_service_mut() -> &'static mut crate::dc_pool::DCTarg
     crate::dc_target_service::get_mut()
 }
 
-/*
-// Descriptor pool, used for container preparation
-declare_global!(descriptor_pool, crate::descriptors::DescriptorFactoryService);
-
-#[inline]
-pub unsafe fn get_descriptor_pool_ref() -> &'static crate::descriptors::DescriptorFactoryService {
-    crate::descriptor_pool::get_ref()
-}
-
-#[inline]
-pub unsafe fn get_descriptor_pool_mut() -> &'static mut crate::descriptors::DescriptorFactoryService {
-    crate::descriptor_pool::get_mut()
-} */
-
 declare_global!(
     sp_service,
     crate::shadow_process_service::ShadowProcessService
@@ -302,6 +288,7 @@ pub unsafe fn get_mem_pool_mut() -> &'static mut crate::mem_pools::MemPool {
     crate::mem_pool::get_mut()
 }
 
+// TODO: need add locks
 declare_global!(global_pt_cache, crate::remote_pt_cache::RemotePageTableCache);
 
 #[inline]
