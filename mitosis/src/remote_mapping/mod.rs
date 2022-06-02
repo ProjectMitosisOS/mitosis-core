@@ -5,9 +5,7 @@
 //! Credits: some code is taken from <https://github.com/rust-osdev/x86_64/blob/master/src/structures/paging/mod.rs>
 
 pub use page_structures::*;
-pub use page_cache::{PageCache};
 pub use page_table::{PageEntry, RemotePageAddr, RemotePageTable, RemotePageTableIter};
 
 pub mod page_structures;
 pub mod page_table;
-pub mod page_cache;
