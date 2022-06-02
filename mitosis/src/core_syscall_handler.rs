@@ -1,6 +1,5 @@
 use alloc::string::String;
 use core::option::Option;
-use x86_64::VirtAddr;
 
 #[allow(unused_imports)]
 use crate::descriptors::{ChildDescriptor, ParentDescriptor};

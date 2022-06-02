@@ -326,7 +326,7 @@ impl ChildDescriptor {
 }
 
 impl os_network::serialize::Serialize for ChildDescriptor {
-    fn serialize(&self, bytes: &mut BytesMut) -> bool {
+    fn serialize(&self, _bytes: &mut BytesMut) -> bool {
         // Note, since we currently don't support multi-fork, so child serialize is not implemented
         unimplemented!();
     }

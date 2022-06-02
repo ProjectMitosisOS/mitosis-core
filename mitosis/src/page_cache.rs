@@ -4,28 +4,32 @@ use hashbrown::hash_map::DefaultHashBuilder;
 use hashbrown::HashMap;
 
 // Map from handler id into the whole page table
-type PageCacheKey = u64;
-type PageCacheValue = crate::remote_mapping::RemotePageTable;
+type Key = u64;
+type Value = crate::remote_mapping::RemotePageTable;
 
+/// A global kernel-space KV store that stores 
+/// a mapping between: handler_id -> its page table, 
+/// whose page table entries may reference to a local cache
+/// TODO: we can abstract it to a more general KV 
 #[derive(Default)]
-pub struct PageCache {
-    store: HashMap<PageCacheKey, PageCacheValue, DefaultHashBuilder, PageMapAllocator>,
+pub struct RemotePageTableCache {
+    store: HashMap<Key, Value, DefaultHashBuilder, PageMapAllocator>,
 }
 
-impl PageCache {
+impl RemotePageTableCache {
     #[inline(always)]
     fn gen_cache_key(
-        remote_mac_id: usize,
+        _remote_mac_id: usize,
         handler_id: usize,
-    ) -> PageCacheKey {
-        handler_id as PageCacheKey
+    ) -> Key {
+        handler_id as Key
     }
 
     pub fn lookup_mut(
         &mut self,
         remote_mac_id: usize,
         handler_id: usize,
-    ) -> Option<&mut PageCacheValue> {
+    ) -> Option<&mut Value> {
         self.store
             .get_mut(&Self::gen_cache_key(remote_mac_id, handler_id))
     }
@@ -34,7 +38,7 @@ impl PageCache {
         &self,
         remote_mac_id: usize,
         handler_id: usize,
-    ) -> Option<&PageCacheValue> {
+    ) -> Option<&Value> {
         self.store
             .get(&Self::gen_cache_key(remote_mac_id, handler_id))
     }
@@ -43,13 +47,13 @@ impl PageCache {
         &mut self,
         remote_mac_id: usize,
         handler_id: usize,
-        value: PageCacheValue,
+        value: Value,
     ) {
         let key = Self::gen_cache_key(remote_mac_id, handler_id);
         self.store.insert(key, value);
     }
 
-    pub fn entry_len(&self) -> usize {
+    pub fn num(&self) -> usize {
         self.store.len()
     }
 }
