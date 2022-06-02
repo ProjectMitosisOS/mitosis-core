@@ -36,13 +36,13 @@ impl Page {
             // free the page
             Self {
                 page_p: new_page_p as *mut _,
-                raw : false,
+                raw: false,
             };
             return None;
         }
         Some(Self {
             page_p: new_page_p as *mut _,
-            raw : false,
+            raw: false,
         })
     }
 
@@ -73,7 +73,7 @@ impl Clone for Page {
     fn clone(&self) -> Self {
         Self {
             page_p: self.page_p,
-            raw : self.raw,
+            raw: self.raw,
         }
     }
 }
@@ -88,8 +88,8 @@ impl core::fmt::Debug for Page {
 
 impl Drop for Page {
     fn drop(&mut self) {
-        // the page is allocated from new page 
-        if !self.raw { 
+        // the page is allocated from new page
+        if !self.raw {
             unsafe { crate::bindings::pmem_free_page(self.page_p as *mut _) };
         }
     }
