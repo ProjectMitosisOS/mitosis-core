@@ -38,6 +38,7 @@ template_args="{\
 template-build-exp=templates-build/template-build-exp.toml
 template-clean=templates-build/template-clean.toml
 template-build-mitosis=templates-build/template-build-mitosis.toml
+template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
 
 
@@ -96,8 +97,14 @@ micro-function: micro-function-startup micro-function-execution-prepare
 build-cpp:
 	$(call builder, $(template-build-exp))
 
-build-mitosis: build-cpp
+build-mitosis: clean build-cpp
 	$(call builder, $(template-build-mitosis))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
+
+build-mitosis-cache: clean build-cpp
+	$(call builder, $(template-build-mitosis-cache))
+	sleep 1
 	$(call builder, $(template-build-lean-container))
 
 clean: gen-clean

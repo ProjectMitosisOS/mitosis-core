@@ -9,27 +9,25 @@ cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
 
 [[template.pass]]
 role = 'parent'
-#path = 'exp/fork-functions' ## python version
-#cmd = 'sleep 3; cd ${micro_func_name} && python function.py -working_set=${working_set} -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="${micro_func_name}" '
 path='exp' ## c-version
-cmd='sleep 3 && ./bench_workingset --working_set=${working_set} --whether_prepare=1'
+cmd='sleep 1 && ./bench_workingset --working_set=${working_set} --whether_prepare=1'
 
 [[template.pass]]
 role = 'parent'
 path = 'exp'
-cmd = './simple_child -mac_id=0 -wait_finish_sec=5 ; ./simple_child -mac_id=0'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=5; for i in seq 1 3 ;do ./simple_child -mac_id=0 ;done; for i in seq 1 3 ;do ./simple_child -mac_id=0 ;done'
 
 [template.placeholder]
 working_set = [
     1048576,
     4194304,
-#    8388608,
-#    16777216,
-#    33554432,
-#    67108864,
-#    134217728,
-#    268435456,
-#    536870912,
+    8388608,
+    16777216,
+    33554432,
+    67108864,
+    134217728,
+    268435456,
+    536870912,
     1073741824,
 ]
 micro_func_name = "micro"
