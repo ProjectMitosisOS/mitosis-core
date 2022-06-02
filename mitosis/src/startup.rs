@@ -26,6 +26,12 @@ pub fn check_global_configurations() {
         crate::log::info!("[check]: Disable prefetching.")
     }
 
+    if cfg!(feature = "page-cache") {
+        crate::log::info!("[check]: Cache remote page table optimization is enabled.")
+    } else {
+        crate::log::info!("[check]: Not cache remote page table.")
+    }    
+
     crate::log::info!("********* All configuration check passes !*********");
 }
 
