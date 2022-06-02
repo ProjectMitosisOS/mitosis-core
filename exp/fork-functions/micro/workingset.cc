@@ -21,6 +21,9 @@
 DEFINE_int64(working_set, 16777216, "working set size");
 DEFINE_int64(handler_id, 73, "rfork handler id");
 DEFINE_int32(whether_prepare, 0, "whether to prepare");
+DEFINE_int32(profile, 1, "profile the result");
+DEFINE_int32(touch_ratio, 100, "Working set touch ratio");
+DEFINE_int32(exclude_execution, 0, "Return immediately after checkpoint");
 
 char *buffer = nullptr;
 
@@ -51,7 +54,7 @@ static void init_buffer() {
     }    
 }
 
-static void __attribute__((optimize("O2"))) handler()
+static void __attribute__((optimize("O2"))) handler(std::string name, uint64_t workingset)
 {
     uint64_t sum = 0;
     int count = 0;
@@ -61,7 +64,7 @@ static void __attribute__((optimize("O2"))) handler()
     clock.tick();
 
     auto gap = PAGE_SIZE;
-    for (uint64_t i = 0;i < (uint64_t)FLAGS_working_set; i += gap) { 
+    for (uint64_t i = 0;i < (uint64_t)workingset; i += gap) {
         // sum += *((uint64_t *)(buffer + i));
         *((uint64_t *)(buffer + i)) = i * 73 + random.count();        
         count += 1;
@@ -69,8 +72,8 @@ static void __attribute__((optimize("O2"))) handler()
 
     clock.tock();
     double time = double(clock.duration().count()) / 1000;
-    std::cout << "Run time = " << time << " ms\n";
-//    printf("check final output %llu, count %d\n", sum, count);
+    if (FLAGS_profile != 0)
+        std::cout << "[" << name << "] Run time = " << time << " ms\n";
 }
 
 int main(int argc, char **argv)
@@ -91,15 +94,8 @@ int main(int argc, char **argv)
       );    
 
     // cold start 
-    {
-        handler();
-        printf("first execution (cold start) done\n");
-    }
-
-    {
-        handler();
-        printf("second execution (warm start) done\n");
-    }
+    handler("cold start",  FLAGS_working_set);
+    handler("warm start",  FLAGS_working_set * FLAGS_touch_ratio / 100);
 
     // prepare 
     if (FLAGS_whether_prepare > 0) {
@@ -107,14 +103,13 @@ int main(int argc, char **argv)
         clock.tick();
         fork_prepare_ping(sd, FLAGS_handler_id);    
         clock.tock();
-        std::cout << "prepare time = " << double(clock.duration().count())/1000 << " ms\n";
+        if (FLAGS_profile != 0)
+            std::cout << "Prepare time = " << double(clock.duration().count())/1000 << " ms\n";
     }
 
-    // warm start 
-    {
-        handler();
-        printf("second execution after prepare (warm start) done\n");
-    }
+    // warm start
+    if (!FLAGS_exclude_execution)
+        handler("cow start", FLAGS_working_set * FLAGS_touch_ratio / 100);
     _Exit(0);
 
     // free(buffer);
