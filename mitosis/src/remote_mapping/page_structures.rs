@@ -33,7 +33,7 @@ pub type PageTableEntry = u64;
 /// through index operations. For example, `page_table[15]` returns the 15th page table entry.
 #[repr(align(4096))]
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct PageTable {
     entries: [PageTableEntry; ENTRY_COUNT],
     level: PageTableLevel,
@@ -42,22 +42,61 @@ pub struct PageTable {
 }
 
 
-// impl Drop for PageTable {
-//     fn drop(&mut self) {
-//         match self.level.next_lower_level() {
-//             Some(_) => {
-//                 for entry in self.iter() {
-//                     if *entry != 0 {
-//                         // this is a pointer
-//                         unsafe { alloc::boxed::Box::from_raw(*entry as *mut PageTable) };
-//                     }
-//                 }
-//             }
-//             // last page level do nothing
-//             None => {}
-//         }
-//     }
-// }
+impl Drop for PageTable {
+    fn drop(&mut self) {
+        match self.level.next_lower_level() {
+            Some(_) => {
+                for entry in self.iter() {
+                    if *entry != 0 {
+                        // this is a pointer
+                        unsafe { alloc::boxed::Box::from_raw(*entry as *mut PageTable) };
+                    }
+                }
+            }
+            // last page level do nothing
+            None => {}
+        }
+    }
+}
+
+impl PageTable {
+    pub fn deep_copy(&self) -> Box<Self> {
+        const EMPTY: PageTableEntry = 0;
+        let mut result = Box::new(Self {
+            entries: [EMPTY; ENTRY_COUNT],
+            level: self.level,
+            upper_level: self.upper_level,
+            upper_level_index: self.upper_level_index,
+        });
+        let entity = &mut *result;
+
+        for (idx, value) in self.entries.iter().enumerate() {
+            match entity.level {
+                PageTableLevel::One => {
+                    entity[idx] = *value;
+                }
+                _ => {
+                    if *value == 0 {
+                        entity[idx] = 0;
+                    } else {
+                        let next_level = *value as *mut Self;
+                        if !next_level.is_null() {
+                            // deep copy to lower levels
+                            let mut copy_level =
+                                unsafe { (&(*next_level) as &Self).deep_copy() };
+                            // update into new upper level
+                            copy_level.upper_level = entity as *mut PageTable;
+                            copy_level.upper_level_index = idx;
+                            entity[idx] = Box::into_raw(copy_level) as _;
+                        }
+                    }
+                }
+            }
+        }
+
+        result
+    }
+}
 
 impl PageTable {
     /// Creates an empty page table.
@@ -106,13 +145,13 @@ impl PageTable {
 
     /// Returns an iterator over the entries of the page table.
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &PageTableEntry> {
+    pub fn iter(&self) -> impl Iterator<Item=&PageTableEntry> {
         self.entries.iter()
     }
 
     /// Returns an iterator that allows modifying the entries of the page table.
     #[inline]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut PageTableEntry> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut PageTableEntry> {
         self.entries.iter_mut()
     }
 
@@ -380,8 +419,8 @@ impl PhysAddr {
     ///
     /// See the `align_up` function for more information.
     pub fn align_up<U>(self, align: U) -> Self
-    where
-        U: Into<u64>,
+        where
+            U: Into<u64>,
     {
         PhysAddr(align_up(self.0, align.into()))
     }
@@ -390,16 +429,16 @@ impl PhysAddr {
     ///
     /// See the `align_down` function for more information.
     pub fn align_down<U>(self, align: U) -> Self
-    where
-        U: Into<u64>,
+        where
+            U: Into<u64>,
     {
         PhysAddr(align_down(self.0, align.into()))
     }
 
     /// Checks whether the physical address has the demanded alignment.
     pub fn is_aligned<U>(self, align: U) -> bool
-    where
-        U: Into<u64>,
+        where
+            U: Into<u64>,
     {
         self.align_down(align) == self
     }
@@ -453,7 +492,6 @@ impl PhysAddr {
 
         kernel_page_va as *mut crate::bindings::page
     }
-
 }
 
 impl core::fmt::Debug for PhysAddr {

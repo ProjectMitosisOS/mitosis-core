@@ -46,6 +46,7 @@ pub unsafe fn copy_kernel_page(dst: *mut page, src: *mut page) {
 }
 
 /// Mark the target page as COW mode
+#[inline(always)]
 pub unsafe fn mark_cow(page: *mut page) {
     crate::bindings::pmem_get_page(page);
     crate::bindings::pmem_page_dup_rmap(page, false);

@@ -33,8 +33,18 @@ impl RemotePageTable {
     #[inline]
     pub fn copy(&self) -> Self {
         Self {
-            l4_page_table: Box::new(*self.l4_page_table),
-            cnt: 0,
+            l4_page_table: self.l4_page_table.deep_copy(),
+            cnt: self.cnt,
+        }
+    }
+
+    pub fn print_self(&mut self) {
+        if let Some(iter) = RemotePageTableIter::new(self) {
+            for item in iter {
+                if item.addr.cache_bit() {
+                    crate::log::info!("[table] index:{}, addr:{}, cache bit:{}", item.index, item.addr.as_u64(), item.addr.cache_bit());
+                }
+            }
         }
     }
 
@@ -92,6 +102,7 @@ impl RemotePageTable {
     /// Add a (addr, phy) mapping to the page table.
     /// Return Some(value) if there is an existing mapping.
     /// Return None means the map is successful.
+    #[inline]
     pub fn map(&mut self, addr: VirtAddr, phy: PhysAddr) -> core::option::Option<PhysAddr> {
         let entry = RemotePageAddr::containing_address(addr);
 
@@ -102,13 +113,32 @@ impl RemotePageTable {
         if res == 0 {
             // The bottom bit of a physical page cannot be 1 (4KB aligned)
             // We will encode the remote information in this bit
-            assert!(phy.bottom_bit() == false);
+            // assert!(phy.bottom_bit() == false);
             l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
             self.cnt += 1;
             return None;
         }
 
         return Some(PhysAddr::new(res));
+    }
+
+    /// Add one (addr, phy) mapping into the page table.
+    /// The new pair mapping would override the origin pair (if exist)
+    #[inline]
+    pub fn force_map(&mut self, addr: VirtAddr, phy: PhysAddr) {
+        let entry = RemotePageAddr::containing_address(addr);
+
+        let l1_pt = self.map_to_the_l1(&entry);
+        let l1_pt: &mut PageTable = unsafe { &mut (*l1_pt) };
+
+        let res = l1_pt[usize::from(entry.p1_index())];
+
+        // force update mapping
+        l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
+        // not exist
+        if res == 0 {
+            self.cnt += 1;
+        }
     }
 
     fn map_to_the_l1(&mut self, entry: &RemotePageAddr) -> *mut PageTable {
