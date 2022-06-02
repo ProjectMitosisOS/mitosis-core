@@ -11,6 +11,10 @@ pub struct Page {
 }
 
 impl Page {
+    pub unsafe fn new_from_raw(inner: *mut page) -> Self {
+        Self { page_p: inner }
+    }
+
     pub unsafe fn new_from_upage(
         user_page_va: *mut crate::linux_kernel_module::c_types::c_void,
     ) -> Option<Self> {
@@ -47,9 +51,8 @@ impl Page {
         crate::bindings::pmem_page_dup_rmap(self.page_p, false);
     }
 
-    #[allow(dead_code)]
     #[inline]
-    pub fn get_page(&self) -> *mut page {
+    pub fn get_inner(&self) -> *mut page {
         self.page_p
     }
 

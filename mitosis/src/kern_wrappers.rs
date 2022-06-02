@@ -11,6 +11,8 @@ pub mod vma;
 pub mod vma_iters;
 pub mod page;
 
+pub use page::{Page, copy_page_content_4k};
+
 /// TODO: still don't know how this struct is used for
 pub struct Process {
     task: task::Task,

@@ -228,7 +228,7 @@ impl RemotePageTableIter {
             cur_idx: -1,
         };
 
-        res.cur_page = unsafe { Self::find_the_first_level_one_page(res.cur_page)? };
+        res.cur_page = Self::find_the_first_level_one_page(res.cur_page)?;
         Some(res)
     }
 

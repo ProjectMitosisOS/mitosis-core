@@ -445,7 +445,7 @@ impl MitosisSysCallHandler {
         // let resume_related = self.caller_status.resume_related.as_ref().unwrap();
 
         #[cfg(feature = "page-cache")]
-            let mut miss_page_cache = false;
+        let mut miss_page_cache = false;
         let phy_addr = resume_related.descriptor.lookup_pg_table(fault_addr);
 
         let new_page = {
@@ -454,29 +454,31 @@ impl MitosisSysCallHandler {
             } else {
                 #[cfg(feature = "page-cache")]
                 {
-                    use crate::remote_mapping::{PhysAddr};
+                    use crate::remote_mapping::PhysAddr;
                     let phy_addr = phy_addr.unwrap();
-                    let _phys_addr = PhysAddr::new(phy_addr);
+                    let phys_addr = PhysAddr::new(phy_addr);
                     // if cache hit
-                    if _phys_addr.is_cache() {
-                        let page = crate::remote_mapping::page_cache::Page {
-                            inner: _phys_addr.convert_to_page() as *mut crate::bindings::page,
-                        };
-                        if core::intrinsics::unlikely(false == _phys_addr.is_ro()) {
+                    if phys_addr.is_cache() {
+                        let mut page = crate::kern_wrappers::Page::new_from_raw(
+                            phys_addr.convert_to_page() as *mut crate::bindings::page,
+                        );
+
+                        // the page access is read/write
+                        if core::intrinsics::unlikely(false == phys_addr.is_ro()) {
                             // Not read only, then copy into a new page
                             let new_page_p = crate::bindings::pmem_alloc_page(
                                 crate::bindings::PMEM_GFP_HIGHUSER,
                             );
 
-                            crate::remote_mapping::page_cache::copy_kernel_page(
-                                new_page_p, page.inner,
+                            crate::kern_wrappers::copy_page_content_4k(
+                                new_page_p,
+                                page.get_inner(),
                             );
                             Some(new_page_p)
                         } else {
                             // Read only, mark as COW directly
-                            let p = page.inner as *mut crate::bindings::page;
-                            crate::remote_mapping::page_cache::mark_cow(p);
-                            Some(p)
+                            page.increase_ref_count();
+                            Some(page.get_inner())
                         }
                     } else {
                         // Cache miss, fallback into RDMA read
@@ -499,14 +501,16 @@ impl MitosisSysCallHandler {
                 #[cfg(feature = "page-cache")]
                 if miss_page_cache && phy_addr.is_some() {
                     use crate::remote_mapping::{PhysAddr, PhysAddrBitFlag};
-                    let _phy_addr = phy_addr.unwrap();
+
+                    // let phy_addr = phy_addr.unwrap();
                     // Caching up this page. Just mark as CoW.
                     // We leave the Cache bit setting process to function `caching_pg_table`
-                    crate::remote_mapping::page_cache::mark_cow(new_page_p);
+                    crate::kern_wrappers::Page::new_from_raw(new_page_p).increase_ref_count();
 
-                    let kernel_va =
-                        PhysAddr::encode(new_page_p as crate::kern_wrappers::mm::VirtAddrType,
-                                         PhysAddrBitFlag::Cache as _);
+                    let kernel_va = PhysAddr::encode(
+                        new_page_p as crate::kern_wrappers::mm::VirtAddrType,
+                        PhysAddrBitFlag::Cache as _,
+                    );
                     resume_related
                         .descriptor
                         .page_table
