@@ -209,10 +209,10 @@ cmake ..
 make
 ```
 
-Run the single thread benchmark of lean container.
+Run the single thread benchmark of lean container. Note that the `$ARGx$ is the arguments feed to the container. `
 
 ```bash
-sudo ./lib/build/benchmark_lean_container_w_command 10 $CONTAINER_NAME $ROOTFS_ABS_PATH $COMMAND_ABS_PATH $ARGS1 $ARGS2 # Running for 10 seconds
+sudo ./lib/build/benchmark_lean_container_w_command 10 $CONTAINER_NAME $ROOTFS_ABS_PATH $COMMAND_ABS_PATH $ARGS1 $ARGS2 ... # Running for 10 seconds
 ```
 
 This will start lean containers running in the `$ROOTFS_ABS_PATH` and executing the command `$COMMAND_ABS_PATH $ARGS1 $ARGS2`.
