@@ -38,16 +38,6 @@ impl RemotePageTable {
         }
     }
 
-    pub fn print_self(&mut self) {
-        if let Some(iter) = RemotePageTableIter::new(self) {
-            for item in iter {
-                if item.addr.cache_bit() {
-                    crate::log::info!("[table] index:{}, addr:{}, cache bit:{}", item.index, item.addr.as_u64(), item.addr.cache_bit());
-                }
-            }
-        }
-    }
-
     /// Create an empty page table
     pub fn new() -> Self {
         Self {
@@ -229,9 +219,12 @@ impl Iterator for RemotePageTableIter {
 }
 
 impl RemotePageTableIter {
-    pub fn new(pt: &mut RemotePageTable) -> core::option::Option<Self> {
+    /// Creating iterators over the L4 page table is always unsafe,
+    /// because it elide the rust lifetime checks
+    pub unsafe fn new(pt: &RemotePageTable) -> core::option::Option<Self> {
         let mut res = Self {
-            cur_page: &mut (*pt.l4_page_table) as _,
+            // !! The real dangerous code here! 
+            cur_page: &(*(pt.l4_page_table)) as *const PageTable as _,
             cur_idx: -1,
         };
 
@@ -332,4 +325,23 @@ impl Default for RemotePageTable {
     fn default() -> Self {
         Self::new()
     }
+}
+
+impl core::fmt::Display for RemotePageTable {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        if let Some(iter) = unsafe { RemotePageTableIter::new(self) } {
+            for item in iter {
+                if item.addr.is_cache() {
+                    write!(
+                        f,
+                        "[table] index:{}, addr:{}, cache bit:{}",
+                        item.index,
+                        item.addr.as_u64(),
+                        item.addr.is_cache()
+                    )?;
+                }
+            }
+        }
+       Ok(()) 
+    }    
 }

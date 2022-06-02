@@ -458,11 +458,11 @@ impl MitosisSysCallHandler {
                     let phy_addr = phy_addr.unwrap();
                     let _phys_addr = PhysAddr::new(phy_addr);
                     // if cache hit
-                    if _phys_addr.cache_bit() {
+                    if _phys_addr.is_cache() {
                         let page = crate::remote_mapping::page_cache::Page {
-                            inner: _phys_addr.real_addr() as *mut crate::bindings::page,
+                            inner: _phys_addr.convert_to_page() as *mut crate::bindings::page,
                         };
-                        if core::intrinsics::unlikely(false == _phys_addr.ro_bit()) {
+                        if core::intrinsics::unlikely(false == _phys_addr.is_ro()) {
                             // Not read only, then copy into a new page
                             let new_page_p = crate::bindings::pmem_alloc_page(
                                 crate::bindings::PMEM_GFP_HIGHUSER,

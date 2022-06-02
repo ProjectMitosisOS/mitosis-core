@@ -41,7 +41,6 @@ pub struct PageTable {
     upper_level_index: usize,
 }
 
-
 impl Drop for PageTable {
     fn drop(&mut self) {
         match self.level.next_lower_level() {
@@ -82,8 +81,7 @@ impl PageTable {
                         let next_level = *value as *mut Self;
                         if !next_level.is_null() {
                             // deep copy to lower levels
-                            let mut copy_level =
-                                unsafe { (&(*next_level) as &Self).deep_copy() };
+                            let mut copy_level = unsafe { (&(*next_level) as &Self).deep_copy() };
                             // update into new upper level
                             copy_level.upper_level = entity as *mut PageTable;
                             copy_level.upper_level_index = idx;
@@ -145,13 +143,13 @@ impl PageTable {
 
     /// Returns an iterator over the entries of the page table.
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item=&PageTableEntry> {
+    pub fn iter(&self) -> impl Iterator<Item = &PageTableEntry> {
         self.entries.iter()
     }
 
     /// Returns an iterator that allows modifying the entries of the page table.
     #[inline]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut PageTableEntry> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut PageTableEntry> {
         self.entries.iter_mut()
     }
 
@@ -357,7 +355,7 @@ pub enum PhysAddrBitFlag {
 }
 
 impl PhysAddrBitFlag {
-    pub fn default_flag() -> u64 {
+    pub fn mask() -> u64 {
         Prefetch as u64 | Cache as u64 | ReadOnly as u64
     }
 }
@@ -385,11 +383,11 @@ impl PhysAddr {
     }
 
     /// Get the bottom bit of this physical address.
-    /// Normally, it will never be zero.
+    /// Normally, it will always be zero.
     ///
     /// Thus, we will use it to encode additional information
     pub fn bottom_bit(&self) -> bool {
-        self.prefetch_bit()
+        self.is_prefetch()
     }
 
     /// Set the bottom bit of this physical address.
@@ -419,8 +417,8 @@ impl PhysAddr {
     ///
     /// See the `align_up` function for more information.
     pub fn align_up<U>(self, align: U) -> Self
-        where
-            U: Into<u64>,
+    where
+        U: Into<u64>,
     {
         PhysAddr(align_up(self.0, align.into()))
     }
@@ -429,16 +427,16 @@ impl PhysAddr {
     ///
     /// See the `align_down` function for more information.
     pub fn align_down<U>(self, align: U) -> Self
-        where
-            U: Into<u64>,
+    where
+        U: Into<u64>,
     {
         PhysAddr(align_down(self.0, align.into()))
     }
 
     /// Checks whether the physical address has the demanded alignment.
     pub fn is_aligned<U>(self, align: U) -> bool
-        where
-            U: Into<u64>,
+    where
+        U: Into<u64>,
     {
         self.align_down(align) == self
     }
@@ -449,7 +447,7 @@ impl PhysAddr {
     /// Set lower 3 bits into all zero.
     #[inline(always)]
     pub fn decode(addr: u64) -> u64 {
-        addr & !PhysAddrBitFlag::default_flag()
+        addr & !PhysAddrBitFlag::mask()
     }
 
     /// Encode from the give page physical address.
@@ -457,24 +455,24 @@ impl PhysAddr {
     #[inline(always)]
     pub fn encode(page_addr: u64, flag: u64) -> u64 {
         // Validate the flags
-        page_addr | (flag & PhysAddrBitFlag::default_flag())
+        page_addr | (flag & PhysAddrBitFlag::mask())
     }
 
     /// Get Prefetch bit value
     #[inline(always)]
-    pub fn prefetch_bit(&self) -> bool {
+    pub fn is_prefetch(&self) -> bool {
         self.0 & Prefetch as u64 == Prefetch as u64
     }
 
     /// Get Cache bit value
     #[inline(always)]
-    pub fn cache_bit(&self) -> bool {
+    pub fn is_cache(&self) -> bool {
         self.0 & Cache as u64 == Cache as u64
     }
 
     /// Get ReadOnly bit value
     #[inline(always)]
-    pub fn ro_bit(&self) -> bool {
+    pub fn is_ro(&self) -> bool {
         self.0 & ReadOnly as u64 == ReadOnly as u64
     }
 
@@ -487,7 +485,7 @@ impl PhysAddr {
     /// - Remote physical address, if the prefetch and cache are both 0
     /// - Local kernel virtual address, if either prefetch or cache is 1
     #[inline(always)]
-    pub fn get_page(&self) -> *mut crate::bindings::page {
+    pub fn convert_to_page(&self) -> *mut crate::bindings::page {
         let kernel_page_va = self.real_addr();
 
         kernel_page_va as *mut crate::bindings::page
