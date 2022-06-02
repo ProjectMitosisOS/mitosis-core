@@ -8,6 +8,6 @@ cmd = 'source $HOME/.cargo/env; cp mitosis-kms/${Kbuild} mitosis-kms/Kbuild && m
 
 [template.placeholder]
 name = ["build"]
-Kbuild = "Kbuild-mitosis"
+Kbuild = "Kbuild-mitosis-cache"
 
 

@@ -115,6 +115,7 @@ int main(int argc, char **argv)
         handler();
         printf("second execution after prepare (warm start) done\n");
     }
+    _Exit(0);
 
     // free(buffer);
     return 0;

@@ -12,4 +12,6 @@ insmod:
 rmmod:
 	sudo rmmod ${KMODULE_NAME}
 
+clean:
+	rm -rf ${KMS_DIR}/target
 

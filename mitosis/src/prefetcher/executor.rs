@@ -57,7 +57,7 @@ impl<'a> DCAsyncPrefetcher<'a> {
             access_info: remote_info,
         })
     }
-
+    #[inline]
     pub fn new_from_raw(conn: DCConn<'a>, lkey: u32, access_info: AccessInfo) -> Self {
         Self {
             conn: conn,

@@ -70,6 +70,10 @@ impl Drop for MitosisSysCallHandler {
             );
         }
         self.caching_pg_table();
+        #[cfg(feature = "prefetch")]
+        if self.caller_status.resume_related.is_some() {
+            unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.push_one_qp()) };
+        }
         self.caller_status.prepared_key.map(|k| {
             if !self.caller_status.ping_img {
                 crate::log::info!("unregister prepared process {}", k);
