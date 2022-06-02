@@ -35,7 +35,7 @@ impl<'a> DCPool<'a> {
     }
 
     #[inline]
-    pub fn push_one_qp(&mut self) {
+    pub fn create_one_qp(&mut self) {
         let nic_idx = 0;
         self.pool.push((
             unsafe { crate::get_dc_factory_ref(nic_idx) }
@@ -50,6 +50,13 @@ impl<'a> DCPool<'a> {
             },
         ));
     }
+
+    /// Arg: DCQP, its corresponding lkey
+    #[inline]
+    pub fn push_one_qp(&mut self, qp: (DCConn<'a>, u32)) { 
+        self.pool.push(qp)
+    }
+
 }
 
 use os_network::Factory;
