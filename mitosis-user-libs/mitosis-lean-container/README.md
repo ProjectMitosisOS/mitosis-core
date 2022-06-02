@@ -180,6 +180,45 @@ The peak throughput on val01 is 5665 containers/s.
 | 16                             | 5491       |
 | 24                             | 4625       |
 
+### Running the single thread microbenchmark with specific rootfs and command
+
+The single thread microbenchmark measures the latency of lean container creation and the execution of specific command.
+
+The pseudo code of the critical path is shown below:
+
+```plain
+int critical_path() {
+    int is_container = setup_container();
+    if (is_container) {
+        execve(command...);
+    } else {
+        wait_container_exit();
+    }
+}
+```
+
+We will benchmark this critical path in the main process.
+
+Build the lean container.
+
+```bash
+cd lib
+mkdir build
+cd build
+cmake ..
+make
+```
+
+Run the single thread benchmark of lean container.
+
+```bash
+sudo ./lib/build/benchmark_lean_container_w_command 10 $CONTAINER_NAME $ROOTFS_ABS_PATH $COMMAND_ABS_PATH $ARGS1 $ARGS2 # Running for 10 seconds
+```
+
+This will start lean containers running in the `$ROOTFS_ABS_PATH` and executing the command `$COMMAND_ABS_PATH $ARGS1 $ARGS2`.
+
+Note that the rootfs should be specified with **absolute path** on the host machine, and the command should be specified with its **absolute path** in the rootfs directory.
+
 ## Running the lean container with CRIU
 
 ### Base Image Preparation
