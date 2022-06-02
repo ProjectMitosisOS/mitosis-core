@@ -28,6 +28,7 @@ HOSTS={'builder':[$(STR_ALL_HOSTS)] , \
 
 PLACEHOLDER={'parent_gid': '$(PARENT_GID)'}
 
+
 template_args="{\
 'pwd':'$(PWD)','user':'$(USER)',\
 'hosts':$(HOSTS),'path':'$(PROJECT_PATH)',\
@@ -46,12 +47,14 @@ template-build-lean-container=templates-build/template-build-lean-container.toml
 
 # Micro for functions
 template-run-micro-func-startup=templates-run/micro-func/template-run-micro-startup.toml
-template-run-micro-func-execution-prepare=templates-run/micro-func/template-run-micro-execution-prepare.toml
+template-run-micro-func-execution=templates-run/micro-func/template-run-micro-execution.toml
+template-run-micro-func-prepare=templates-run/micro-func/template-run-micro-prepare.toml
 
 
 ## Micro with working set
 template-run-micro-startup=templates-run/micro-c/template-run-micro-startup.toml
-template-run-micro-execution-prepare=templates-run/micro-c/template-run-micro-execution-prepare.toml
+template-run-micro-execution=templates-run/micro-c/template-run-micro-execution.toml
+template-run-micro-prepare=templates-run/micro-c/template-run-micro-prepare.toml
 
 run_out=out
 build_out=run-build.toml
@@ -80,19 +83,24 @@ endef
 micro-function-startup:
 	$(call runner, $(template-run-micro-func-startup), ${run_out}/$@)
 
-micro-function-execution-prepare:
-	$(call runner, $(template-run-micro-func-execution-prepare), ${run_out}/$@)
+micro-function-execution:
+	$(call runner, $(template-run-micro-func-execution), ${run_out}/$@)
+micro-function-prepare:
+	$(call runner, $(template-run-micro-func-prepare), ${run_out}/$@)
 
-micro-c-execution-prepare:
-	$(call runner, $(template-run-micro-execution-prepare), ${run_out}/$@)
+micro-c-execution:
+	$(call runner, $(template-run-micro-execution), ${run_out}/$@)
+micro-c-prepare:
+	$(call runner, $(template-run-micro-prepare), ${run_out}/$@)
 
 micro-c-startup:
 	$(call runner, $(template-run-micro-startup), ${run_out}/$@)
 
+micro-c: micro-c-execution micro-c-prepare
 
-micro-function: micro-function-startup micro-function-execution-prepare
+micro-function: micro-function-execution micro-c-prepare
 
-
+micro: micro-c micro-function
 # Built all cpp
 build-cpp:
 	$(call builder, $(template-build-exp))
@@ -106,6 +114,7 @@ build-mitosis-cache: clean build-cpp
 	$(call builder, $(template-build-mitosis-cache))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
+
 
 clean: gen-clean
 	pkill python; sleep 0.1
