@@ -40,7 +40,7 @@ impl MySyscallHandler {
             assert!(new_pt.map(VirtAddr::new(*k), PhysAddr::new(*v)).is_none());
         }
 
-        let mut iter = RemotePageTableIter::new(&mut new_pt).unwrap();
+        let mut iter = unsafe { RemotePageTableIter::new(&mut new_pt).unwrap() };
 
         // randomly move the iterator
         for _ in 0..5 {
@@ -49,7 +49,7 @@ impl MySyscallHandler {
             }
         }
 
-        let iter_copy = unsafe { iter.clone() }; 
+        let iter_copy = unsafe { iter.clone() };
 
         // Add the current iterator to generate the requests
         exe.execute_reqs(iter, StepPrefetcher::<PageEntry, 2>::new());
@@ -75,13 +75,44 @@ impl MySyscallHandler {
         unsafe { mitosis::bindings::pmem_free_page(res.unwrap()) };
 
         log::info!("pending reqs: {}", exe.num_pending());
-        assert_eq!(exe.num_pending(), 0); 
+        assert_eq!(exe.num_pending(), 0);
 
         // finally, we check the prefetched page cannot be prefetch again
-        exe.execute_reqs(iter_copy, ConstPrefetcher::<PageEntry, 2>::new());        
+        exe.execute_reqs(iter_copy, ConstPrefetcher::<PageEntry, 2>::new());
         log::info!("pending reqs after the prefetch: {}", exe.num_pending());
-        assert_eq!(exe.num_pending(), 0); 
+        assert_eq!(exe.num_pending(), 0);
+
+        self.test_page_table_self_cloning();
         0
+    }
+}
+
+impl MySyscallHandler {
+    fn test_page_table_self_cloning(&self) {
+        log::info!("===============start test page table self cloning===============");
+        let mut page_table = RemotePageTable::new();
+
+        for i in 0..20 {
+            let u = PhysAddr::encode((i + 1) * 4096, PhysAddrBitFlag::Cache as _);
+            page_table.map(VirtAddr::new(i * 4096), PhysAddr::new(u));
+        }
+
+        log::info!("get initial page size:{}", page_table.len());
+        log::debug!("{}", page_table);
+
+        let copied_pg_table = page_table.copy();
+        log::info!("get initial page size:{}", copied_pg_table.len());
+        log::debug!("{}", copied_pg_table);
+
+        for i in 0..20 {
+            let u = PhysAddr::encode((i + 1) * 4096, PhysAddrBitFlag::Cache as _);
+            assert_eq!(
+                page_table.translate(VirtAddr::new(i * 4096)).unwrap(),
+                copied_pg_table.translate(VirtAddr::new(i * 4096)).unwrap(),
+            );
+        }
+
+        log::info!("===============end test page table self cloning===============");
     }
 }
 

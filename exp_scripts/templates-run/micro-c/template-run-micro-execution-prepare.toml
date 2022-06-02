@@ -17,12 +17,12 @@ cmd='sleep 3 && ./bench_workingset --working_set=${working_set} --whether_prepar
 [[template.pass]]
 role = 'parent'
 path = 'exp'
-cmd = './simple_child -mac_id=0 -wait_finish_sec=5'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=5 ; ./simple_child -mac_id=0'
 
 [template.placeholder]
-working_set = [ 4096,
-#    1048576,
-#    4194304,
+working_set = [
+    1048576,
+    4194304,
 #    8388608,
 #    16777216,
 #    33554432,

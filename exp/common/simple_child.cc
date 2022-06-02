@@ -13,7 +13,7 @@ main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     sleep(FLAGS_wait_finish_sec);
     int sd = sopen();
-    printf("mac id:%d\n", FLAGS_mac_id);
+//    printf("mac id:%d\n", FLAGS_mac_id);
     assert(sd != 0);
     fork_resume_remote(sd, FLAGS_mac_id, FLAGS_handler_id);
     assert(false);

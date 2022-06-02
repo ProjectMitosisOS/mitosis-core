@@ -30,6 +30,14 @@ pub struct RemotePageTable {
 }
 
 impl RemotePageTable {
+    #[inline]
+    pub fn copy(&self) -> Self {
+        Self {
+            l4_page_table: self.l4_page_table.deep_copy(),
+            cnt: self.cnt,
+        }
+    }
+
     /// Create an empty page table
     pub fn new() -> Self {
         Self {
@@ -84,6 +92,7 @@ impl RemotePageTable {
     /// Add a (addr, phy) mapping to the page table.
     /// Return Some(value) if there is an existing mapping.
     /// Return None means the map is successful.
+    #[inline]
     pub fn map(&mut self, addr: VirtAddr, phy: PhysAddr) -> core::option::Option<PhysAddr> {
         let entry = RemotePageAddr::containing_address(addr);
 
@@ -94,13 +103,32 @@ impl RemotePageTable {
         if res == 0 {
             // The bottom bit of a physical page cannot be 1 (4KB aligned)
             // We will encode the remote information in this bit
-            assert!(phy.bottom_bit() != 1);
+            // assert!(phy.bottom_bit() == false);
             l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
             self.cnt += 1;
             return None;
         }
 
         return Some(PhysAddr::new(res));
+    }
+
+    /// Add one (addr, phy) mapping into the page table.
+    /// The new pair mapping would **always overwrite** the origin pair (if exist)
+    #[inline]
+    pub fn force_map(&mut self, addr: VirtAddr, phy: PhysAddr) {
+        let entry = RemotePageAddr::containing_address(addr);
+
+        let l1_pt = self.map_to_the_l1(&entry);
+        let l1_pt: &mut PageTable = unsafe { &mut (*l1_pt) };
+
+        let res = l1_pt[usize::from(entry.p1_index())];
+
+        // force update mapping
+        l1_pt[usize::from(entry.p1_index())] = phy.as_u64();
+        // not exist
+        if res == 0 {
+            self.cnt += 1;
+        }
     }
 
     fn map_to_the_l1(&mut self, entry: &RemotePageAddr) -> *mut PageTable {
@@ -143,7 +171,7 @@ impl PageEntry {
 
 impl crate::prefetcher::NeedPrefetch for PageEntry {
     fn need_prefetch(&self) -> bool {
-        self.addr.bottom_bit() == 0
+        self.addr.bottom_bit() == false
     }
 }
 
@@ -191,13 +219,16 @@ impl Iterator for RemotePageTableIter {
 }
 
 impl RemotePageTableIter {
-    pub fn new(pt: &mut RemotePageTable) -> core::option::Option<Self> {
+    /// Creating iterators over the L4 page table is always unsafe,
+    /// because it elide the rust lifetime checks
+    pub unsafe fn new(pt: &RemotePageTable) -> core::option::Option<Self> {
         let mut res = Self {
-            cur_page: &mut (*pt.l4_page_table) as _,
+            // !! The real dangerous code here! 
+            cur_page: &(*(pt.l4_page_table)) as *const PageTable as _,
             cur_idx: -1,
         };
 
-        res.cur_page = unsafe { Self::find_the_first_level_one_page(res.cur_page)? };
+        res.cur_page = Self::find_the_first_level_one_page(res.cur_page)?;
         Some(res)
     }
 
@@ -294,4 +325,23 @@ impl Default for RemotePageTable {
     fn default() -> Self {
         Self::new()
     }
+}
+
+impl core::fmt::Display for RemotePageTable {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        if let Some(iter) = unsafe { RemotePageTableIter::new(self) } {
+            for item in iter {
+                if item.addr.is_cache() {
+                    write!(
+                        f,
+                        "[table] index:{}, addr:{}, cache bit:{}",
+                        item.index,
+                        item.addr.as_u64(),
+                        item.addr.is_cache()
+                    )?;
+                }
+            }
+        }
+       Ok(()) 
+    }    
 }

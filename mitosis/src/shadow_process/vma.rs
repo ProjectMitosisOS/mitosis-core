@@ -78,6 +78,7 @@ impl<'a, 'b> VMACopyPTGenerator<'a, 'b> {
 }
 
 use crate::kern_wrappers::vma_iters::*;
+use crate::remote_mapping::{PhysAddr, PhysAddrBitFlag};
 
 impl VMACopyPTGenerator<'_, '_> {
     pub fn generate(&self) {
@@ -163,29 +164,16 @@ impl VMACOWPTGenerator<'_, '_> {
         use core::intrinsics::{likely, unlikely};
         let my: &mut Self = &mut (*((*walk).private as *mut Self));
 
-        let phy_addr = pmem_get_phy_from_pte(pte);
-        // if addr == 0xd55000 {
-        //     // if addr == 0x5bf000 || addr == 0x7ffff71e2000 {
-        //     let vma = &my.vma.vma_inner;
-        //     let st = vma.is_stack();
-        //     let name = if vma.get_backed_file_name().is_some() {
-        //         vma.get_backed_file_name().unwrap()
-        //     } else {
-        //         String::from("none")
-        //     };
-        //     crate::log::info!(
-        //         "st:{}, va:0x{:x}, pa:0x{:x}, name:{}",
-        //         st,
-        //         addr,
-        //         phy_addr,
-        //         name
-        //     )
-        // }
+        let mut phy_addr = pmem_get_phy_from_pte(pte);
         if likely(phy_addr > 0) {
             if unlikely(my.vma.has_write_permission()) {
                 my.inner
                     .add_page(COW4KPage::new(pmem_pte_to_page(pte)).unwrap());
                 pmem_clear_pte_write(pte);
+            }
+            if likely(pmem_check_pte_write(pte) == 0) {
+                // Read only page
+                phy_addr = PhysAddr::encode(phy_addr, PhysAddrBitFlag::ReadOnly as _);
             }
             // #[cfg(not(feature = "fast-descriptors"))]
             // my.inner_flat.add_one(addr, phy_addr);
