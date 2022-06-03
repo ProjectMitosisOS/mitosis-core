@@ -278,7 +278,7 @@ impl ChildDescriptor {
             // find prefetch pages
             let pte_iter = RemotePageTableIter::new_from_l1(pt, idx);
             self.prefetcher
-                .execute_reqs(pte_iter, StepPrefetcher::<PageEntry, 4>::new());
+                .execute_reqs(pte_iter, StepPrefetcher::<PageEntry, 2>::new());
             self.poll_prefetcher();
 
             // wait for the request to complete
