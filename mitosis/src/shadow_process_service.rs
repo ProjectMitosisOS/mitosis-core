@@ -28,7 +28,7 @@ struct ProcessBundler {
 
 impl ProcessBundler {
     fn new(process: ShadowProcess, targets: Arc<DCTarget>) -> Self {
-        crate::log::info!(
+        crate::log::debug!(
             "Alloc serialization buf sz {} KB",
             process.get_descriptor_ref().serialization_buf_len() / 1024
         );
