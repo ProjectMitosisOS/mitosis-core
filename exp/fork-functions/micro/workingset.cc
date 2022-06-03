@@ -97,6 +97,7 @@ int main(int argc, char **argv)
     handler("cold start",  FLAGS_working_set);
     handler("warm start",  FLAGS_working_set * FLAGS_touch_ratio / 100);
 
+#if 1
     // prepare 
     if (FLAGS_whether_prepare > 0) {
         Timer<std::chrono::microseconds , std::chrono::steady_clock> clock;
@@ -111,7 +112,15 @@ int main(int argc, char **argv)
     if (!FLAGS_exclude_execution)
         handler("cow start", FLAGS_working_set * FLAGS_touch_ratio / 100);
     _Exit(0);
-
+#else
+    if (fork() == 0) {
+        handler("fork child start", FLAGS_working_set );
+    }
+    else {
+        sleep(2);
+        handler("fork parent start", FLAGS_working_set );
+    }
+#endif
     // free(buffer);
     return 0;
 }
