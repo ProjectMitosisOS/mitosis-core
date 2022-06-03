@@ -54,11 +54,11 @@ static void init_buffer() {
     }    
 }
 
-static void __attribute__((optimize("O2"))) handler(std::string name, uint64_t workingset)
+static void inline __attribute__((optimize("O2"))) handler(std::string name, uint64_t workingset)
 {
     uint64_t sum = 0;
     int count = 0;
-    Timer<std::chrono::microseconds , std::chrono::steady_clock> clock;
+    Timer<std::chrono::nanoseconds , std::chrono::steady_clock> clock;
     auto random = clock.duration();
 
     clock.tick();
@@ -71,7 +71,7 @@ static void __attribute__((optimize("O2"))) handler(std::string name, uint64_t w
     }
 
     clock.tock();
-    double time = double(clock.duration().count()) / 1000;
+    double time = double(clock.duration().count()) / 1e6;
     if (FLAGS_profile != 0)
         std::cout << "[" << name << "] Run time = " << time << " ms\n";
 }
