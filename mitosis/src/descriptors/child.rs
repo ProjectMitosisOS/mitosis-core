@@ -64,7 +64,7 @@ impl ChildDescriptor {
         }*/
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
         self.page_table
             .translate(VirtAddr::new(virt))
