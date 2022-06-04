@@ -14,7 +14,7 @@ cmd = 'make insmod'
 [[template.pass]]
 role = 'child'
 path = 'exp'
-cmd = './connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
+cmd = 'sleep 3; ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
 
 [[template.pass]]
 role = 'parent'
