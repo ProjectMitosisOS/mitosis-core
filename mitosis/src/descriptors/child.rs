@@ -80,12 +80,6 @@ impl ChildDescriptor {
         // 1. Unmap origin vma regions
         task.unmap_self();
         let access_info = AccessInfo::new(&self.machine_info).unwrap();
-        #[cfg(feature = "eager-resume")]
-            let mut addr_buf = Vec::with_capacity((crate::PREFETCH_STEP + 1) * 2);
-        #[cfg(feature = "eager-resume")]
-        for _i in 0..(crate::PREFETCH_STEP + 1) * 2 {
-            addr_buf.push(0);
-        }
         // 2. Map new vma regions
         (&self.vma).into_iter().for_each(|m| {
             let vma = unsafe { task.map_one_region(file, m) };
@@ -102,7 +96,7 @@ impl ChildDescriptor {
                 crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
             }
             #[cfg(feature = "eager-resume")]
-            self.eager_fetch_vma(m, vma, &access_info, &mut addr_buf);
+            self.eager_fetch_vma(m, vma, &access_info);
         });
         // 3. Re-set states
         task.set_mm_reg_states(&self.regs);
@@ -114,18 +108,17 @@ impl ChildDescriptor {
     fn eager_fetch_vma(&self,
                        vma_des: &VMADescriptor,
                        vma: &'static mut crate::bindings::vm_area_struct,
-                       access_info: &AccessInfo,
-                       addr_buf: &mut Vec<VirtAddrType>) {
+                       access_info: &AccessInfo) {
         let (size, start) = (vma_des.get_sz(), vma_des.get_start());
-        let mut idx = 0;
+        let len = 4;
+        let mut addr_buf: Vec<VirtAddrType> = Vec::with_capacity(len);
         for addr in (start..start + size).step_by(4096) {
-            if idx < addr_buf.len() {
-                addr_buf[idx] = addr;
-                idx += 1;
+            if addr_buf.len() < len {
+                addr_buf.push(addr);
             }
-            if idx == addr_buf.len() {
+            if len == addr_buf.len() {
                 // batch
-                let page_list = self.batch_read_remote_pages(addr_buf, access_info);
+                let page_list = self.batch_read_remote_pages(&addr_buf, access_info);
 
                 for (i, new_page_p) in page_list.iter().enumerate() {
                     if let Some(new_page_p) = new_page_p {
@@ -135,7 +128,20 @@ impl ChildDescriptor {
                             unsafe { crate::bindings::pmem_vm_insert_page(vma, addr_buf[i], *new_page_p) };
                     }
                 }
-                idx = 0;
+                addr_buf.clear();
+            }
+        }
+        if !addr_buf.is_empty() {
+            // batch
+            let page_list = self.batch_read_remote_pages(&addr_buf, access_info);
+
+            for (i, new_page_p) in page_list.iter().enumerate() {
+                if let Some(new_page_p) = new_page_p {
+                    vma.vm_page_prot.pgprot =
+                        vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
+                    let _ =
+                        unsafe { crate::bindings::pmem_vm_insert_page(vma, addr_buf[i], *new_page_p) };
+                }
             }
         }
     }

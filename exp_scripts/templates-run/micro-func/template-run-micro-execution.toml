@@ -20,6 +20,7 @@ cmd = './simple_child -mac_id=0 -wait_finish_sec=5; for i in seq 1 3 ;do ./simpl
 
 
 [template.placeholder]
-micro_func_name = ["micro", "json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
+micro_func_name = ["json", "compression", "image"]
+#micro_func_name = ["micro", "json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
 
 
