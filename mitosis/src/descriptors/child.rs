@@ -125,8 +125,7 @@ impl ChildDescriptor {
             }
             if idx == addr_buf.len() {
                 // batch
-                #[cfg(feature = "prefetch")]
-                    let page_list = self.batch_read_remote_pages(addr_buf, access_info);
+                let page_list = self.batch_read_remote_pages(addr_buf, access_info);
 
                 for (i, new_page_p) in page_list.iter().enumerate() {
                     if let Some(new_page_p) = new_page_p {
@@ -138,22 +137,6 @@ impl ChildDescriptor {
                 }
                 idx = 0;
             }
-
-
-            // #[cfg(feature = "prefetch")]
-            //     let new_page_p =
-            //     unsafe { self.read_remote_page_wo_prefetch(addr, access_info) };
-            //
-            // #[cfg(not(feature = "prefetch"))]
-            //     let new_page_p = {
-            //     unsafe { self.read_remote_page(addr, &access_info) }
-            // };
-            // if let Some(new_page_p) = new_page_p {
-            //     vma.vm_page_prot.pgprot =
-            //         vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
-            //     let _ =
-            //         unsafe { crate::bindings::pmem_vm_insert_page(vma, addr, new_page_p) };
-            // }
         }
     }
 
@@ -394,7 +377,7 @@ impl ChildDescriptor {
             // find prefetch pages
             let pte_iter = RemotePageTableIter::new_from_l1(pt, idx);
             self.prefetcher
-                .execute_reqs(pte_iter, StepPrefetcher::<PageEntry, crate::PREFETCH_STEP>::new());
+                .execute_reqs(pte_iter, StepPrefetcher::<PageEntry, { crate::PREFETCH_STEP }>::new());
             self.poll_prefetcher();
 
             // wait for the request to complete
