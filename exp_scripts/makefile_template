@@ -18,6 +18,7 @@ PLOT=1 # If plot the target figure
 
 FILTER=
 
+
 STR_ALL_HOSTS='${PARENT_HOST}',${STR_CHILD_HOSTS}
 RUNNER_FLAG=-k=$(USE_PROXY_COMMAND)
 
@@ -40,6 +41,7 @@ template-build-exp=templates-build/template-build-exp.toml
 template-clean=templates-build/template-clean.toml
 template-build-mitosis=templates-build/template-build-mitosis.toml
 template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
+template-build-mitosis-eager-resume=templates-build/template-build-mitosis-eager-resume.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
 
 
@@ -55,6 +57,7 @@ template-run-micro-func-prepare=templates-run/micro-func/template-run-micro-prep
 template-run-micro-startup=templates-run/micro-c/template-run-micro-startup.toml
 template-run-micro-execution=templates-run/micro-c/template-run-micro-execution.toml
 template-run-micro-prepare=templates-run/micro-c/template-run-micro-prepare.toml
+template-run-micro-touch-ratio=templates-run/micro-c/template-run-micro-touch-ratio.toml
 
 run_out=out
 build_out=run-build.toml
@@ -77,6 +80,8 @@ define runner
 	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
 endef
 
+
+
 # Tests
 micro-function-startup:
 	$(call runner, $(template-run-micro-func-startup), ${run_out}/$@)
@@ -94,11 +99,21 @@ micro-c-prepare:
 micro-c-startup:
 	$(call runner, $(template-run-micro-startup), ${run_out}/$@)
 
-micro-c: micro-c-execution micro-c-prepare
+mitosis-ondemand-touch-ratio: build-mitosis
+	$(call runner, $(template-run-micro-touch-ratio), ${run_out}/$@)
 
-micro-function: micro-function-execution micro-c-prepare
+mitosis-eager-touch-ratio: build-mitosis-eager-resume
+	$(call runner, $(template-run-micro-touch-ratio), ${run_out}/$@)
+
+touch-ratio: mitosis-ondemand-touch-ratio mitosis-eager-touch-ratio
+
+micro-c: micro-c-execution micro-c-prepare micro-c-startup
+
+micro-function: micro-function-execution micro-function-prepare micro-function-startup
 
 micro: micro-c micro-function
+
+micro-execution: micro-c-execution micro-function-execution
 # Built all cpp
 build-cpp:
 	$(call builder, $(template-build-exp))
@@ -110,6 +125,11 @@ build-mitosis: clean build-cpp
 
 build-mitosis-cache: clean build-cpp
 	$(call builder, $(template-build-mitosis-cache))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
+
+build-mitosis-eager-resume: clean build-cpp
+	$(call builder, $(template-build-mitosis-eager-resume))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
