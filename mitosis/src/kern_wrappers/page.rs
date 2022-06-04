@@ -12,6 +12,7 @@ pub struct Page {
 }
 
 impl Page {
+    #[inline]
     pub unsafe fn new_from_raw(inner: *mut page) -> Self {
         Self {
             page_p: inner,
@@ -98,6 +99,7 @@ impl Drop for Page {
 unsafe impl Sync for Page {}
 
 /// copy the content of src to the dst
+#[inline(always)]
 pub unsafe fn copy_page_content_4k(dst: *mut page, src: *mut page) {
     use crate::linux_kernel_module::c_types;
     use rust_kernel_linux_util::bindings::memcpy;

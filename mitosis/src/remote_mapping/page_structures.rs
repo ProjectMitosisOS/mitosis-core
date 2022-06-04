@@ -378,6 +378,7 @@ impl PhysAddr {
     /// Creates a new physical address.
     ///
     /// Panics if a bit in the range 52 to 64 is set.
+    #[inline(always)]
     pub fn new(addr: u64) -> PhysAddr {
         PhysAddr(addr)
     }

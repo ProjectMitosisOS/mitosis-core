@@ -1,4 +1,4 @@
 copy*.sh
 run*.toml
-out
+out*
 makefile
