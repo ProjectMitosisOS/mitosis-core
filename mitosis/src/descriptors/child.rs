@@ -350,7 +350,7 @@ impl ChildDescriptor {
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
 
         // FIXME: currently this code is from the remote_mapping.rs
-        // But we need to trigger much code in it
+        // But we need to use this piece of code
         let res = {
             use crate::remote_paging::{DCReqPayload, TIMEOUT_USEC};
             use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
@@ -430,6 +430,7 @@ impl ChildDescriptor {
                 }
                 Err(_e) => panic!("not implemented"),
             }
+
         }
     }
 }

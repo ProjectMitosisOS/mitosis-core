@@ -59,13 +59,20 @@ impl<'a> DCAsyncPrefetcher<'a> {
     }
 
     /// Clean my prefetch requests
-    pub fn drain_connections(&mut self) -> Result<(DCConn<'a>, u32), <Self as Future>::Error> { 
-        while !self.pending_queues.is_empty() { 
-            self.poll()?;
+    pub fn drain_connections(&mut self) -> Result<(DCConn<'a>, u32), <Self as Future>::Error> {
+        while !self.pending_queues.is_empty() {
+            let page = self.poll()?;
+            match page {
+                Async::Ready(p) => {
+                    unsafe {
+                        crate::bindings::pmem_free_page(p);
+                    };
+                }
+                _ => {}
+            };
         }
-    Ok((self.conn.clone(), self.lkey))
+        Ok((self.conn.clone(), self.lkey))
     }
-
 
     #[inline]
     pub fn new_from_raw(conn: DCConn<'a>, lkey: u32, access_info: AccessInfo) -> Self {
@@ -164,8 +171,8 @@ impl<'a> Future for DCAsyncPrefetcher<'a> {
                 let pte_page = unsafe { &mut (*pte_p) };
 
                 assert!(PhysAddr::new(v.user_page as _).bottom_bit() == false);
-                pte_page[v.idx] = PhysAddr::encode(v.user_page as u64,
-                                                   PhysAddrBitFlag::Prefetch as _);
+                pte_page[v.idx] =
+                    PhysAddr::encode(v.user_page as u64, PhysAddrBitFlag::Prefetch as _);
 
                 return Ok(Async::Ready(v.user_page));
             }
