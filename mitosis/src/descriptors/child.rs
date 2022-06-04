@@ -110,7 +110,7 @@ impl ChildDescriptor {
                        vma: &'static mut crate::bindings::vm_area_struct,
                        access_info: &AccessInfo) {
         let (size, start) = (vma_des.get_sz(), vma_des.get_start());
-        let len = 4;
+        let len = 12;
         let mut addr_buf: Vec<VirtAddrType> = Vec::with_capacity(len);
         for addr in (start..start + size).step_by(4096) {
             if addr_buf.len() < len {
