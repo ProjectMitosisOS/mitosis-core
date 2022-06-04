@@ -98,6 +98,11 @@ impl Drop for MitosisSysCallHandler {
                 crate::log::info!("unregister prepared process {} done", k);
             }
         });
+        #[cfg(feature = "eager-resume")]
+        {
+            //     let task = crate::kern_wrappers::task::Task::new();
+            //     task.unmap_self();
+        }
     }
 }
 

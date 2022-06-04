@@ -54,7 +54,8 @@ impl Task {
             vma.vm_flags =
                 (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::DONTEXPAND).bits();
         }
-        if cfg!(feature = "eager-resume") {
+        #[cfg(feature = "eager-resume")]
+        {
             vma.vm_flags = (crate::bindings::VMFlags::from_bits_unchecked(vma.vm_flags) |
                 crate::bindings::VMFlags::MIXEDMAP).bits();
         }
