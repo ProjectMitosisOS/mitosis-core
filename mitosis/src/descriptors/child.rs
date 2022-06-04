@@ -81,9 +81,9 @@ impl ChildDescriptor {
         task.unmap_self();
         let access_info = AccessInfo::new(&self.machine_info).unwrap();
         #[cfg(feature = "eager-resume")]
-            let mut addr_buf = Vec::with_capacity(crate::PREFETCH_STEP + 1);
+            let mut addr_buf = Vec::with_capacity((crate::PREFETCH_STEP + 1) * 2);
         #[cfg(feature = "eager-resume")]
-        for _i in 0..crate::PREFETCH_STEP + 1 {
+        for _i in 0..(crate::PREFETCH_STEP + 1) * 2 {
             addr_buf.push(0);
         }
         // 2. Map new vma regions
