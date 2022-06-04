@@ -57,10 +57,9 @@ def mitosis_bench(handler):
         print("warm start")
         result = handler(*args, **kwargs)
 
-        if prepare == 1:
-            whether_prepare(handler_id)
+        if whether_prepare == 1:
+            prepare(handler_id)
         if not ret_imm:
-            print("third run")
             result = handler(*args, **kwargs)
         os._exit(0)
 
