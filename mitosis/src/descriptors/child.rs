@@ -218,6 +218,7 @@ impl ChildDescriptor {
                 Ok(_) => { res.push(Some(new_page_p)) }
                 Err(e) => {
                     crate::log::error!("[batch_read_remote_pages] Failed to read the remote page {:?}", e);
+                    unsafe { crate::bindings::pmem_free_page(new_page_p) };
                     res.push(None)
                 }
             }
@@ -257,6 +258,7 @@ impl ChildDescriptor {
             Ok(_) => Some(new_page_p),
             Err(e) => {
                 crate::log::error!("Failed to read the remote page {:?}", e);
+                unsafe { crate::bindings::pmem_free_page(new_page_p) };
                 None
             }
         };
@@ -290,6 +292,7 @@ impl ChildDescriptor {
             Ok(_) => Some(new_page_p),
             Err(e) => {
                 crate::log::error!("Failed to read the remote page {:?}", e);
+                unsafe { crate::bindings::pmem_free_page(new_page_p) };
                 None
             }
         };
@@ -407,6 +410,7 @@ impl ChildDescriptor {
             Ok(_) => Some(new_page_p),
             Err(e) => {
                 crate::log::error!("Failed to read the remote page {:?}", e);
+                unsafe { crate::bindings::pmem_free_page(new_page_p) };
                 None
             }
         };
