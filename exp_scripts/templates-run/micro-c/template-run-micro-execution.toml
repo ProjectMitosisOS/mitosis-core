@@ -10,7 +10,7 @@ cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
 [[template.pass]]
 role = 'parent'
 path='exp' ## c-version
-cmd='sleep 1 && ./bench_workingset --working_set=${working_set} --whether_prepare=1'
+cmd='sleep 1 && ./bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0'
 
 [[template.pass]]
 role = 'parent'

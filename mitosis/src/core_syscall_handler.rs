@@ -462,7 +462,7 @@ impl MitosisSysCallHandler {
         // let resume_related = self.caller_status.resume_related.as_ref().unwrap();
 
         #[cfg(feature = "page-cache")]
-        let mut miss_page_cache = false;
+            let mut miss_page_cache = false;
         let phy_addr = resume_related.descriptor.lookup_pg_table(fault_addr);
 
         let new_page = {
@@ -480,8 +480,12 @@ impl MitosisSysCallHandler {
                             phys_addr.convert_to_page() as *mut crate::bindings::page,
                         );
 
-                        // the page access is read/write
-                        if core::intrinsics::unlikely(false == phys_addr.is_ro()) {
+                        if phys_addr.is_ro() {
+                            // Read only, mark it as COW directly
+                            page.increase_ref_count();
+                            Some(page.get_inner())
+                        } else {
+                            // the page access is read/write
                             // Not read only, then copy into a new page
                             let new_page_p = crate::bindings::pmem_alloc_page(
                                 crate::bindings::PMEM_GFP_HIGHUSER,
@@ -492,10 +496,6 @@ impl MitosisSysCallHandler {
                                 page.get_inner(),
                             );
                             Some(new_page_p)
-                        } else {
-                            // Read only, mark it as COW directly
-                            page.increase_ref_count();
-                            Some(page.get_inner())
                         }
                     } else {
                         // Cache miss, fallback into RDMA read

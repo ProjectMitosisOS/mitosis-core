@@ -45,7 +45,7 @@ def mitosis_bench(handler):
             syscall_lib.call_prepare(fd, key)
         end = time.time()
         if profile == 1:
-            print("done...")
+            # print("done...")
             bench.report("%s-prepare" % app_name, start, end)
 
     @wraps(handler)

@@ -62,6 +62,7 @@ impl RemotePageTable {
     }
 
     /// Lookup the physical address using the $addr$
+    #[inline(always)]
     pub fn translate(&self, addr: VirtAddr) -> core::option::Option<PhysAddr> {
         let (pt, index) = self.find_l1_page_idx(addr)?;
         let pt = unsafe { &mut (*pt) };
@@ -75,7 +76,7 @@ impl RemotePageTable {
     /// Lookup the last-level page of the requested address
     /// Return:
     /// - Page ptr, Entry index
-    #[inline]
+    #[inline(always)]
     pub fn find_l1_page_idx(
         &self,
         addr: VirtAddr,

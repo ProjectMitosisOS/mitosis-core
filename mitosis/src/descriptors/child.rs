@@ -64,7 +64,7 @@ impl ChildDescriptor {
         }*/
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn lookup_pg_table(&self, virt: VirtAddrType) -> Option<PhyAddrType> {
         self.page_table
             .translate(VirtAddr::new(virt))
@@ -94,8 +94,8 @@ impl ChildDescriptor {
                 // set the vma
                 crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
             }
-
-            if cfg!(feature = "eager-resume") {
+            #[cfg(feature = "eager-resume")]
+            {
                 let (size, start) = (m.get_sz(), m.get_start());
                 for addr in (start..start + size).step_by(4096) {
                     #[cfg(feature = "prefetch")]
@@ -278,7 +278,7 @@ impl ChildDescriptor {
             // find prefetch pages
             let pte_iter = RemotePageTableIter::new_from_l1(pt, idx);
             self.prefetcher
-                .execute_reqs(pte_iter, StepPrefetcher::<PageEntry, 4>::new());
+                .execute_reqs(pte_iter, StepPrefetcher::<PageEntry, 2>::new());
             self.poll_prefetcher();
 
             // wait for the request to complete
