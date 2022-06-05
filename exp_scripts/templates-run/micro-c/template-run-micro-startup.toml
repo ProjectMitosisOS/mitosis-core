@@ -25,7 +25,7 @@ cmd = 'cd ${micro_func_name} && python function.py -working_set=${working_set} -
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr}' # TODO：Could be further refined
+cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
 
 [template.placeholder]
 working_set = [1048576,

@@ -19,7 +19,6 @@ PLOT=1 # If plot the target figure
 FILTER=
 
 
-
 STR_ALL_HOSTS='${PARENT_HOST}',${STR_CHILD_HOSTS}
 RUNNER_FLAG=-k=$(USE_PROXY_COMMAND)
 
@@ -140,7 +139,7 @@ build-mitosis-cache: clean build-cpp
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
-build-mitosis-eager-resume: clean build-cpp
+build-mitosis-eager-resume: build-cpp
 	$(call builder, $(template-build-mitosis-eager-resume))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
