@@ -1,15 +1,14 @@
-use alloc::vec::Vec;
-#[allow(unused_imports)]
-use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
 #[allow(unused_imports)]
 use crate::bindings::page;
 use crate::linux_kernel_module;
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
 
 use os_network::bytes::BytesMut;
-use os_network::Conn;
 #[allow(unused_imports)]
 use os_network::future::{Async, Future};
-use os_network::rdma::Err;
+use os_network::Conn;
 
 use super::rdma::RDMADescriptor;
 use super::reg::RegDescriptor;
@@ -48,6 +47,8 @@ pub struct ChildDescriptor {
 
     #[cfg(feature = "prefetch")]
     pub prefetcher: DCAsyncPrefetcher<'static>,
+    #[cfg(feature = "eager-resume")]
+    pub eager_fetched_pages: hashbrown::HashSet<VirtAddrType>,
 }
 
 impl ChildDescriptor {
@@ -73,8 +74,9 @@ impl ChildDescriptor {
         task.unmap_self();
         let access_info = AccessInfo::new(&self.machine_info).unwrap();
         // 2. Map new vma regions
+        #[cfg(not(feature = "eager-resume"))]
         (&self.vma).into_iter().for_each(|m| {
-            let vma = unsafe { task.map_one_region(file, m) };
+            let vma = unsafe { task.map_one_region(file, &m) };
 
             #[allow(dead_code)]
                 let vma = vma.unwrap();
@@ -87,8 +89,25 @@ impl ChildDescriptor {
                 // set the vma
                 crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
             }
+        });
+
+        #[cfg(feature = "eager-resume")]
+        self.vma.clone().into_iter().for_each(|m| {
+            let vma = unsafe { task.map_one_region(file, &m) };
+
+            #[allow(dead_code)]
+            let vma = vma.unwrap();
+
+            // tune the bits
+            let origin_vma_flags =
+                unsafe { crate::bindings::VMFlags::from_bits_unchecked(m.flags) };
+            // crate::log::info!("orign vma: {:?}", origin_vma_flags);
+            if origin_vma_flags.contains(crate::bindings::VMFlags::VM_ALLOC) {
+                // set the vma
+                crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
+            }
             #[cfg(feature = "eager-resume")]
-            self.eager_fetch_vma(m, vma, &access_info);
+            self.eager_fetch_vma(&m, vma, &access_info);
         });
         // 3. Re-set states
         task.set_mm_reg_states(&self.regs);
@@ -97,10 +116,12 @@ impl ChildDescriptor {
 
 impl ChildDescriptor {
     #[cfg(feature = "eager-resume")]
-    fn eager_fetch_vma(&self,
-                       vma_des: &VMADescriptor,
-                       vma: &'static mut crate::bindings::vm_area_struct,
-                       access_info: &AccessInfo) {
+    fn eager_fetch_vma(
+        &mut self,
+        vma_des: &VMADescriptor,
+        vma: &'static mut crate::bindings::vm_area_struct,
+        access_info: &AccessInfo,
+    ) {
         let (size, start) = (vma_des.get_sz(), vma_des.get_start());
         let len = 12;
         let mut addr_buf: Vec<VirtAddrType> = Vec::with_capacity(len);
@@ -116,8 +137,10 @@ impl ChildDescriptor {
                     if let Some(new_page_p) = new_page_p {
                         vma.vm_page_prot.pgprot =
                             vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
-                        let _ =
-                            unsafe { crate::bindings::pmem_vm_insert_page(vma, addr_buf[i], *new_page_p) };
+                        let _ = unsafe {
+                            crate::bindings::pmem_vm_insert_page(vma, addr_buf[i], *new_page_p)
+                        };
+                        self.eager_fetched_pages.insert(*new_page_p as VirtAddrType);
                     }
                 }
                 addr_buf.clear();
@@ -129,20 +152,23 @@ impl ChildDescriptor {
 
             for (i, new_page_p) in page_list.iter().enumerate() {
                 if let Some(new_page_p) = new_page_p {
-                    vma.vm_page_prot.pgprot =
-                        vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
-                    let _ =
-                        unsafe { crate::bindings::pmem_vm_insert_page(vma, addr_buf[i], *new_page_p) };
+                    vma.vm_page_prot.pgprot = vma.vm_page_prot.pgprot | (((1 as u64) << 52) as u64); // present bit
+                    let _ = unsafe {
+                        crate::bindings::pmem_vm_insert_page(vma, addr_buf[i], *new_page_p)
+                    };
+                    self.eager_fetched_pages.insert(*new_page_p as VirtAddrType);
                 }
             }
         }
     }
 
-
     #[inline]
-    fn batch_read_remote_pages(&self,
-                               addr_list: &Vec<VirtAddrType>,
-                               access_info: &AccessInfo) -> Vec<Option<*mut crate::bindings::page>> {
+    #[allow(dead_code)]
+    fn batch_read_remote_pages(
+        &self,
+        addr_list: &Vec<VirtAddrType>,
+        access_info: &AccessInfo,
+    ) -> Vec<Option<*mut crate::bindings::page>> {
         let mut res: Vec<Option<*mut crate::bindings::page>> = Vec::with_capacity(addr_list.len());
         for (i, remote_va) in addr_list.iter().enumerate() {
             let remote_pa = self.lookup_pg_table(*remote_va);
@@ -151,8 +177,8 @@ impl ChildDescriptor {
                 continue;
             }
 
-
-            let new_page_p = unsafe { crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER) };
+            let new_page_p =
+                unsafe { crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER) };
             let new_page_pa = unsafe { crate::bindings::pmem_page_to_phy(new_page_p) } as u64;
 
             let result = {
@@ -164,8 +190,9 @@ impl ChildDescriptor {
                     0
                 };
                 let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
-                let (dc_qp, lkey) = unsafe { crate::get_dc_pool_service_mut().get_dc_qp_key(pool_idx) }
-                    .expect("failed to get DCQP");
+                let (dc_qp, lkey) =
+                    unsafe { crate::get_dc_pool_service_mut().get_dc_qp_key(pool_idx) }
+                        .expect("failed to get DCQP");
 
                 let mut payload = crate::remote_paging::DCReqPayload::default()
                     .set_laddr(dst)
@@ -179,7 +206,6 @@ impl ChildDescriptor {
                     .set_dc_access_key(access_info.dct_key as _)
                     .set_dc_num(access_info.dct_num);
 
-
                 let mut payload = unsafe { core::pin::Pin::new_unchecked(&mut payload) };
                 os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
 
@@ -188,8 +214,10 @@ impl ChildDescriptor {
 
                 if i == addr_list.len() - 1 {
                     // wait for the request to complete
-                    let mut timeout_dc = os_network::timeout::TimeoutWRef::new(dc_qp,
-                                                                               crate::remote_paging::TIMEOUT_USEC);
+                    let mut timeout_dc = os_network::timeout::TimeoutWRef::new(
+                        dc_qp,
+                        crate::remote_paging::TIMEOUT_USEC,
+                    );
                     match os_network::block_on(&mut timeout_dc) {
                         Ok(_) => Ok(()),
                         Err(e) => {
@@ -207,9 +235,12 @@ impl ChildDescriptor {
             };
 
             match result {
-                Ok(_) => { res.push(Some(new_page_p)) }
+                Ok(_) => res.push(Some(new_page_p)),
                 Err(e) => {
-                    crate::log::error!("[batch_read_remote_pages] Failed to read the remote page {:?}", e);
+                    crate::log::error!(
+                        "[batch_read_remote_pages] Failed to read the remote page {:?}",
+                        e
+                    );
                     unsafe { crate::bindings::pmem_free_page(new_page_p) };
                     res.push(None)
                 }
@@ -219,7 +250,6 @@ impl ChildDescriptor {
         return res;
     }
 }
-
 
 impl ChildDescriptor {
     #[cfg(not(feature = "prefetch"))]
@@ -250,7 +280,7 @@ impl ChildDescriptor {
             Ok(_) => Some(new_page_p),
             Err(e) => {
                 crate::log::error!("Failed to read the remote page {:?}", e);
-                unsafe { crate::bindings::pmem_free_page(new_page_p) };
+                crate::bindings::pmem_free_page(new_page_p);
                 None
             }
         };
@@ -284,7 +314,7 @@ impl ChildDescriptor {
             Ok(_) => Some(new_page_p),
             Err(e) => {
                 crate::log::error!("Failed to read the remote page {:?}", e);
-                unsafe { crate::bindings::pmem_free_page(new_page_p) };
+                crate::bindings::pmem_free_page(new_page_p);
                 None
             }
         };
@@ -347,8 +377,8 @@ impl ChildDescriptor {
             use crate::remote_paging::{DCReqPayload, TIMEOUT_USEC};
             use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
             use core::pin::Pin;
+            use os_network::block_on;
             use os_network::timeout::TimeoutWRef;
-            use os_network::{block_on};
 
             let pool_idx = crate::bindings::pmem_get_current_cpu() as usize;
             let (dc_qp, lkey) = crate::get_dc_pool_service_mut()
@@ -377,8 +407,10 @@ impl ChildDescriptor {
             // This can overlap with the networking requests latency
             // find prefetch pages
             let pte_iter = RemotePageTableIter::new_from_l1(pt, idx);
-            self.prefetcher
-                .execute_reqs(pte_iter, StepPrefetcher::<PageEntry, { crate::PREFETCH_STEP }>::new());
+            self.prefetcher.execute_reqs(
+                pte_iter,
+                StepPrefetcher::<PageEntry, { crate::PREFETCH_STEP }>::new(),
+            );
             self.poll_prefetcher();
 
             // wait for the request to complete
@@ -402,7 +434,7 @@ impl ChildDescriptor {
             Ok(_) => Some(new_page_p),
             Err(e) => {
                 crate::log::error!("Failed to read the remote page {:?}", e);
-                unsafe { crate::bindings::pmem_free_page(new_page_p) };
+                crate::bindings::pmem_free_page(new_page_p);
                 None
             }
         };
@@ -422,7 +454,6 @@ impl ChildDescriptor {
                 }
                 Err(_e) => panic!("not implemented"),
             }
-
         }
     }
 }
@@ -506,11 +537,11 @@ impl os_network::serialize::Serialize for ChildDescriptor {
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
         #[cfg(feature = "prefetch")]
-            let (prefetch_conn, lkey) =
+        let (prefetch_conn, lkey) =
             unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.pop_one_qp())? };
 
         #[cfg(feature = "prefetch")]
-            let access_info = AccessInfo::new(&machine_info).unwrap();
+        let access_info = AccessInfo::new(&machine_info).unwrap();
 
         Some(Self {
             regs: regs,
@@ -520,6 +551,8 @@ impl os_network::serialize::Serialize for ChildDescriptor {
 
             #[cfg(feature = "prefetch")]
             prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info),
+            #[cfg(feature = "eager-resume")]
+            eager_fetched_pages: Default::default(),
         })
     }
 
