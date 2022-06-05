@@ -100,8 +100,12 @@ impl Drop for MitosisSysCallHandler {
         });
         #[cfg(feature = "eager-resume")]
         {
-            //     let task = crate::kern_wrappers::task::Task::new();
-            //     task.unmap_self();
+            if let Some(des) = self.caller_status.resume_related.as_ref() {
+                let des = &des.descriptor;
+                for k in des.eager_fetched_pages.iter() {
+                    unsafe { crate::bindings::pmem_free_page(*k as *mut crate::bindings::page) };
+                }
+            }
         }
     }
 }
