@@ -25,8 +25,11 @@ DEFINE_int32(profile, 1, "profile the result");
 DEFINE_int32(touch_ratio, 100, "Working set touch ratio");
 DEFINE_int32(exclude_execution, 0, "Return immediately after checkpoint");
 
-void init_buffer(uint64_t workingset);
-void handler(std::string name, uint64_t workingset);
+extern "C"
+{
+    void init_buffer(uint64_t workingset);
+    void handler(const char *name, uint64_t workingset);
+}
 
 template <class DT = std::chrono::milliseconds,
           class ClockT = std::chrono::steady_clock>

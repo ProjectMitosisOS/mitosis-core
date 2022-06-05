@@ -32,35 +32,42 @@ public:
 
 char *buffer = nullptr;
 
-void init_buffer(uint64_t workingset)
+extern "C"
 {
-    buffer = (char *)mmap(
-        nullptr,
-        workingset, // for one page length
-        PROT_READ | PROT_WRITE | PROT_EXEC,
-        MAP_ANON | MAP_PRIVATE, // to a private block of hardware memory
-        0,
-        0);
-}
 
-void __attribute__((optimize("O2"))) handler(std::string name, uint64_t workingset)
-{
-    uint64_t sum = 0;
-    int count = 0;
-    Timer<std::chrono::nanoseconds, std::chrono::steady_clock> clock;
-    auto random = clock.duration();
-
-    clock.tick();
-
-    auto gap = PAGE_SIZE;
-    for (uint64_t i = 0; i < (uint64_t)workingset; i += gap)
+    void init_buffer(uint64_t workingset)
     {
-        // sum += *((uint64_t *)(buffer + i));
-        *((uint64_t *)(buffer + i)) = i * 73 + random.count();
-        count += 1;
+        buffer = (char *)mmap(
+            nullptr,
+            workingset, // for one page length
+            PROT_READ | PROT_WRITE | PROT_EXEC,
+            MAP_ANON | MAP_PRIVATE, // to a private block of hardware memory
+            0,
+            0);
+        // std::cout<< " check mmap value: " << (uint64_t)buffer << std::endl;
     }
 
-    clock.tock();
-    double time = double(clock.duration().count()) / 1e6;
-    std::cout << "[" << name << "] Run time = " << time << " ms\n";
+    void  handler(const char *name, uint64_t workingset)
+    {
+        // std::cout << "Before handler check: " << name << workingset << std::endl; 
+
+        uint64_t sum = 0;
+        int count = 0;
+        Timer<std::chrono::nanoseconds, std::chrono::steady_clock> clock;
+        auto random = clock.duration();
+
+        clock.tick();
+
+        auto gap = PAGE_SIZE;
+        for (uint64_t i = 0; i < (uint64_t)workingset; i += gap)
+        {
+            // sum += *((uint64_t *)(buffer + i));
+            *((uint64_t *)(buffer + i)) = i * 73 + random.count();
+            count += 1;
+        }
+
+        clock.tock();
+        double time = double(clock.duration().count()) / 1e6;
+        std::cout << "[" << name << "] Run time = " << time << " ms\n";
+    }
 }
