@@ -24,11 +24,11 @@ cmd = "./bench_workingset --working_set=${working_set} -profile=0 -whether_prepa
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr}' # TODO：Could be further refined
+cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
 
 [template.placeholder]
 #touch_ratio = [85, 90, 95]
-touch_ratio = [0, 20, 40, 50, 55, 57, 60, 70, 80, 85, 90, 95 100]
+touch_ratio = [0, 20, 40, 50, 55, 57, 60, 70, 80, 85, 90, 95, 100]
 working_set = 67108864
 micro_func_name = "micro"
 
