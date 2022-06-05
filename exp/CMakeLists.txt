@@ -27,7 +27,7 @@ add_executable(bench_lean_container fork-functions/benchmark_lean_container.c
 add_executable(bench_exe_time_parent fork-micro/bench_exe_time_parent.cc)
 add_executable(bench_prepare_time fork-micro/bench_prepare_time.cc)
 
-add_executable(bench_workingset fork-functions/micro/workingset.cc)
+add_executable(bench_workingset fork-functions/micro/workingset.cc fork-functions/micro/workingset_impl.cc)
 
 foreach (s ${samples})
     target_link_libraries(${s} gflags)
