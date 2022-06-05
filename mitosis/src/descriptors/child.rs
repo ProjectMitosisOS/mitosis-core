@@ -56,14 +56,6 @@ impl ChildDescriptor {
     /// serialzied buffer
     pub fn new(_task: &crate::kern_wrappers::task::Task, _mac_info: RDMADescriptor) -> Self {
         unimplemented!();
-        /*
-        let (vma, pt) = task.generate_mm();
-        Self {
-            regs: task.generate_reg_descriptor(),
-            page_table: pt,
-            vma: vma,
-            machine_info: mac_info,
-        }*/
     }
 
     #[inline(always)]
