@@ -23,8 +23,8 @@ cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=1 -pin=1 -
 
 [[template.pass]]
 role = 'child'
-path = 'exp_scripts'
-cmd = 'sleep 3 && sh run_lean_container.sh' # TODO：Could be further refined
+path = ''
+cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr}'
 
 
 [template.placeholder]
