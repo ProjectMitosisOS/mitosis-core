@@ -24,6 +24,6 @@ def main_hello():
     print("hello world")   
 
 if __name__ == "__main__":
-#    main_micro()
-    main_hello()
+    main_micro()
+#    main_hello()
                  
