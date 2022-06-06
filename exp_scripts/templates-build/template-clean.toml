@@ -12,6 +12,11 @@ role = 'builder'
 path = ''
 cmd = 'source $HOME/.cargo/env; rm -rf mitosis-kms/target ; make rmmod'
 
+[[template.pass]]
+role = 'builder'
+path = ''
+cmd = 'sudo umount /tmp'
+
 
 [template.placeholder]
 name = ["build"]

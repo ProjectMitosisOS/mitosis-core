@@ -8,7 +8,7 @@ from mitosis_wrapper import *
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 
-f = open('linux.json')
+f = open('/tmp/linux.json')
 content = f.read()
 
 
