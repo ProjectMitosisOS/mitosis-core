@@ -31,32 +31,65 @@ impl Task {
 
     /// Map one region into current task
     #[inline]
-    pub unsafe fn map_one_region(&self,
-                                 file: *mut crate::bindings::file,
-                                 vma_meta: &VMADescriptor) -> Option<&'static mut crate::bindings::vm_area_struct> {
+    pub unsafe fn map_one_region(
+        &self,
+        file: *mut crate::bindings::file,
+        vma_meta: &VMADescriptor,
+        next_vma: core::option::Option<&VMADescriptor>,
+    ) -> Option<&'static mut crate::bindings::vm_area_struct> {
         use crate::bindings::{pmem_vm_mmap, VMFlags};
-        let ret = pmem_vm_mmap(
-            file,
-            vma_meta.get_start(),
-            vma_meta.get_sz(),
-            vma_meta.get_mmap_flags(),
-            crate::kern_wrappers::mm::mmap_flags::MAP_PRIVATE,
-            0,
-        );
+
+        let ret = {
+            // we need to extend the VMA of heap & stack to avoid corrupting
+            let mut extended_map_area_sz = 16 * 1024 * 1024; // 16MB
+            if next_vma.is_some() {
+                assert!(next_vma.unwrap().get_start() >= vma_meta.get_end());
+                extended_map_area_sz = core::cmp::min(
+                    extended_map_area_sz,
+                    next_vma.unwrap().get_start() - vma_meta.get_end(),
+                );
+            } else { 
+                extended_map_area_sz = 0;
+            }
+
+            if vma_meta.is_anonymous() {
+                pmem_vm_mmap(
+                    file,
+                    vma_meta.get_start(),
+                    vma_meta.get_sz() + extended_map_area_sz,
+                    vma_meta.get_mmap_flags(),
+                    crate::kern_wrappers::mm::mmap_flags::MAP_PRIVATE,
+                    0,
+                )
+            } else {
+                pmem_vm_mmap(
+                    file,
+                    vma_meta.get_start(),
+                    vma_meta.get_sz(),
+                    vma_meta.get_mmap_flags(),
+                    crate::kern_wrappers::mm::mmap_flags::MAP_PRIVATE,
+                    0,
+                )
+            }
+        };
         if ret != vma_meta.get_start() {
             return None;
         }
-        let vma = self.get_memory_descriptor().find_vma(vma_meta.get_start()).unwrap();
+        let vma = self
+            .get_memory_descriptor()
+            .find_vma(vma_meta.get_start())
+            .unwrap();
         if vma_meta.is_stack() {
-            vma.vm_flags =
-                (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::STACK).bits();
+            vma.vm_flags = (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::STACK).bits();
         } else {
             vma.vm_flags =
                 (VMFlags::from_bits_unchecked(vma.vm_flags) | VMFlags::DONTEXPAND).bits();
         }
-        if cfg!(feature = "eager-resume") {
-            vma.vm_flags = (crate::bindings::VMFlags::from_bits_unchecked(vma.vm_flags) |
-                crate::bindings::VMFlags::MIXEDMAP).bits();
+        #[cfg(feature = "eager-resume")]
+        {
+            vma.vm_flags = (crate::bindings::VMFlags::from_bits_unchecked(vma.vm_flags)
+                | crate::bindings::VMFlags::MIXEDMAP)
+                .bits();
         }
         return Some(vma);
     }

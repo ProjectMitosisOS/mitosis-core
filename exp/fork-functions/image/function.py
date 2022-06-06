@@ -89,9 +89,6 @@ def image_processing(file_name, image_path):
         tmp = image
         # path_list += flip(image, file_name)
         path_list += rotate(image, file_name)
-        # path_list += imgfilter(image, file_name)
-        # path_list += gray_scale(image, file_name)
-        # path_list += resize(image, file_name)
 
     latency = time() - start
     return latency, path_list
@@ -101,11 +98,11 @@ def handler():
     in_key = 'test.jpeg'
     latency, path_list = image_processing(in_key, in_key)
 
-
 @mitosis_bench
 def bench():
+#    print("before image processing")    
     handler()
-
+#    print("image processing done") 
 
 if __name__ == '__main__':
     bench()

@@ -18,6 +18,7 @@ PLOT=1 # If plot the target figure
 
 FILTER=
 
+
 STR_ALL_HOSTS='${PARENT_HOST}',${STR_CHILD_HOSTS}
 RUNNER_FLAG=-k=$(USE_PROXY_COMMAND)
 
@@ -38,8 +39,10 @@ template_args="{\
 # Template path list
 template-build-exp=templates-build/template-build-exp.toml
 template-clean=templates-build/template-clean.toml
-template-build-mitosis=templates-build/template-build-mitosis.toml
+template-build-mitosis-prefetch=templates-build/template-build-mitosis-prefetch.toml
+template-build-mitosis-cow=templates-build/template-build-mitosis-cow.toml
 template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
+template-build-mitosis-eager-resume=templates-build/template-build-mitosis-eager-resume.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
 
 
@@ -47,14 +50,17 @@ template-build-lean-container=templates-build/template-build-lean-container.toml
 
 # Micro for functions
 template-run-micro-func-startup=templates-run/micro-func/template-run-micro-startup.toml
+template-run-micro-func-startup-execution=templates-run/micro-func/template-run-micro-startup-execution.toml
 template-run-micro-func-execution=templates-run/micro-func/template-run-micro-execution.toml
 template-run-micro-func-prepare=templates-run/micro-func/template-run-micro-prepare.toml
 
 
 ## Micro with working set
 template-run-micro-startup=templates-run/micro-c/template-run-micro-startup.toml
+template-run-micro-startup-execution=templates-run/micro-c/template-run-micro-startup-execution.toml
 template-run-micro-execution=templates-run/micro-c/template-run-micro-execution.toml
 template-run-micro-prepare=templates-run/micro-c/template-run-micro-prepare.toml
+template-run-micro-touch-ratio=templates-run/micro-c/template-run-micro-touch-ratio.toml
 
 run_out=out
 build_out=run-build.toml
@@ -77,9 +83,14 @@ define runner
 	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
 endef
 
+
+
 # Tests
 micro-function-startup:
 	$(call runner, $(template-run-micro-func-startup), ${run_out}/$@)
+
+micro-function-startup-execution:
+	$(call runner, $(template-run-micro-func-startup-execution), ${run_out}/$@)
 
 micro-function-execution:
 	$(call runner, $(template-run-micro-func-execution), ${run_out}/$@)
@@ -94,22 +105,47 @@ micro-c-prepare:
 micro-c-startup:
 	$(call runner, $(template-run-micro-startup), ${run_out}/$@)
 
-micro-c: micro-c-execution micro-c-prepare
+micro-c-startup-execution:
+	$(call runner, $(template-run-micro-startup-execution), ${run_out}/$@)
 
-micro-function: micro-function-execution micro-c-prepare
+
+micro-touch-ratio:
+	$(call runner, $(template-run-micro-touch-ratio), ${run_out}/$@)
+
+
+
+### End of tests
+
+## Touch ratio
+micro-c: micro-c-execution micro-c-prepare micro-c-startup
+
+micro-function: micro-function-execution micro-function-prepare micro-function-startup micro-function-startup-execution
 
 micro: micro-c micro-function
+
+micro-execution: micro-c-execution micro-function-execution
 # Built all cpp
 build-cpp:
 	$(call builder, $(template-build-exp))
 
-build-mitosis: clean build-cpp
-	$(call builder, $(template-build-mitosis))
+build-mitosis-prefetch: clean build-cpp
+	$(call builder, $(template-build-mitosis-prefetch))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
+build-mitosis-cow: clean build-cpp
+	$(call builder, $(template-build-mitosis-cow))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
+
+
 build-mitosis-cache: clean build-cpp
 	$(call builder, $(template-build-mitosis-cache))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
+
+build-mitosis-eager-resume: build-cpp
+	$(call builder, $(template-build-mitosis-eager-resume))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
@@ -117,3 +153,4 @@ build-mitosis-cache: clean build-cpp
 clean: gen-clean
 	pkill python; sleep 0.1
 	python bootstrap.py -f $(build_out) ${RUNNER_FLAG}
+

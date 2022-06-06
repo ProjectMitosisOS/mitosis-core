@@ -82,6 +82,8 @@ impl ParentDescriptor {
 
             #[cfg(feature = "prefetch")]
             prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info),
+            #[cfg(feature = "eager-resume")]
+            eager_fetched_pages: Default::default()
         }
     }
 }

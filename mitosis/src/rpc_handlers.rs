@@ -24,10 +24,11 @@ pub(crate) fn handle_echo(input: &BytesMut, output: &mut BytesMut) -> usize {
     64
 }
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub(crate) struct DescriptorLookupReply {
     pub(crate) pa: u64,
     pub(crate) sz: usize,
+    pub(crate) ready: bool,
 }
 
 impl os_network::serialize::Serialize for DescriptorLookupReply {}
@@ -41,14 +42,29 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
 
     if addr.is_none() {
         crate::log::error!("empty addr, key:{}!", key);
+
+        // send an error reply
         return 0; // a null reply indicate that the we don't have the key
     }
 
-    let reply = DescriptorLookupReply {
-        pa : addr.unwrap().get_pa(),
-        sz : addr.unwrap().len(),
+    let reply = match addr {
+        Some(addr) => {
+            DescriptorLookupReply {
+                pa: addr.get_pa(),
+                sz: addr.len(),
+                ready: true,
+            }
+        }
+        None => {
+            crate::log::error!("Failed to find the handner with id: {}!", key);
+            DescriptorLookupReply {
+                pa: 0,
+                sz: 0,
+                ready: false,
+            }
+        }
     };
-    crate::log::debug!("send reply:{:?}", reply);
+
     reply.serialize(output);
     reply.serialization_buf_len()
 }

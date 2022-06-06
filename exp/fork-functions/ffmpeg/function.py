@@ -16,8 +16,8 @@ tmp = '/dev/shm/'
 @tick_execution_time
 def lambda_handler():
     subprocess.check_output(['/usr/local/ffmpeg/bin/ffmpeg', '-y',
-                             '-i', 'test.mp4',
-                             '-vf', 'hflip', 'out.mp4'])
+                             '-i', '/tmp/test.mp4',
+                             '-vf', 'hflip', '/tmp/out.mp4'])
 
 
 @mitosis_bench

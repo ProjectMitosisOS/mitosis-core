@@ -23,7 +23,7 @@ clean_fs: unmount_dev
 CONTAINER_NAME=my_test_container
 
 COMMAND_ABS_PATH=/usr/local/bin/python
-ARGS1=/app/main.py
+ARGS1=main.py
 ARGS2=
 
 run:
