@@ -1,27 +1,24 @@
-import json
+import gzip
 import os
+import shutil
 import sys
 
 sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
 
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['MKL_NUM_THREADS'] = '1'
-
-f = open('/tmp/linux.json')
-content = f.read()
-
+time = 0
 
 @tick_execution_time
 def lambda_handler():
-    json_data = json.loads(content)
-    str_json = json.dumps(json_data, indent=4)
-
+    global time
+    dst = 'result-' + str(time)
+    src = 'compression-' + str(time)
+    shutil.make_archive(dst, 'zip', src)
+    time += 1
 
 @mitosis_bench
 def bench():
     lambda_handler()
-
 
 if __name__ == '__main__':
     bench()

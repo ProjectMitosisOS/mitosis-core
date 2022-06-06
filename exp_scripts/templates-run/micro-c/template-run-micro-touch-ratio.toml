@@ -18,17 +18,17 @@ cmd = 'sleep 1 && ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
 
 [[template.pass]]
 role = 'parent'
-path = 'exp/fork-functions'
-#cmd = 'sleep 1 && ./bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0 --profile=0 --touch_ratio=${touch_ratio}'
-cmd = 'cd ${micro_func_name} && python function.py -working_set=${working_set} -pin=1 -profile=0 -handler_id=73 -exclude_execution=0 -touch_ratio=${touch_ratio}'
+path = 'exp'
+cmd = "./bench_workingset --working_set=${working_set} -profile=0 -whether_prepare=1 -exclude_execution=0  -touch_ratio=${touch_ratio}"
 
 [[template.pass]]
 role = 'child'
-path = 'exp_scripts'
-cmd = 'sleep 3 && sh run_lean_container.sh' # TODO：Could be further refined
+path = ''
+cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
 
 [template.placeholder]
-touch_ratio = [0, 20, 40, 50, 60, 80, 90, 100]
+#touch_ratio = [85, 90, 95]
+touch_ratio = [0, 20, 40, 50, 55, 57, 60, 70, 80, 85, 90, 95, 100]
 working_set = 67108864
 micro_func_name = "micro"
 

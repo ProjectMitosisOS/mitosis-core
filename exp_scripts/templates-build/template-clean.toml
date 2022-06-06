@@ -3,14 +3,19 @@
 
 [[template.pass]]
 role = 'child'
-path = 'mitosis-user-libs/mitosis-lean-container'
-cmd = 'make clean_fs COMMAND_ABS_PATH=/app/lean_child PATH_TO_APP=../../exp/fork-functions/child'
+path = ''
+cmd = 'make clean_fs LEAN_APP_NAME=simple_child'
 
 
 [[template.pass]]
 role = 'builder'
 path = ''
 cmd = 'source $HOME/.cargo/env; rm -rf mitosis-kms/target ; make rmmod'
+
+[[template.pass]]
+role = 'builder'
+path = ''
+cmd = 'sudo umount /tmp'
 
 
 [template.placeholder]
