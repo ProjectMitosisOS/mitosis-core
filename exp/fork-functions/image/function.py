@@ -101,11 +101,11 @@ def handler():
     in_key = 'test.jpeg'
     latency, path_list = image_processing(in_key, in_key)
 
-
 @mitosis_bench
 def bench():
+    print("before image processing")    
     handler()
-
+    print("image processing done") 
 
 if __name__ == '__main__':
     bench()
