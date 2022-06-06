@@ -9,8 +9,6 @@ main(int argc, char *argv[]) {
         return -1;
     }
 
-    printf("in lean child\n");
-
     int mac_id = std::stoi(argv[1]);
     int handler_id = std::stoi(argv[2]);
     int sd = sopen();

@@ -64,7 +64,7 @@ void report(struct timespec *start, struct timespec *end)
         long op = count - last_count;
         double latency = (elapsed_time_since_last_report / NANOSECONDS_IN_MILLISECOND) / op;
         long qps = (op / (elapsed_time_since_last_report / NANOSECONDS_IN_SECOND));
-        printf("qps %ld containers/sec, latency %f ms\n", qps, latency);
+        printf("Throughput: %ld containers/sec, latency %f ms\n", qps, latency);
 
         last_timestamp = elapsed_time;
         last_count = count;
@@ -155,20 +155,16 @@ int main(int argc, char **argv)
 
     for (;;)
     {
-        printf("spawn one lean container\n"); 
-        sleep(1);
         test_setup_lean_container(name, pid, rootfs_abs_path, command);
 
         clock_gettime(CLOCK_REALTIME, &now);
         count++;
         report(&start, &now);
         elapsed_time = get_passed_nanosecond(&start, &now);
-        break;
         if (elapsed_time > benchmark_time_nanoseconds)
         {
             break;
         }
-        sleep(1);
     }
 
     printf("total: start %ld lean containers in %f second(s)\n", count, elapsed_time / NANOSECONDS_IN_SECOND);

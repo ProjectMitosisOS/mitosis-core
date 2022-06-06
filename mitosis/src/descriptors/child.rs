@@ -75,25 +75,8 @@ impl ChildDescriptor {
         let access_info = AccessInfo::new(&self.machine_info).unwrap();
         // 2. Map new vma regions
         #[cfg(not(feature = "eager-resume"))]
-        (&self.vma).into_iter().for_each(|m| {
-            let vma = unsafe { task.map_one_region(file, &m) };
-
-            #[allow(dead_code)]
-                let vma = vma.unwrap();
-
-            // tune the bits
-            let origin_vma_flags =
-                unsafe { crate::bindings::VMFlags::from_bits_unchecked(m.flags) };
-            // crate::log::info!("orign vma: {:?}", origin_vma_flags);
-            if origin_vma_flags.contains(crate::bindings::VMFlags::VM_ALLOC) {
-                // set the vma
-                crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
-            }
-        });
-
-        #[cfg(feature = "eager-resume")]
-        self.vma.clone().into_iter().for_each(|m| {
-            let vma = unsafe { task.map_one_region(file, &m) };
+        (&self.vma).into_iter().enumerate().for_each(|(i, m)| {
+            let vma = unsafe { task.map_one_region(file, &m, self.vma.get(i + 1)) };
 
             #[allow(dead_code)]
             let vma = vma.unwrap();
@@ -106,9 +89,27 @@ impl ChildDescriptor {
                 // set the vma
                 crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
             }
+        });
+
+        #[cfg(feature = "eager-resume")]
+        self.vma.clone().into_iter().enumerate().for_each(|(i, m)| {
+            let vma = unsafe { task.map_one_region(file, &m, self.vma.get(i + 1)) };
+
+            #[allow(dead_code)]
+            let vma = vma.unwrap();
+
+            // tune the bits
+            let origin_vma_flags =
+                unsafe { crate::bindings::VMFlags::from_bits_unchecked(m.flags) };
+
+            if origin_vma_flags.contains(crate::bindings::VMFlags::VM_ALLOC) {
+                // set the vma
+                crate::kern_wrappers::vma::VMA::new(vma).set_alloc();
+            }
             #[cfg(feature = "eager-resume")]
             self.eager_fetch_vma(&m, vma, &access_info);
         });
+
         // 3. Re-set states
         task.set_mm_reg_states(&self.regs);
     }
