@@ -1,5 +1,8 @@
 use alloc::string::String;
+
 use core::option::Option;
+#[allow(unused_imports)]
+use rust_kernel_linux_util::kthread;
 
 #[allow(unused_imports)]
 use crate::descriptors::{ChildDescriptor, ParentDescriptor};
@@ -238,7 +241,7 @@ impl MitosisSysCallHandler {
         crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
 
         // code for sanity checks
-        
+        /*
         let mm = crate::kern_wrappers::task::Task::new().get_memory_descriptor();
         let vma = mm.find_vma(0x5555561692b8);
         if vma.is_none() {
@@ -246,9 +249,9 @@ impl MitosisSysCallHandler {
         }
         vma.map(|vma| {
             crate::log::info!("sanity check vma {:?}", vma);
-        });
+        }); */
 
-        /* 
+        /*
         use crate::bindings::VMFlags;
         let mm = Task::new().get_memory_descriptor();
         for mut vma in mm.get_vma_iter() {
@@ -309,8 +312,6 @@ impl MitosisSysCallHandler {
             return -1;
         }
 
-        crate::log::info!("In local resume with handler_id {}", handler_id); 
-
         let cpu_id = crate::get_calling_cpu_id();
         // send an RPC to the remote to query the descriptor address
         let caller = unsafe {
@@ -349,6 +350,11 @@ impl MitosisSysCallHandler {
                 match DescriptorLookupReply::deserialize(&reply) {
                     Some(d) => {
                         crate::log::debug!("sanity check query descriptor result {:?}", d);
+
+                        if !d.ready {
+                            crate::log::error!("failed to lookup handler id: {:?}", handler_id);
+                            return -1;
+                        }
 
                         // fetch the descriptor with one-sided RDMA
                         let desc_buf = RemotePagingService::remote_descriptor_fetch(
@@ -410,9 +416,8 @@ impl MitosisSysCallHandler {
                             remote_mac_id: machine_id as _,
                             descriptor: des,
                             // access info cannot failed to create
-                            access_info: access_info.unwrap(),                            
+                            access_info: access_info.unwrap(),
                         });
-                        crate::log::info!("return to the user!!!!!!");
                         return 0;
                     }
                     None => {
@@ -476,7 +481,7 @@ impl MitosisSysCallHandler {
         // let resume_related = self.caller_status.resume_related.as_ref().unwrap();
 
         #[cfg(feature = "page-cache")]
-            let mut miss_page_cache = false;
+        let mut miss_page_cache = false;
         let phy_addr = resume_related.descriptor.lookup_pg_table(fault_addr);
 
         let new_page = {
@@ -556,7 +561,6 @@ impl MitosisSysCallHandler {
                     if vd.is_anonymous && (vma.get_start() == vd.get_start()) {
                         let new_page_p =
                             crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
-                        //crate::bindings::get_zeroed_page(crate::bindings::PMEM_GFP_HIGHUSER);
 
                         (*vmf).page = new_page_p as *mut _;
                         return 0;

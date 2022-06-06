@@ -28,13 +28,13 @@ cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_c
 
 [template.placeholder]
 micro_func_name = [
-#    "micro", 
-#    "json", 
-#    "chameleon", 
-#    "compression", 
+    "micro", 
+    "json", 
+    "chameleon", 
+    "compression", 
 #    "helloworld", 
     "image", 
-#    "pagerank", 
-#    "pyaes",
-#    "recognition"
+    "pagerank", 
+    "pyaes",
+    "recognition"
 ]

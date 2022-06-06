@@ -55,8 +55,8 @@ def mitosis_bench(handler):
         prepare(handler_id)
         if not ret_imm:
             result = handler(*args, **kwargs)
-        while True:
-            time.sleep(1)
+#        while True:
+#            time.sleep(1)
         os._exit(0)
 
     return wrapper
