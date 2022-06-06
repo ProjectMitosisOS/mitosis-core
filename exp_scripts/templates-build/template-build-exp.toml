@@ -9,7 +9,7 @@ cmd = 'cmake . ; make -j'
 [[template.pass]]
 role = 'builder'
 path = 'exp'
-cmd = 'sudo unmount /tmp ;mkdir -p /tmp ; sudo mount -t tmpfs tmpfs -o size=2G /tmp ; cp -r compression* /tmp/. ; cp test* /tmp/. ; cp *.json /tmp/.'
+cmd = 'sudo umount /tmp ;mkdir -p /tmp ; sudo mount -t tmpfs tmpfs -o size=2G /tmp ; cp -r compression* /tmp/. ; cp test* /tmp/. ; cp *.json /tmp/.'
 
 [template.placeholder]
 name = ["build"]
