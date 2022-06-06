@@ -14,7 +14,7 @@ cmd = 'make insmod'
 [[template.pass]]
 role = 'child'
 path = 'exp'
-cmd = 'sleep 3; ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
+cmd = 'sleep 1; ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
 
 [[template.pass]]
 role = 'parent'
@@ -24,20 +24,20 @@ cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=1 -pin=1 -
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
+cmd = 'sleep 5 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
 
 
 [template.placeholder]
 micro_func_name = [
-#    "micro", 
-#    "json", 
-#    "chameleon", 
-#    "compression", 
-#    "helloworld", 
-#    "image", 
+    "micro",
+    "json",
+    "chameleon",
+    "compression",
+    "helloworld",
+    "image",
     "pagerank", 
-#    "pyaes",
-#    "recognition"
+    "pyaes",
+    "recognition"
 ]
 
 
