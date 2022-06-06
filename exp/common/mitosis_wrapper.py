@@ -4,6 +4,7 @@ import time
 from functools import wraps
 import syscall_lib
 import bench
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-handler_id", type=int, default=73, help="rfork handler id")
@@ -25,7 +26,6 @@ app_name = args.app_name
 touch_ratio = args.touch_ratio
 ret_imm = args.exclude_execution != 0
 ret = ret_imm == 1
-
 
 def mitosis_bench(handler):
     """
@@ -55,6 +55,8 @@ def mitosis_bench(handler):
         prepare(handler_id)
         if not ret_imm:
             result = handler(*args, **kwargs)
+        while True:
+            time.sleep(1)
         os._exit(0)
 
     return wrapper

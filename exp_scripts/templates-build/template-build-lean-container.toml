@@ -11,7 +11,6 @@ role = 'child'
 path = ''
 cmd = 'make export mount_dev LEAN_APP_NAME=simple_child'
 
-
 [template.placeholder]
 name = ["build"]
 

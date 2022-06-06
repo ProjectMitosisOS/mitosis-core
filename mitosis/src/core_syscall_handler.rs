@@ -238,16 +238,17 @@ impl MitosisSysCallHandler {
         crate::log::debug!("prepared buf sz {}KB", res.unwrap() / 1024);
 
         // code for sanity checks
-        /*
+        
         let mm = crate::kern_wrappers::task::Task::new().get_memory_descriptor();
-        let vma = mm.find_vma(0x5bf000);
+        let vma = mm.find_vma(0x5555561692b8);
         if vma.is_none() {
-            crate::log::debug!("failed to lookup vma");
+            crate::log::info!("sanity check failed to lookup vma");
         }
         vma.map(|vma| {
             crate::log::info!("sanity check vma {:?}", vma);
-            unsafe { crate::bindings::print_file_path(vma.vm_file) };
         });
+
+        /* 
         use crate::bindings::VMFlags;
         let mm = Task::new().get_memory_descriptor();
         for mut vma in mm.get_vma_iter() {
@@ -307,6 +308,9 @@ impl MitosisSysCallHandler {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
         }
+
+        crate::log::info!("In local resume with handler_id {}", handler_id); 
+
         let cpu_id = crate::get_calling_cpu_id();
         // send an RPC to the remote to query the descriptor address
         let caller = unsafe {
@@ -406,8 +410,9 @@ impl MitosisSysCallHandler {
                             remote_mac_id: machine_id as _,
                             descriptor: des,
                             // access info cannot failed to create
-                            access_info: access_info.unwrap(),
+                            access_info: access_info.unwrap(),                            
                         });
+                        crate::log::info!("return to the user!!!!!!");
                         return 0;
                     }
                     None => {

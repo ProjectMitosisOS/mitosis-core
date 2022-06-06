@@ -8,6 +8,9 @@ main(int argc, char *argv[]) {
         printf("Wrong argc: %d. Usage: %s [mac_id] [handler_id]\n", argc, argv[0]);
         return -1;
     }
+
+    printf("in lean child\n");
+
     int mac_id = std::stoi(argv[1]);
     int handler_id = std::stoi(argv[2]);
     int sd = sopen();

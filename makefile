@@ -53,7 +53,7 @@ build_lean_lib:
 
 
 LEAN_BENCH_EXE_PATH=exp/bench_lean_container
-BENCH_SEC=5
+BENCH_SEC=3
 name=bench_lean_container
 command="lean_child"
 
