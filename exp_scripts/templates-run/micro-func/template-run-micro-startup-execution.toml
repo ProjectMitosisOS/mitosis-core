@@ -24,7 +24,7 @@ cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=0 -pin=1 -
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'sleep 5 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
+cmd = 'sleep 5 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
 
 [template.placeholder]
 micro_func_name = [
@@ -38,3 +38,4 @@ micro_func_name = [
     "pyaes",
     "recognition"
 ]
+run_sec=8

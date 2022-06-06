@@ -19,5 +19,6 @@ cmd = 'sleep 5; for i in seq 1 3; do for i in seq 1 3 ;do ${loop_cmd} ;done; don
 
 [template.placeholder]
 micro_func_name = ["micro", "json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
-loop_cmd="echo 3 | sudo tee /proc/sys/vm/drop_caches;./simple_child -mac_id=0"
+loop_cmd="./simple_child -mac_id=0"
+#loop_cmd="echo 3 | sudo tee /proc/sys/vm/drop_caches;./simple_child -mac_id=0"
 
