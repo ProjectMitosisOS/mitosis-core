@@ -32,7 +32,7 @@ add_library(micro_function SHARED fork-functions/micro/workingset_impl.cc)
 set_property(TARGET micro_function PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 foreach (s ${samples})
-    target_link_libraries(${s} gflags)
+    target_link_libraries(${s} gflags pthread)
 endforeach (s)
 
 
