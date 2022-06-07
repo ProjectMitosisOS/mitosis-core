@@ -5,17 +5,19 @@
 role = 'parent'
 path = ''
 cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
-
+order = 0
 
 [[template.pass]]
 role = 'parent'
-path='exp' ## c-version
-cmd='sleep 1 && ./bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0'
+path = 'exp' ## c-version
+cmd = './bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0'
+order = 1
 
 [[template.pass]]
 role = 'parent'
 path = 'exp'
-cmd = './simple_child -mac_id=0 -wait_finish_sec=5; for i in seq 1 3 ;do ./simple_child -mac_id=0 ;done; for i in seq 1 3 ;do ./simple_child -mac_id=0 ;done'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=0; for i in seq 1 3 ;do ./simple_child -mac_id=0 ;done; for i in seq 1 3 ;do ./simple_child -mac_id=0 ;done'
+order = 2
 
 [template.placeholder]
 working_set = [
