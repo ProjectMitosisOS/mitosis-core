@@ -30,7 +30,7 @@ pub fn check_global_configurations() {
         crate::log::info!("[check]: Cache remote page table optimization is enabled.")
     } else {
         crate::log::info!("[check]: Not cache remote page table.")
-    }    
+    }
 
     crate::log::info!("********* All configuration check passes !*********");
 }
@@ -124,15 +124,15 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     crate::log::info!("All RPC thread handlers initialized!");
 
     // establish an RPC to myself
-    for i in 0..config.rpc_threads_num {
-        probe_remote_rpc_end(
-            config.machine_id + config.max_cluster_size * i,
-            unsafe { crate::service_rpc::get_ref() }
-                .get_connect_info(i)
-                .expect("Self RPC handler connection info uninitialized"),
-        )
-        .expect("failed to connect to my RPC handlers!");
-    }
+    // for i in 0..config.rpc_threads_num {
+    //     probe_remote_rpc_end(
+    //         1 + config.max_cluster_size * i,
+    //         unsafe { crate::service_rpc::get_ref() }
+    //             .get_connect_info(i)
+    //             .expect("Self RPC handler connection info uninitialized"),
+    //     )
+    //     .expect("failed to connect to my RPC handlers!");
+    // }
     crate::log::info!("Probe myself RPC handlers done");
 
     crate::log::info!(
@@ -161,7 +161,7 @@ pub fn end_instance() {
         crate::log::debug!("drop shadow process service");
         crate::sp_service::drop();
         crate::mem_pool::drop();
-        
+
         crate::global_pt_cache::drop();
     };
     end_rdma();
