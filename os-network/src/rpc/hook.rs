@@ -199,7 +199,10 @@ where
                         let reply_payload =
                             self.service
                                 .execute(meta.get_rpc_id(), &rpc_args, &mut out_buf);
-                        self.analysis.handle_one();
+
+                        self.analysis.handle_one();                        
+                        self.analysis.handle_session_call(meta.get_session_id());
+
                         match reply_payload {
                             Some(size) => self.send_reply(
                                 meta.get_session_id(),
@@ -250,10 +253,11 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "RPCHook\n  \t service: {}\n\t connected_sessions: {}, ncalls handled {}",
+            "RPCHook\n  \t service: {}\n\t connected_sessions: {}, ncalls handled {}, other: {:?}",
             self.service,
             self.connected_sessions.len(),
-            self.analysis.get_ncalls()
+            self.analysis.get_ncalls(), 
+            self.analysis.session_counts
         )
     }
 }

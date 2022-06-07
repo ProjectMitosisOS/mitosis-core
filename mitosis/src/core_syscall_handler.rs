@@ -312,7 +312,8 @@ impl MitosisSysCallHandler {
             return -1;
         }
 
-        let cpu_id = crate::get_calling_cpu_id();
+        // let cpu_id = crate::get_calling_cpu_id();
+        let cpu_id = 0;
         // send an RPC to the remote to query the descriptor address
         let caller = unsafe {
             crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)

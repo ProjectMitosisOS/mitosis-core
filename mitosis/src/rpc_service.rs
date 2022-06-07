@@ -232,7 +232,12 @@ impl Service {
             match rpc_server.poll() {
                 Ok(Async::Ready(_)) => {}
                 Ok(_NotReady) => {}
-                Err(e) => crate::log::error!("RPC handler {} meets an error {:?}", arg.id, e),
+                Err(e) => crate::log::error!(
+                    "RPC handler {} meets an error {:?}, status {:?}",
+                    arg.id,
+                    e,
+                    rpc_server
+                ),
             };
             counter += 1;
             if core::intrinsics::unlikely(counter > Self::YIELD_THRESHOLD) {
@@ -244,7 +249,7 @@ impl Service {
             }
         }
 
-        crate::log::debug!(
+        crate::log::info!(
             "MITOSIS RPC thread {} ended. rpc status: {:?} ",
             arg.id,
             rpc_server

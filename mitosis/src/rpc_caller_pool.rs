@@ -71,7 +71,7 @@ impl<'a> CallerPool<'a> {
         let caller = self.get_caller(idx)?;
         if caller.session_connected(session_id) {
             crate::log::warn!("The session {} has already connected.", session_id);
-            return Some(());
+            return None;
         }
 
         let client_session = caller.get_transport_mut().create(meta).unwrap();

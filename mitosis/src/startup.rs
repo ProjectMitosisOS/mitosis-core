@@ -133,7 +133,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     //     )
     //     .expect("failed to connect to my RPC handlers!");
     // }
-    crate::log::info!("Probe myself RPC handlers done");
+    // crate::log::info!("Probe myself RPC handlers done");
 
     crate::log::info!(
         "All initialization done, takes {} ms",
@@ -146,6 +146,8 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
+        crate::service_rpc::drop();
+
         crate::log::debug!("drop dc targets");
         crate::dc_target_service::drop();
 
@@ -156,7 +158,6 @@ pub fn end_instance() {
         crate::dc_pool_service_async::drop();
 
         crate::service_caller_pool::drop();
-        crate::service_rpc::drop();
 
         crate::log::debug!("drop shadow process service");
         crate::sp_service::drop();
