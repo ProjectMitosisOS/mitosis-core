@@ -44,6 +44,33 @@ pid_t wait_pid(pid_t pid) {
     }
 }
 
+
+int genRandomString(int length, char *ouput) {
+    int flag, i;
+    time_t t;
+    t = time(NULL);
+    srand((unsigned) t);
+    for (i = 0; i < length - 1; i++) {
+        flag = rand() % 3;
+        switch (flag) {
+            case 0:
+                ouput[i] = 'A' + rand() % 26;
+                break;
+            case 1:
+                ouput[i] = 'a' + rand() % 26;
+                break;
+            case 2:
+                ouput[i] = '0' + rand() % 10;
+                break;
+            default:
+                ouput[i] = 'x';
+                break;
+        }
+    }
+    ouput[length - 1] = '\0';
+    return 0;
+}
+
 static long get_passed_nanosecond(struct timespec *start, struct timespec *end) {
     return NANOSECONDS_IN_SECOND * (end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
 }
@@ -140,6 +167,9 @@ int main(int argc, char **argv) {
     int thread_num = argv[5];
 
 
+    char rand_name[12];
+    genRandomString(12, rand_name);
+    name = rand_name;
     int argv_index = 0;
     for (int i = 4; i < argc && argv_index < MAX_COMMAND_LENGTH; ++i, ++argv_index) {
         execve_argv[argv_index] = argv[i];

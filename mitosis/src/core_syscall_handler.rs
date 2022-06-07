@@ -339,7 +339,7 @@ impl MitosisSysCallHandler {
             return -1;
         };
 
-        let mut timeout_caller = TimeoutWRef::new(caller, TIMEOUT_USEC);
+        let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
 
         use crate::rpc_handlers::DescriptorLookupReply;
         use os_network::serialize::Serialize;
