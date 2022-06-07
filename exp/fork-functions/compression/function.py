@@ -11,8 +11,8 @@ time = 0
 @tick_execution_time
 def lambda_handler():
     global time
-    dst = 'result-' + str(time)
-    src = 'compression-' + str(time)
+    dst = '/tmp/result-' + str(time)
+    src = '/tmp/compression-' + str(time)
     shutil.make_archive(dst, 'zip', src)
     time += 1
 

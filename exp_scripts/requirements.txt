@@ -1,4 +1,4 @@
-numpy==1.16.0
+numpy==1.17.3
 chameleon==3.10.1
 six==1.10.0
 pyaes==1.6.1
