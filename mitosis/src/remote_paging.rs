@@ -41,8 +41,8 @@ impl AccessInfo {
 
 pub struct RemotePagingService;
 
-use os_network::msg::UDMsg as RMemory;
 use crate::remote_mapping::PhysAddr;
+use os_network::msg::UDMsg as RMemory;
 
 pub(crate) type DCReqPayload = os_network::rdma::payload::Payload<ib_dc_wr>;
 
@@ -51,7 +51,7 @@ impl RemotePagingService {
     pub(crate) fn remote_descriptor_fetch(
         d: crate::rpc_handlers::DescriptorLookupReply,
         caller: &mut crate::rpc_caller_pool::UDCaller<'static>,
-        session_id : usize
+        session_id: usize,
     ) -> Result<RMemory, <os_network::rdma::dc::DCConn<'static> as Conn>::IOResult> {
         let descriptor_buf = RMemory::new(d.sz, 0);
         let point = caller.get_ss(session_id).unwrap().0.get_ss_meta();
@@ -77,7 +77,7 @@ impl RemotePagingService {
         dc_qp.post(&payload.as_ref())?;
 
         // wait for the request to complete
-        let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
+        let mut timeout_dc = TimeoutWRef::new(dc_qp, 10 * TIMEOUT_USEC);
         match block_on(&mut timeout_dc) {
             Ok(_) => Ok(descriptor_buf),
             Err(e) => {
@@ -132,7 +132,7 @@ impl RemotePagingService {
                 if e.is_elapsed() {
                     // The fallback path? DC cannot distinguish from failures
                     // unimplemented!();
-                    crate::log::error!("fatal, timeout on reading the DC QP"); 
+                    crate::log::error!("fatal, timeout on reading the DC QP");
                     Err(os_network::rdma::Err::Timeout)
                     //Ok(())
                 } else {

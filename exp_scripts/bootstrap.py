@@ -415,7 +415,9 @@ def main():
                                            p["path"])
                 if p["host"] not in config.get("null",[]):
                     printer.append(RunPrinter(str(i) + p["host"],res))
-            time.sleep(1)
+            if "pend" in dict(p).keys():
+                pend = float(p["pend"])
+                time.sleep(pend)
 
     while len(printer) > 0:
         temp = []
