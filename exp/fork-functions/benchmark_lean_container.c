@@ -48,7 +48,7 @@ static long get_passed_nanosecond(struct timespec *start, struct timespec *end) 
     return NANOSECONDS_IN_SECOND * (end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
 }
 
-void report(struct timespec *start, struct timespec *end) {
+void report(char *name, struct timespec *start, struct timespec *end) {
     static long last_count = 0;
     static long last_timestamp = 0;
 
@@ -61,7 +61,7 @@ void report(struct timespec *start, struct timespec *end) {
         long op = count - last_count;
         double latency = (elapsed_time_since_last_report / NANOSECONDS_IN_MILLISECOND) / op;
         long qps = (op / (elapsed_time_since_last_report / NANOSECONDS_IN_SECOND));
-        printf("Throughput: %ld containers/sec, latency %f ms\n", qps, latency);
+        printf("[%s] Throughput: %ld containers/sec, latency %f ms\n", name, qps, latency);
 
         last_timestamp = elapsed_time;
         last_count = count;
@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
 
         clock_gettime(CLOCK_REALTIME, &now);
         count++;
-        report(&start, &now);
+        report(name, &start, &now);
         elapsed_time = get_passed_nanosecond(&start, &now);
         if (elapsed_time > benchmark_time_nanoseconds) {
             break;

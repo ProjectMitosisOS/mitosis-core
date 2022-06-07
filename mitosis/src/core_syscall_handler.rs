@@ -328,13 +328,16 @@ impl MitosisSysCallHandler {
             )
         };
 
-        caller
+        if caller
             .sync_call::<usize>(
                 remote_session_id,
                 crate::rpc_handlers::RPCId::Query as _,
                 handler_id as _,
             )
-            .unwrap();
+            .is_err()
+        {
+            return -1;
+        };
 
         let mut timeout_caller = TimeoutWRef::new(caller, TIMEOUT_USEC);
 

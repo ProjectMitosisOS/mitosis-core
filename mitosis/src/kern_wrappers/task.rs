@@ -41,7 +41,8 @@ impl Task {
 
         let ret = {
             // we need to extend the VMA of heap & stack to avoid corrupting
-            let mut extended_map_area_sz = 16 * 1024 * 1024; // 16MB
+            let mut extended_map_area_sz = 1024 * 1024 * 1024; // 1GB
+            // let mut extended_map_area_sz = 0;
             if next_vma.is_some() {
                 assert!(next_vma.unwrap().get_start() >= vma_meta.get_end());
                 extended_map_area_sz = core::cmp::min(

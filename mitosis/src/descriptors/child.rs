@@ -345,7 +345,7 @@ impl ChildDescriptor {
         #[cfg(feature = "prefetch")]
         {
             // we need to do the prefetch
-            if PhysAddr::new(remote_pa).bottom_bit() {
+            if PhysAddr::new(remote_pa).is_prefetch() {
                 /*
                 Two cases.
                     1. the page is prefetched. then we can directly return
@@ -355,7 +355,7 @@ impl ChildDescriptor {
                 FIXME:
                 - Currently, we don't handle the timeout here
                  */
-                while remote_pa == crate::prefetcher::executor::K_MAGIC_IN_PREFETCH {
+                while remote_pa == crate::remote_mapping::K_MAGIC_IN_PREFETCH {
                     // poll the prefetcher
                     self.poll_prefetcher();
                     remote_pa = l1_page[idx];
@@ -368,7 +368,7 @@ impl ChildDescriptor {
 
                 // clean the entry in the page table, since 
                 // the OS is responsible for reclaiming this page
-                
+                l1_page[idx] = 0;            
 
                 return Some(page);
             }
@@ -547,8 +547,11 @@ impl os_network::serialize::Serialize for ChildDescriptor {
             unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.pop_one_qp())? };
 
         #[cfg(feature = "prefetch")]
-        let access_info = AccessInfo::new(&machine_info).unwrap();
-
+        let access_info = AccessInfo::new(&machine_info);
+        #[cfg(feature = "prefetch")]
+        if access_info.is_none() {
+            return None;
+        }
         Some(Self {
             regs: regs,
             page_table: pt,
@@ -556,7 +559,7 @@ impl os_network::serialize::Serialize for ChildDescriptor {
             machine_info: machine_info,
 
             #[cfg(feature = "prefetch")]
-            prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info),
+            prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info.unwrap()),
             #[cfg(feature = "eager-resume")]
             eager_fetched_pages: Default::default(),
         })

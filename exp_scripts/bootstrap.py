@@ -335,7 +335,7 @@ class Courier2:
                     try:
                         for line in iter(lambda: stdout.readline(2048), ""):
                             if pty and (len(line) > 0): ## ignore null lines
-                                print((("[%s]: " % host) + line), end="")
+                                print((("[%s]: " % host) + line))
                             else:
                                 ret[1] += (line + "\n")
                     except UnicodeDecodeError as e:
@@ -360,7 +360,7 @@ def str_to_bool(value):
         return False
     elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
         return True
-    raise ValueError(f'{value} is not a valid boolean value')
+#    raise ValueError(f'{value} is not a valid boolean value')
 
 def get_order(p):
     try:
@@ -445,8 +445,11 @@ def main():
                                            p["host"],
                                            p["path"])
                 if p["host"] not in config.get("null",[]):
-                    printer.append(RunPrinter(str(i) + p["host"],res, get_order(p)))
-            time.sleep(1)
+                    printer.append(RunPrinter(str(i) + p["host"],res, get_order(p)))                    
+
+#            if "pend" in dict(p).keys():
+#                pend = float(p["pend"])
+#                time.sleep(pend)
 
     while len(printer) > 0 or len(execution_queue) > 0:
         temp = []

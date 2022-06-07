@@ -18,14 +18,12 @@ use os_network::{
     Factory, Future,
 };
 
-use crate::remote_mapping::{PhysAddrBitFlag, RemotePageTableIter};
+use crate::remote_mapping::{PhysAddrBitFlag, RemotePageTableIter, K_MAGIC_IN_PREFETCH};
 
 use crate::bindings::page;
 use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 
 use super::Prefetch;
-
-pub const K_MAGIC_IN_PREFETCH: u64 = 1;
 
 /// This struct is really, really, unsafe
 /// Since I currently don't know how to do it right in rust
@@ -59,13 +57,23 @@ impl<'a> DCAsyncPrefetcher<'a> {
     }
 
     /// Clean my prefetch requests
+    /// This call is necessary to drain pending RDMA requests related to this QP.
+    /// After call drain_conenctions, another container can use this QP for the prefetch. 
     pub fn drain_connections(&mut self) -> Result<(DCConn<'a>, u32), <Self as Future>::Error> {
         while !self.pending_queues.is_empty() {
+            // let pt = self.pending_queues.front().unwrap().pt;
+            // let idx = self.pending_queues.front().unwrap().idx;
+
+            // we don't need to clear this page now, 
+            // because upon page table drop, we will free the pages
             let page = self.poll()?;
             match page {
                 Async::Ready(p) => {
-                    unsafe {
-                        crate::bindings::pmem_free_page(p);
+                    unsafe {                    
+                        // clear the pt entry                            
+                        //let mut pt = &mut (*pt);                        
+                        //pt[idx] = 0;
+                        //crate::bindings::pmem_free_page(p);
                     };
                 }
                 _ => {}
