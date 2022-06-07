@@ -6,12 +6,13 @@ role = 'builder'
 path = 'exp'
 cmd = 'cmake . ; make -j'
 
-[[template.pass]]
-role = 'builder'
-path = 'exp'
-cmd = 'sudo umount /tmp ;mkdir -p /tmp ; sudo mount -t tmpfs tmpfs -o size=2G /tmp ; cp -r compression* /tmp/. ; cp test* /tmp/. ; cp *.json /tmp/.'
+#[[template.pass]]
+#role = 'builder'
+#path = 'exp'
+#cmd = 'sudo umount ${tmp_dir} ;mkdir -p ${tmp_dir} ; sudo mount -t tmpfs tmpfs -o size=2G ${tmp_dir} ; cp -r compression* ${tmp_dir}/. ; cp test* ${tmp_dir}/. ; cp *.json ${tmp_dir}/.'
 
 [template.placeholder]
 name = ["build"]
+tmp_dir="/tmp-mitosis"
 
 
