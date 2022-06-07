@@ -2,6 +2,12 @@
 [template]
 
 [[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'make insmod'
+order = 0
+
+[[template.pass]]
 role = 'child'
 path = ''
 cmd = 'make insmod'
@@ -9,27 +15,40 @@ order = 0
 
 [[template.pass]]
 role = 'child'
+path = 'exp'
+cmd = './connector -gid=${parent_gid} -mac_id=1 -nic_id=0'
+order = 1
+
+# FIXME: If only connect once, child won't time out
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = './connector -gid=${parent_gid} -mac_id=2 -nic_id=0'
+order = 2
+
+[[template.pass]]
+role = 'parent'
 path = 'exp/fork-functions'
 cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=1 -pin=1 -profile=0 -handler_id=73'
-order = 1
+order = 3
 
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
-order = 2
-loop = 12
+cmd = 'make bench_lean_mitosis mac_id=1 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
+order = 4
+loop = 1
 
 [template.placeholder]
 micro_func_name = [
     "micro",
-    "json",
-    "chameleon",
-    "compression",
-    "helloworld",
-    "image",
-    "pagerank",
-    "pyaes",
-    "recognition"
+#    "json",
+#    "chameleon",
+#    "compression",
+#    "helloworld",
+#    "image",
+#    "pagerank",
+#    "pyaes",
+#    "recognition"
 ]
 run_sec = 30
