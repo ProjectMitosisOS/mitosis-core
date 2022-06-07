@@ -62,3 +62,12 @@ handler_id=73
 
 bench_lean_mitosis:
 	sudo ${LEAN_BENCH_EXE_PATH} ${BENCH_SEC} ${name} ${ROOTFS_ABS_PATH} ${command} ${mac_id} ${handler_id}
+
+thread_num=2
+target:
+	@sh loop_runner.sh ${thread_num} "echo hello world &"
+
+
+bench_lean_mitosis_mul:
+#	@$(SHELL) -c 'for i in 1 2 3 4 5;do echo I am b ;done'
+	@$(SHELL) -c 'for i in $(seq 100000); do echo 'f'; done'
