@@ -159,8 +159,8 @@ class ConnectProxy:
             channel = transport.open_session()
             return channel.exec_command(cmd)
 
-    def execute_w_channel(self,cmd):
-        print("emit", cmd,"@",self.mac)
+    def execute_w_channel(self, cmd):
+        print("emit", cmd, "@", self.mac)
 
         transport = self.ssh.get_transport()
         channel = transport.open_session()
@@ -340,7 +340,7 @@ class Courier2:
                 while not stdout.channel.closed:
                     try:
                         for line in iter(lambda: stdout.readline(2048), ""):
-                            if pty and (len(line) > 0): ## ignore null lines
+                            if pty and (len(line) > 0):  ## ignore null lines
                                 print((("[%s]: " % host) + line))
                             else:
                                 ret[1] += (line + "\n")
@@ -367,13 +367,15 @@ def str_to_bool(value):
         return False
     elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
         return True
+
+
 #    raise ValueError(f'{value} is not a valid boolean value')
 
 def get_order(p):
     try:
         return int(p["order"])
     except:
-        return 0    
+        return 0
 
 
 def main():
@@ -384,11 +386,12 @@ def main():
         '-f', metavar='CONFIG', dest='config', default="run.toml", nargs='+',
         help='The configuration files to execute commands')
 
-    arg_parser.add_argument('-b','--black', nargs='+', help='hosts to ignore', required=False)
-    arg_parser.add_argument('-n','--num', help='num-passes to run', default = 128,type=int)
-    arg_parser.add_argument('-k','--proxy_command', help='whether to use proxy_command in ssh_config', default = False,type=str_to_bool)
-    arg_parser.add_argument('-u','--user', help='user name', default = "",type=str)
-    arg_parser.add_argument('-p','--pwd', help='password', default = "",type=str)
+    arg_parser.add_argument('-b', '--black', nargs='+', help='hosts to ignore', required=False)
+    arg_parser.add_argument('-n', '--num', help='num-passes to run', default=128, type=int)
+    arg_parser.add_argument('-k', '--proxy_command', help='whether to use proxy_command in ssh_config', default=False,
+                            type=str_to_bool)
+    arg_parser.add_argument('-u', '--user', help='user name', default="", type=str)
+    arg_parser.add_argument('-p', '--pwd', help='password', default="", type=str)
 
     args = arg_parser.parse_args()
 
@@ -415,21 +418,21 @@ def main():
         cr = Courier2(user, pwd, passp=passp)
 
         ## now execute
-        passes = config.get("pass",[])
-        execution_queue = []        
+        passes = config.get("pass", [])
+        execution_queue = []
 
         global_execution_order = 0
 
         for p in passes:
-            execution_queue.append(p) 
-        execution_queue.sort(key=lambda x : get_order(x))
+            execution_queue.append(p)
+        execution_queue.sort(key=lambda x: get_order(x))
 
         ## restrict the number of running process
         execution_queue = execution_queue[0:num]
 
         idx = -1
         for p in execution_queue:
-            if get_order(p) <= global_execution_order: 
+            if get_order(p) <= global_execution_order:
                 idx += 1
             else:
                 break
@@ -437,7 +440,7 @@ def main():
         execution_queue = execution_queue[idx + 1:]
 
         ## emit all the must run queues 
-        for (i,p) in enumerate(must_run_queue):
+        for (i, p) in enumerate(must_run_queue):
             if runned > num:
                 break
 
@@ -446,19 +449,19 @@ def main():
 
             runned += 1
 
-            if p.get("local","no") == "yes":
+            if p.get("local", "no") == "yes":
                 subprocess.run(p["cmd"].split(" "))
                 pass
             else:
                 res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
                                            p["host"],
                                            p["path"])
-                if p["host"] not in config.get("null",[]):
-                    printer.append(RunPrinter(str(i) + p["host"],res, get_order(p)))                    
+                if p["host"] not in config.get("null", []):
+                    printer.append(RunPrinter(str(i) + p["host"], res, get_order(p)))
 
-#            if "pend" in dict(p).keys():
-#                pend = float(p["pend"])
-#                time.sleep(pend)
+                #            if "pend" in dict(p).keys():
+    #                pend = float(p["pend"])
+    #                time.sleep(pend)
 
     while len(printer) > 0 or len(execution_queue) > 0:
         temp = []
@@ -477,13 +480,16 @@ def main():
                 p = execution_queue.pop(0)
 
                 ## issue another
-                res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
-                                           p["host"],
-                                           p["path"])
-                if p["host"] not in config.get("null",[]):
-                    printer.append(RunPrinter(str(i) + p["host"],res, get_order(p)))                
+                loop = 1 if "loop" not in p.keys() else int(p["loop"])
+                for _ in range(loop):
+                    res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
+                                               p["host"],
+                                               p["path"])
+                    if p["host"] not in config.get("null", []):
+                        printer.append(RunPrinter(str(i) + p["host"], res, get_order(p)))
             else:
                 break
+
 
 if __name__ == "__main__":
     main()
