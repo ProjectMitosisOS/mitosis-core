@@ -62,6 +62,9 @@ template-run-micro-execution=templates-run/micro-c/template-run-micro-execution.
 template-run-micro-prepare=templates-run/micro-c/template-run-micro-prepare.toml
 template-run-micro-touch-ratio=templates-run/micro-c/template-run-micro-touch-ratio.toml
 
+template-run-many-to-one=templates-run/many-to-one/template-run.toml
+template-run-many-to-one-local=templates-run/many-to-one/template-run-local.toml
+
 run_out=out
 build_out=run-build.toml
 
@@ -112,6 +115,12 @@ micro-c-startup-execution:
 micro-touch-ratio:
 	$(call runner, $(template-run-micro-touch-ratio), ${run_out}/$@)
 
+## Thpt evaluations
+
+many-to-one:
+	$(call runner, $(template-run-many-to-one), ${run_out}/$@)
+many-to-one-local:
+	$(call runner, $(template-run-many-to-one-local), ${run_out}/$@)
 
 
 ### End of tests
@@ -124,22 +133,24 @@ micro-function: micro-function-execution micro-function-prepare micro-function-s
 micro: micro-c micro-function
 
 micro-execution: micro-c-execution micro-function-execution
+
+
 # Built all cpp
 build-cpp:
 	$(call builder, $(template-build-exp))
 
-build-mitosis-prefetch: clean build-cpp
+build-mitosis-prefetch: build-cpp
 	$(call builder, $(template-build-mitosis-prefetch))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
-build-mitosis-cow: clean build-cpp
+build-mitosis-cow: build-cpp
 	$(call builder, $(template-build-mitosis-cow))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
 
-build-mitosis-cache: clean build-cpp
+build-mitosis-cache: build-cpp
 	$(call builder, $(template-build-mitosis-cache))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
@@ -153,4 +164,3 @@ build-mitosis-eager-resume: build-cpp
 clean: gen-clean
 	pkill python; sleep 0.1
 	python bootstrap.py -f $(build_out) ${RUNNER_FLAG}
-
