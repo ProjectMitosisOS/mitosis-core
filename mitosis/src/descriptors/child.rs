@@ -365,6 +365,11 @@ impl ChildDescriptor {
                 // The remote page is encoded in the page table as
                 //     *mut addr | 1
                 let page = PhysAddr::decode(remote_pa as _) as *mut page;
+
+                // clean the entry in the page table, since 
+                // the OS is responsible for reclaiming this page
+                
+
                 return Some(page);
             }
         }
