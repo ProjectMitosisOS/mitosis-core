@@ -85,9 +85,16 @@ def handle_template(config):
                 item['host']
             for (k, host) in enumerate(item['host']):
                 key = '${@incr}'
+                order = 0
+                try:
+                    order = item['order']
+                except:
+                    pass
+
                 out_dict['pass'].append({
                     'host': host, 'path': template_dict['path'] + '/' + item['path'],
-                    'cmd': cmd if key not in cmd else cmd.replace(key, str(1 + k))
+                    'cmd': cmd if key not in cmd else cmd.replace(key, str(1 + k)),
+                    'order' : order
                 })
         with open(fname, 'w') as f:
             toml.dump(out_dict, f)

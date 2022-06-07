@@ -39,7 +39,7 @@ unmount_dev:
 	sudo python3 ${LEAN_CONTAINER_DIR}/mount_device.py --rootfs ${ROOTFS_DIR} --device ${DEVICE} --unmount
 
 clean_fs: unmount_dev
-	sudo rm -r ${ROOTFS_DIR}
+	-sudo rm -r ${ROOTFS_DIR}
 
 
 #CONTAINER_NAME=my_test_container

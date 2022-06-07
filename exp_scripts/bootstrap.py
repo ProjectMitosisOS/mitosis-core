@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from ast import expr_context
 import toml
 import paramiko
 import getpass
@@ -22,9 +23,10 @@ except:
     pass
 
 class RunPrinter:
-    def __init__(self,name,c):
+    def __init__(self,name,c,o):
         self.c = c
         self.name = name
+        self.order = o
 
     def print_one(self):
         if self.c.recv_ready():
@@ -152,6 +154,7 @@ class ConnectProxy:
             return channel.exec_command(cmd)
 
     def execute_w_channel(self,cmd):
+        print("emit", cmd,"@",self.mac)
         transport = self.ssh.get_transport()
         channel = transport.open_session()
         channel.get_pty()
@@ -359,6 +362,12 @@ def str_to_bool(value):
         return True
     raise ValueError(f'{value} is not a valid boolean value')
 
+def get_order(p):
+    try:
+        return int(p["order"])
+    except:
+        return 0    
+
 def main():
     global use_ssh_config
     arg_parser = argparse.ArgumentParser(
@@ -366,12 +375,14 @@ def main():
     arg_parser.add_argument(
         '-f', metavar='CONFIG', dest='config', default="run.toml",nargs='+',
         help='The configuration files to execute commands')
+
     arg_parser.add_argument('-b','--black', nargs='+', help='hosts to ignore', required=False)
     arg_parser.add_argument('-n','--num', help='num-passes to run', default = 128,type=int)
     arg_parser.add_argument('-k','--proxy_command', help='whether to use proxy_command in ssh_config', default = False,type=str_to_bool)
     arg_parser.add_argument('-u','--user', help='user name', default = "",type=str)
     arg_parser.add_argument('-p','--pwd', help='password', default = "",type=str)
     args = arg_parser.parse_args()
+
     num = args.num
     use_ssh_config = args.proxy_command
     print('use proxy command', args.proxy_command)
@@ -396,15 +407,35 @@ def main():
 
         ## now execute
         passes = config.get("pass",[])
+        execution_queue = []        
 
-        for (i,p) in enumerate(passes):
+        global_execution_order = 0
+
+        for p in passes:
+            execution_queue.append(p) 
+        execution_queue.sort(key=lambda x : get_order(x))
+
+        ## restrict the number of running process
+        execution_queue = execution_queue[0:num]
+
+        idx = -1
+        for p in execution_queue:
+            if get_order(p) <= global_execution_order: 
+                idx += 1
+            else:
+                break
+        must_run_queue = execution_queue[0:idx + 1]
+        execution_queue = execution_queue[idx + 1:]
+
+        ## emit all the must run queues 
+        for (i,p) in enumerate(must_run_queue):
             if runned > num:
                 break
-            runned += 1
-            print("(execute cmd @%s" % p["host"],p["cmd"])
 
             if p["host"] in black_list:
                 continue
+
+            runned += 1
 
             if p.get("local","no") == "yes":
                 subprocess.run(p["cmd"].split(" "))
@@ -414,15 +445,33 @@ def main():
                                            p["host"],
                                            p["path"])
                 if p["host"] not in config.get("null",[]):
-                    printer.append(RunPrinter(str(i) + p["host"],res))
+                    printer.append(RunPrinter(str(i) + p["host"],res, get_order(p)))
             time.sleep(1)
 
-    while len(printer) > 0:
+    while len(printer) > 0 or len(execution_queue) > 0:
         temp = []
         for p in printer:
             if p.print_one():
                 temp.append(p)
+            else:
+                if global_execution_order <= p.order:
+                    global_execution_order += 1
+
         printer = temp
+
+        ## check whether we are ok        
+        while True:
+            if len(execution_queue) > 0 and get_order(execution_queue[0]) <= global_execution_order:
+                p = execution_queue.pop(0)
+
+                ## issue another
+                res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
+                                           p["host"],
+                                           p["path"])
+                if p["host"] not in config.get("null",[]):
+                    printer.append(RunPrinter(str(i) + p["host"],res, get_order(p)))                
+            else:
+                break
 
 if __name__ == "__main__":
     main()
