@@ -5,26 +5,31 @@
 role = 'parent'
 path = ''
 cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
+order = 0
 
 [[template.pass]]
 role = 'child'
 path = ''
 cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
+order = 0
 
 [[template.pass]]
 role = 'child'
 path = 'exp'
 cmd = 'sleep 1 && ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
+order = 1
 
 [[template.pass]]
 role = 'parent'
 path = 'exp'
 cmd = "./bench_workingset --working_set=${working_set} -profile=0 -whether_prepare=1 -exclude_execution=0  -touch_ratio=${touch_ratio}"
+order = 2
 
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
+cmd = 'make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
+order = 3
 
 [template.placeholder]
 #touch_ratio = [85, 90, 95]

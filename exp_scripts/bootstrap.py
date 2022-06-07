@@ -25,7 +25,7 @@ except:
 
 class RunPrinter:
 
-    def __init__(self, name, c):
+    def __init__(self, name, c, o):
         self.c = c
         self.name = name
         self.order = o
