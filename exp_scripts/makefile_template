@@ -62,8 +62,8 @@ template-run-micro-execution=templates-run/micro-c/template-run-micro-execution.
 template-run-micro-prepare=templates-run/micro-c/template-run-micro-prepare.toml
 template-run-micro-touch-ratio=templates-run/micro-c/template-run-micro-touch-ratio.toml
 
-template-run-many-to-one=templates-run/many-to-one/template-run.toml
-template-run-many-to-one-local=templates-run/many-to-one/template-run-local.toml
+template-run-peak-lean-container=templates-run/many-to-one/template-lean-container.toml
+template-run-peak-raw=templates-run/many-to-one/template-run-raw.toml
 
 run_out=out
 build_out=run-build.toml
@@ -83,7 +83,7 @@ endef
 define runner
 	rm -rf $(2)
 	python toml_generator.py -f $(1) -o $(2) -d ${template_args}
-	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
+#	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
 endef
 
 
@@ -117,10 +117,10 @@ micro-touch-ratio:
 
 ## Thpt evaluations
 
-many-to-one:
-	$(call runner, $(template-run-many-to-one), ${run_out}/$@)
-many-to-one-local:
-	$(call runner, $(template-run-many-to-one-local), ${run_out}/$@)
+peak-lean-container:
+	$(call runner, $(template-run-peak-lean-container), ${run_out}/$@)
+peak-raw-process:
+	$(call runner, $(template-run-peak-raw), ${run_out}/$@)
 
 
 ### End of tests
