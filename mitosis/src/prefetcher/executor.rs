@@ -68,13 +68,13 @@ impl<'a> DCAsyncPrefetcher<'a> {
             // because upon page table drop, we will free the pages
             let page = self.poll()?;
             match page {
-                Async::Ready(p) => {
-                    unsafe {                    
+                Async::Ready(_p) => {
+                    //unsafe {                    
                         // clear the pt entry                            
                         //let mut pt = &mut (*pt);                        
                         //pt[idx] = 0;
                         //crate::bindings::pmem_free_page(p);
-                    };
+                    // };
                 }
                 _ => {}
             };

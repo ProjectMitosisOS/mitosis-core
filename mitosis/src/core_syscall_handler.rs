@@ -54,13 +54,18 @@ impl Default for CallerData {
     }
 }
 
+use core::sync::atomic::AtomicUsize;
+
 /// The MitosisSysCallService has the following two jobs:
 ///  1. handle up parent/child system calls
 ///  2. register the corresponding pagefault handler
+#[allow(dead_code)]
 pub struct MitosisSysCallHandler {
     caller_status: CallerData,
     // structure to encapsulate caller's status
     my_file: *mut crate::bindings::file,
+
+    resume_counter: AtomicUsize,
 }
 
 impl Drop for MitosisSysCallHandler {
@@ -135,6 +140,7 @@ impl FileOperations for MitosisSysCallHandler {
         Ok(Self {
             my_file: file as *mut _,
             caller_status: Default::default(),
+            resume_counter: AtomicUsize::new(0),
         })
     }
 
@@ -146,7 +152,7 @@ impl FileOperations for MitosisSysCallHandler {
         match cmd {
             LibMITOSISCmd::Nil => 0, // a nill core do nothing
             LibMITOSISCmd::Prepare => self.syscall_prepare(arg, false),
-            LibMITOSISCmd::ResumeLocal => self.syscall_local_resume(arg),
+            LibMITOSISCmd::ResumeLocal => unimplemented!(),
             LibMITOSISCmd::ResumeRemote => {
                 let mut req: resume_remote_req_t = Default::default();
                 unsafe {
@@ -159,13 +165,13 @@ impl FileOperations for MitosisSysCallHandler {
                 let (mac_id, handler_id) = (req.machine_id, req.handler_id);
                 if cfg!(feature = "resume-profile") {
                     let mut profile = crate::KRdmaKit::Profile::new();
-                    let res = self.syscall_local_resume_w_rpc(mac_id as _, handler_id as _);
+                    let res = self.syscall_resume_w_rpc(mac_id as _, handler_id as _);
                     profile.tick_record(0);
                     profile.increase_op(1);
                     profile.report(1);
                     res
                 } else {
-                    self.syscall_local_resume_w_rpc(mac_id as _, handler_id as _)
+                    self.syscall_resume_w_rpc(mac_id as _, handler_id as _)
                 }
             }
             LibMITOSISCmd::Connect => {
@@ -278,6 +284,7 @@ impl MitosisSysCallHandler {
     /// This function is only used for testing
     /// will be removed in the future
     #[inline]
+    #[allow(dead_code)]
     fn syscall_local_resume(&mut self, _handler_id: c_ulong) -> c_long {
         unimplemented!();
         /*
@@ -306,11 +313,14 @@ impl MitosisSysCallHandler {
 
     /// This is just a sample test function
     #[inline]
-    fn syscall_local_resume_w_rpc(&mut self, machine_id: c_ulong, handler_id: c_ulong) -> c_long {
+    fn syscall_resume_w_rpc(&mut self, machine_id: c_ulong, handler_id: c_ulong) -> c_long {
         if self.caller_status.resume_related.is_some() {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
         }
+
+//        self.resume_counter
+//            .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
 
         // let cpu_id = crate::get_calling_cpu_id();
         let cpu_id = 0;
@@ -329,14 +339,16 @@ impl MitosisSysCallHandler {
             )
         };
 
-        if caller
-            .sync_call::<usize>(
-                remote_session_id,
-                crate::rpc_handlers::RPCId::Query as _,
-                handler_id as _,
-            )
-            .is_err()
-        {
+        let res = caller.sync_call::<usize>(
+            remote_session_id,
+            crate::rpc_handlers::RPCId::Query as _,
+            handler_id as _,
+        );
+
+        if res.is_err() {
+            crate::log::error!("failed to call {:?}", res);
+            crate::log::info!("sanity check pending reqs {:?}", 
+                caller.get_pending_reqs(remote_session_id));
             return -1;
         };
 
@@ -422,6 +434,7 @@ impl MitosisSysCallHandler {
                             // access info cannot failed to create
                             access_info: access_info.unwrap(),
                         });
+
                         return 0;
                     }
                     None => {
