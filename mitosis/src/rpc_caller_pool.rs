@@ -59,6 +59,7 @@ impl<'a> CallerPool<'a> {
         &'a mut self,
         idx: usize,
         session_id: usize,
+        my_session_id : usize,
         meta: UDHyperMeta,
     ) -> core::option::Option<()> {
         // fetch by sidr connect
@@ -80,6 +81,7 @@ impl<'a> CallerPool<'a> {
         caller
             .connect(
                 session_id,
+                my_session_id,
                 client_session,
                 UDHyperMeta {
                     gid: my_gid,

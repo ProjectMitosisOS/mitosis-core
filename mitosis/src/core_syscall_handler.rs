@@ -319,11 +319,13 @@ impl MitosisSysCallHandler {
             return -1;
         }
 
-//        self.resume_counter
-//            .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+        //        self.resume_counter
+        //            .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
 
         let cpu_id = crate::get_calling_cpu_id();
-//        let cpu_id = 0;
+        assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref())});
+
+        //let cpu_id = 0;
         // send an RPC to the remote to query the descriptor address
         let caller = unsafe {
             crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
@@ -339,16 +341,27 @@ impl MitosisSysCallHandler {
             )
         };
 
+        let my_session_id = unsafe {
+            crate::startup::calculate_session_id(
+                *crate::mac_id::get_ref(),
+                cpu_id,
+                *crate::max_caller_num::get_ref(),
+            )
+        };
+
         let res = caller.sync_call::<usize>(
             remote_session_id,
+            my_session_id,
             crate::rpc_handlers::RPCId::Query as _,
             handler_id as _,
         );
 
         if res.is_err() {
             crate::log::error!("failed to call {:?}", res);
-            crate::log::info!("sanity check pending reqs {:?}", 
-                caller.get_pending_reqs(remote_session_id));
+            crate::log::info!(
+                "sanity check pending reqs {:?}",
+                caller.get_pending_reqs(remote_session_id)
+            );
             return -1;
         };
 
@@ -457,6 +470,7 @@ impl MitosisSysCallHandler {
         gid: &alloc::string::String,
         nic_idx: usize,
     ) -> c_long {
+        crate::log::info!("connect remote machine id: {}", machine_id);
         let info = HandlerConnectInfo::create(gid, nic_idx as _, nic_idx as _);
         match probe_remote_rpc_end(machine_id, info) {
             Some(_) => {

@@ -191,9 +191,14 @@ pub fn probe_remote_rpc_end(
     let len = unsafe { crate::get_rpc_caller_pool_ref().len() };
     for i in 0..len {
         let session_id = calculate_session_id(remote_machine_id, i, len);
+        let my_session_id = calculate_session_id(unsafe { *crate::mac_id::get_ref() }, 
+                i, len);
+        assert_ne!(session_id, my_session_id);
+
         unsafe { crate::get_rpc_caller_pool_mut() }.connect_session_at(
             i,
             session_id, // Notice: it is very important to ensure that session ID is unique!
+            my_session_id,
             UDHyperMeta {
                 // the remote machine's RDMA gid. Since we are unit test, we use the local gid
                 gid: os_network::rdma::RawGID::new(connect_info.gid.clone()).unwrap(),
