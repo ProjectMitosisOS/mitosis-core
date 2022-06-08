@@ -470,7 +470,7 @@ def main():
                 temp.append(p)
             else:
                 if global_execution_order <= p.order:
-                    global_execution_order += 1
+                    global_execution_order = p.order
 
         printer = temp
 
