@@ -77,7 +77,7 @@ where
             .ok_or(Error::session_creation_error())?;
 
         // FIXME: 32 is a magic number I used here
-        if session.get_pending_reqs() > 32 {
+        if session.get_pending_reqs() > 16 {
             crate::block_on(session).map_err(|_| Error::fatal())?;
         }
 
