@@ -22,7 +22,7 @@ order = 1
 [[template.pass]]
 role = 'parent'
 path = 'exp' ## c-version
-cmd = './bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0 -profile=0'
+cmd = './bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=1 -profile=0'
 order = 2
 
 
@@ -31,7 +31,7 @@ role = 'child'
 path = ''
 cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec} name=bench_process_fork'
 order = 3
-loop = 1
+loop = 12
 
 [template.placeholder]
 working_set = [
@@ -46,4 +46,4 @@ working_set = [
     #    536870912,
     #    1073741824,
 ]
-run_sec = 20
+run_sec = 30
