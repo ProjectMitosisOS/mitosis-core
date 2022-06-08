@@ -159,8 +159,8 @@ class ConnectProxy:
             channel = transport.open_session()
             return channel.exec_command(cmd)
 
-    def execute_w_channel(self, cmd):
-        print("emit", cmd, "@", self.mac)
+    def execute_w_channel(self, cmd, order=0):
+        print("emit %d" % order, cmd, "@", self.mac)
 
         transport = self.ssh.get_transport()
         channel = transport.open_session()
@@ -375,8 +375,16 @@ def get_order(p):
     try:
         return int(p["order"])
     except:
-        return 0
+        return 0  
 
+def execute_pass(cr, global_configs, i, printer, p):
+    loop = 1 if "loop" not in p.keys() else int(p["loop"])
+    for _ in range(loop):
+        res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
+            p["host"],
+            p["path"],
+            get_order(p))
+        printer.append(RunPrinter(p["host"], res, get_order(p)))
 
 def main():
     global use_ssh_config
@@ -422,9 +430,18 @@ def main():
         execution_queue = []
 
         global_execution_order = 0
+        global_order_mark = {}
+        global_order_track = {}
 
         for p in passes:
-            execution_queue.append(p)
+            order = get_order(p) 
+            if order in global_order_track:
+                global_order_mark[order] += p.get("loop", 1)
+            else:
+                global_order_track[order] = 0
+                global_order_mark[order] = p.get("loop", 1)
+            execution_queue.append(p)            
+
         execution_queue.sort(key=lambda x: get_order(x))
 
         ## restrict the number of running process
@@ -453,15 +470,7 @@ def main():
                 subprocess.run(p["cmd"].split(" "))
                 pass
             else:
-                res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
-                                           p["host"],
-                                           p["path"])
-                if p["host"] not in config.get("null", []):
-                    printer.append(RunPrinter(str(i) + p["host"], res, get_order(p)))
-
-                #            if "pend" in dict(p).keys():
-    #                pend = float(p["pend"])
-    #                time.sleep(pend)
+                execute_pass(cr,global_configs,i,printer, p=p)
 
     while len(printer) > 0 or len(execution_queue) > 0:
         temp = []
@@ -469,8 +478,10 @@ def main():
             if p.print_one():
                 temp.append(p)
             else:
-                if global_execution_order <= p.order:
-                    global_execution_order = p.order
+                global_order_track[p.order] += 1
+                if global_order_track[p.order] == global_order_mark[p.order]:
+                    assert(global_execution_order <= p.order)
+                    global_execution_order += 1
 
         printer = temp
 
@@ -480,13 +491,7 @@ def main():
                 p = execution_queue.pop(0)
 
                 ## issue another
-                loop = 1 if "loop" not in p.keys() else int(p["loop"])
-                for _ in range(loop):
-                    res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
-                                               p["host"],
-                                               p["path"])
-                    if p["host"] not in config.get("null", []):
-                        printer.append(RunPrinter(str(i) + p["host"], res, get_order(p)))
+                execute_pass(cr,global_configs,0,printer, p =p)
             else:
                 break
 
