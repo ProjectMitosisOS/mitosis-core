@@ -42,6 +42,12 @@ where
     SS: RPCConn,
     SS::ReqPayload: ToBytes,
 {
+    pub fn get_pending_reqs(&self, session_id: usize) -> core::option::Option<usize> {
+        self.connected_sessions
+            .get(&session_id)
+            .map(|(s, _)| s.get_pending_reqs())
+    }
+
     /// Note, this call should use Future to wait
     pub fn sync_call<Args>(
         &mut self,
@@ -53,10 +59,20 @@ where
             .connected_sessions
             .get_mut(&session_id)
             .expect("failed to get session");
+
+        let signal_flag = session.get_pending_reqs() == 0;
         let req_sz = header_factory::CallStubFactory::new(session_id, rpc_id)
             .generate(&arg, msg.get_bytes_mut())
             .unwrap();
-        session.post(msg, req_sz, true)
+
+        session.post(msg, req_sz, signal_flag)?;
+
+        // 32 is really really a magic number
+        if session.get_pending_reqs() > 32 {    
+            let res = crate::block_on(session); // should never fail
+            assert!(res.is_ok());
+        }
+        Ok(())
     }
 
     pub fn session_connected(&self, session_id: usize) -> bool {

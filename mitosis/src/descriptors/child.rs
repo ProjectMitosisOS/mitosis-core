@@ -211,7 +211,10 @@ impl ChildDescriptor {
                 os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
 
                 // now sending the RDMA request
-                dc_qp.post(&payload.as_ref());
+                let res = dc_qp.post(&payload.as_ref());
+                if res.is_err() { 
+                    crate::log::error!("failed to batch read pages {:?}", res);
+                }
 
                 if i == addr_list.len() - 1 {
                     // wait for the request to complete

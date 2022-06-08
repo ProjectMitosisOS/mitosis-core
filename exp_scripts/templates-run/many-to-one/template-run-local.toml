@@ -39,6 +39,13 @@ cmd = 'make bench_lean_mitosis mac_id=1 LEAN_APP_NAME=simple_child BENCH_SEC=${r
 order = 4
 loop = 1
 
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make bench_lean_mitosis mac_id=2 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
+order = 5
+loop = 1
+
 [template.placeholder]
 micro_func_name = [
     "micro",
