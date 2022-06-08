@@ -14,6 +14,5 @@ main(int argc, char *argv[]) {
     int sd = sopen();
     assert(sd != 0);
     fork_resume_remote(sd, mac_id, handler_id);
-    assert(false);
     return 0;
 }
