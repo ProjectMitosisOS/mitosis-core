@@ -47,7 +47,7 @@ extern "C"
         // std::cout<< " check mmap value: " << (uint64_t)buffer << std::endl;
     }
 
-    void  handler(const char *name, uint64_t workingset)
+    void  handler(const char *name, uint64_t workingset, int profile)
     {
         // std::cout << "Before handler check: " << name << workingset << std::endl; 
 
@@ -68,6 +68,7 @@ extern "C"
 
         clock.tock();
         double time = double(clock.duration().count()) / 1e6;
-        std::cout << "[" << name << "] Run time = " << time << " ms\n";
+        if (profile)
+            std::cout << "[" << name << "] Run time = " << time << " ms\n";
     }
 }

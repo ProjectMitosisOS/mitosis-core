@@ -22,7 +22,7 @@ order = 1
 [[template.pass]]
 role = 'parent'
 path = 'exp' ## c-version
-cmd = './bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0'
+cmd = './bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0 -profile=0'
 order = 2
 
 
