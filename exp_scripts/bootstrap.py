@@ -283,7 +283,7 @@ class Courier2:
 
         return True, None
 
-    def execute_w_channel(self, cmd, host, dir, timeout=None):
+    def execute_w_channel(self, cmd, host, dir, timeout=None, order=0):
         p = ConnectProxy(host, self.user)
         try:
             if len(self.keyfile):
@@ -291,13 +291,13 @@ class Courier2:
             else:
                 p.connect(self.pwd, self.passp, timeout=timeout)
         except Exception as e:
-            print("[pre execute] connect to %s error: " % host, e)
+            print("connect to %s error: " % host, e)
             p.close()
             return None, e
 
         try:
             ccmd = ("cd %s" % dir) + ";" + str(self.envs) + cmd
-            return p.execute_w_channel(ccmd)
+            return p.execute_w_channel(ccmd, order=order)
         except:
             return None
 
@@ -383,7 +383,7 @@ def execute_pass(cr, global_configs, i, printer, p):
         res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
             p["host"],
             p["path"],
-            get_order(p))
+            order=get_order(p))
         printer.append(RunPrinter(p["host"], res, get_order(p)))
 
 def main():
@@ -455,6 +455,8 @@ def main():
                 break
         must_run_queue = execution_queue[0:idx + 1]
         execution_queue = execution_queue[idx + 1:]
+
+        print("start emitting jobs")
 
         ## emit all the must run queues 
         for (i, p) in enumerate(must_run_queue):
