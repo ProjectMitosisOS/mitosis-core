@@ -10,7 +10,7 @@ order = 0
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'make insmod ID=1'
+cmd = 'make insmod ID=${@incr}'
 order = 0
 
 [[template.pass]]
