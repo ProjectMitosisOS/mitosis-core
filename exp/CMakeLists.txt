@@ -15,6 +15,7 @@ set(samples
         bench_exe_time_parent ## get execution time
         bench_prepare_time  ## get prepare time
         bench_lean_container
+        bench_process_fork
         bench_workingset ## C++ version of parent of the microbenchmark
         )
 
@@ -24,6 +25,7 @@ add_executable(simple_parent common/simple_parent.cc)
 add_executable(bench_lean_container fork-functions/benchmark_lean_container.c
         ../mitosis-user-libs/mitosis-lean-container/lib/core/lean_container.c
         )
+add_executable(bench_process_fork fork-functions/benchmark_process_fork.c)
 add_executable(bench_exe_time_parent fork-micro/bench_exe_time_parent.cc)
 add_executable(bench_prepare_time fork-micro/bench_prepare_time.cc)
 

@@ -65,7 +65,3 @@ handler_id=73
 bench_lean_mitosis:
 	sudo ${LEAN_BENCH_EXE_PATH} ${BENCH_SEC} ${name} ${ROOTFS_ABS_PATH} ${command} ${mac_id} ${handler_id}
 
-bench_lean_mitosis_bg:
-	sudo ${LEAN_BENCH_EXE_PATH} ${BENCH_SEC} ${name} ${ROOTFS_ABS_PATH} ${command} ${mac_id} ${handler_id} &
-
-
