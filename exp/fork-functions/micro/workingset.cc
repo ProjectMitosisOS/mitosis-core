@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     }
 
     // warm start
-    if (!FLAGS_exclude_execution)
+    if (!FLAGS_exclude_execution && FLAGS_profile != 0)
         handler("cow start", FLAGS_working_set * FLAGS_touch_ratio / 100);
     _Exit(0);
 #else
