@@ -1,0 +1,49 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'make insmod ID=0'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make insmod ID=${@incr}'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = './connector -gid=${parent_gid} -mac_id=0 -nic_id=0'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'exp' ## c-version
+cmd = './bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0'
+order = 2
+
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec} name=bench_process_fork'
+order = 3
+loop = 1
+
+[template.placeholder]
+working_set = [
+    1048576,
+    #    4194304,
+    #    8388608,
+    #    16777216,
+    #    33554432,
+    #    67108864,
+    #    134217728,
+    #    268435456,
+    #    536870912,
+    #    1073741824,
+]
+run_sec = 20

@@ -32,18 +32,6 @@ typedef struct thread_args {
     int worker_id;
 } thargs_t;
 
-pid_t wait_pid(pid_t pid) {
-    int ret;
-    while ((ret = kill(pid, 0)) == 0);
-    if (ret == -1 && errno == ESRCH) {
-        return pid;
-    } else {
-        printf("ret: %d\n", ret);
-        perror("kill");
-        return -1;
-    }
-}
-
 
 int genRandomString(int length, char *ouput) {
     int flag, i;
@@ -99,18 +87,16 @@ void report(char *name, struct timespec *start, struct timespec *end) {
 /**
  * Body function for starting lean container
  * */
-static inline int test_setup_lean_container(char *name, int namespace, char *rootfs_path, char *command) {
-    pid_t pid = setup_lean_container_w_double_fork(name,
-                                                   rootfs_path,
-                                                   namespace);
+static inline int test_setup(char *name, int namespace, char *rootfs_path, char *command) {
+    pid_t pid = fork();
 
     if (pid < 0) {
-        debug_printf("set lean container failed!");
+        debug_printf("set process failed!");
         return -1;
     }
 
     if (pid) {
-        debug_printf("this is the lean container launcher process!\n");
+        debug_printf("this is the process launcher process!\n");
     } else {
         // we are now running in the lean container!
         // exit immediately to avoid performance overhead in benchmark
@@ -119,7 +105,7 @@ static inline int test_setup_lean_container(char *name, int namespace, char *roo
     }
 
     // wait for the containered process to exit
-    pid_t child = wait_pid(pid);
+    pid_t child = waitpid(pid, NULL, 0);
     if (child != pid) {
         printf("child pid: %d, expected: %d\n", child, pid);
         return -1;
@@ -177,7 +163,7 @@ int main(int argc, char **argv) {
     }
     execve_argv[argv_index] = NULL;
 
-    printf("Running for %ld seconds, lean container name %s\n", benchmark_time, name);
+    printf("Running for %ld seconds, the name %s\n", benchmark_time, name);
 //    master(thread_num, benchmark_time);
 
     struct ContainerSpec spec;
@@ -192,18 +178,11 @@ int main(int argc, char **argv) {
     spec.numa_start = -1;
     spec.numa_end = -1;
 
-    pid = setup_cached_namespace(NULL);
-
-    ret = init_cgroup();
-    assert(ret == 0);
-
-    ret = add_lean_container_template(name, &spec);
-    assert(ret == 0);
 
     clock_gettime(CLOCK_REALTIME, &start);
 
     for (;;) {
-        test_setup_lean_container(name, pid, rootfs_abs_path, command);
+        test_setup(name, pid, rootfs_abs_path, command);
 //        usleep(500 * 1000);
         clock_gettime(CLOCK_REALTIME, &now);
         count++;
@@ -214,15 +193,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    printf("total: start %ld lean containers in %f second(s)\n", count, elapsed_time / NANOSECONDS_IN_SECOND);
-
-    clean:
-    ret = remove_lean_container_template(name);
-    assert(ret == 0);
-
-    ret = remove_cached_namespace(pid, NULL);
-    assert(ret == 0);
-
-    printf("finish benchmarking lean container !\n");
+    printf("total: start %ld raw processes in %f second(s)\n", count, elapsed_time / NANOSECONDS_IN_SECOND);
     return 0;
 }
