@@ -28,7 +28,7 @@ DEFINE_int32(exclude_execution, 0, "Return immediately after checkpoint");
 extern "C"
 {
     void init_buffer(uint64_t workingset);
-    void handler(const char *name, uint64_t workingset);
+    void  handler(const char *name, uint64_t workingset, int profile);
 }
 
 template <class DT = std::chrono::milliseconds,
@@ -64,8 +64,8 @@ int main(int argc, char **argv)
     init_buffer(FLAGS_working_set);
 
     // cold start
-    handler("cold start", FLAGS_working_set);
-    handler("warm start", FLAGS_working_set * FLAGS_touch_ratio / 100);
+    handler("cold start", FLAGS_working_set, FLAGS_profile);
+    handler("warm start", FLAGS_working_set * FLAGS_touch_ratio / 100, FLAGS_profile);
 
 #if 1
     // prepare
@@ -80,8 +80,8 @@ int main(int argc, char **argv)
     }
 
     // warm start
-    if (!FLAGS_exclude_execution && FLAGS_profile != 0)
-        handler("cow start", FLAGS_working_set * FLAGS_touch_ratio / 100);
+    if (!FLAGS_exclude_execution)
+        handler("cow start", FLAGS_working_set * FLAGS_touch_ratio / 100, FLAGS_profile);
     _Exit(0);
 #else
     if (fork() == 0)
