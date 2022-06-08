@@ -10,7 +10,7 @@ order = 0
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'make insmod ID=1'
+cmd = 'make insmod ID=${@incr}'
 order = 0
 
 [[template.pass]]
@@ -29,9 +29,9 @@ order = 2
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
+cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec} name=bench_process_fork'
 order = 3
-loop = 1
+loop = 24
 
 [template.placeholder]
 micro_func_name = [
@@ -45,4 +45,4 @@ micro_func_name = [
 #    "pyaes",
 #    "recognition"
 ]
-run_sec = 30
+run_sec = 40
