@@ -216,7 +216,7 @@ impl Service {
 
         // register msg buffers
         // pre-most receive buffers
-        for _ in 0..1024 {
+        for _ in 0..2048 {
             // 64 is the header
             match rpc_server.post_msg_buf(UDMsg::new(4096, 73)) {
                 Ok(_) => {}

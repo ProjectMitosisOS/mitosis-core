@@ -76,15 +76,26 @@ where
             .get_mut(&session_id)
             .ok_or(Error::session_creation_error())?;
 
-        // FIXME: 32 is a magic number I used here
-        if session.get_pending_reqs() > 16 {
-            crate::block_on(session).map_err(|_| Error::fatal())?;
-        }
+        let signal = session.get_pending_reqs() == 0;
+
+        crate::log::debug!(
+            "send a request with signal {} to session {}, pending: {}",
+            signal,
+            session_id,
+            session.get_pending_reqs()
+        );
 
         let msg_sz = reply.get_payload() + reply.generate(buf.get_bytes_mut()).unwrap(); // should succeed
-        session
-            .post(&buf, msg_sz, session.get_pending_reqs() == 0)
-            .map_err(|_| Error::fatal())
+        let ret = session
+            .post(&buf, msg_sz, signal)
+            .map_err(|_| Error::fatal());
+
+        // FIXME: 32 is a magic number I used here
+        if session.get_pending_reqs() > 8 {
+            crate::block_on(session).map_err(|_| Error::fatal())?;
+            assert!(session.get_pending_reqs() == 0);
+        } 
+        return ret;           
     }
 }
 
@@ -112,7 +123,7 @@ where
             // not receiving any request, just move on
             Ok(Async::NotReady) => Ok(Async::NotReady),
 
-            // msg received 
+            // msg received
             Ok(Async::Ready(msg)) => {
                 // parse the request
                 let bytes = unsafe { msg.get_bytes().clone() };
@@ -123,7 +134,6 @@ where
                 let msg_header_bytes =
                     unsafe { bytes.truncate_header(R::HEADER).ok_or(Error::corrupted()) }?;
                 unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
-                // crate::log::debug!("sanity check header {:?}",msg_header);
 
                 let rpc_args = unsafe {
                     msg_header_bytes
@@ -132,7 +142,7 @@ where
                         .ok_or(Error::corrupted())?
                 };
 
-                // parse and dispatch the message 
+                // parse and dispatch the message
                 match msg_header.get_marker() {
                     super::header::ReqType::Connect => {
                         let meta = msg_header.get_connect_stub().ok_or(Error::corrupted())?;
@@ -165,7 +175,7 @@ where
                             // send the reply
                             self.send_reply(
                                 meta.get_session_id(),
-                                ReplyStubFactory::new(ReplyStatus::Ok, 0),                                
+                                ReplyStubFactory::new(ReplyStatus::Ok, 0),
                             )?;
                             // crate::log::info!("send reply done");
                         } else {
@@ -200,7 +210,7 @@ where
                             self.service
                                 .execute(meta.get_rpc_id(), &rpc_args, &mut out_buf);
 
-                        self.analysis.handle_one();                        
+                        self.analysis.handle_one();
                         self.analysis.handle_session_call(meta.get_session_id());
 
                         match reply_payload {
@@ -213,7 +223,7 @@ where
                                 ReplyStubFactory::new(ReplyStatus::NotExist, 0),
                             )?,
                         }
-                        // handle RPC request done 
+                        // handle RPC request done
                     }
 
                     // handle the session dis-connect
@@ -229,9 +239,9 @@ where
                     }
                 }
 
-                // FIXME: Is the post_recv on the last ok? No. 
+                // FIXME: Is the post_recv on the last ok? No.
                 // Currently, if some error happens during the above process,
-                // we may fail to post_recv_buf. 
+                // we may fail to post_recv_buf.
                 // Will handle it later
                 self.transport
                     .post_recv_buf(msg)
@@ -256,7 +266,7 @@ where
             "RPCHook\n  \t service: {}\n\t connected_sessions: {}, ncalls handled {}, other: {:?}",
             self.service,
             self.connected_sessions.len(),
-            self.analysis.get_ncalls(), 
+            self.analysis.get_ncalls(),
             self.analysis.session_counts
         )
     }

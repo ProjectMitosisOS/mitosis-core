@@ -68,11 +68,13 @@ where
 
         session.post(msg, req_sz, signal_flag)?;
 
-        // 32 is really really a magic number
-        if session.get_pending_reqs() > 16 {    
+        // 16 is really really a magic number
+        if session.get_pending_reqs() > 8 {    
             let res = crate::block_on(session); // should never fail
             assert!(res.is_ok());
-        }
+            assert!(session.get_pending_reqs() == 0);
+        }        
+
         Ok(())
     }
 

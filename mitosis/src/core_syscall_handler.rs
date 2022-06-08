@@ -322,10 +322,10 @@ impl MitosisSysCallHandler {
         //        self.resume_counter
         //            .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
 
+        // let cpu_id = 0;        
         let cpu_id = crate::get_calling_cpu_id();
         assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref())});
 
-        //let cpu_id = 0;
         // send an RPC to the remote to query the descriptor address
         let caller = unsafe {
             crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
@@ -470,7 +470,7 @@ impl MitosisSysCallHandler {
         gid: &alloc::string::String,
         nic_idx: usize,
     ) -> c_long {
-        crate::log::info!("connect remote machine id: {}", machine_id);
+        crate::log::debug!("connect remote machine id: {}", machine_id);
         let info = HandlerConnectInfo::create(gid, nic_idx as _, nic_idx as _);
         match probe_remote_rpc_end(machine_id, info) {
             Some(_) => {
