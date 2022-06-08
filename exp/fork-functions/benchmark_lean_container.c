@@ -49,7 +49,8 @@ int genRandomString(int length, char *ouput) {
     int flag, i;
     time_t t;
     t = time(NULL);
-    srand((unsigned) t);
+    pid_t pid = getpid();
+    srand((unsigned) t + pid);
     for (i = 0; i < length - 1; i++) {
         flag = rand() % 3;
         switch (flag) {
@@ -166,9 +167,9 @@ int main(int argc, char **argv) {
     char *command = argv[4];
     int thread_num = argv[5];
 
-
-    char rand_name[12];
-    genRandomString(12, rand_name);
+    int len = 12;
+    char rand_name[len];
+    genRandomString(len, rand_name);
     name = rand_name;
     int argv_index = 0;
     for (int i = 4; i < argc && argv_index < MAX_COMMAND_LENGTH; ++i, ++argv_index) {
@@ -203,7 +204,7 @@ int main(int argc, char **argv) {
 
     for (;;) {
         test_setup_lean_container(name, pid, rootfs_abs_path, command);
-
+//        usleep(500 * 1000);
         clock_gettime(CLOCK_REALTIME, &now);
         count++;
         report(name, &start, &now);
