@@ -27,6 +27,7 @@
 static long count = 0;
 char *execve_argv[MAX_COMMAND_LENGTH];
 char *execve_envp[MAX_COMMAND_LENGTH];
+static int empty_process;
 
 typedef struct thread_args {
     int worker_id;
@@ -114,8 +115,11 @@ static inline int test_setup_lean_container(char *name, int namespace, char *roo
     } else {
         // we are now running in the lean container!
         // exit immediately to avoid performance overhead in benchmark
-        execve(command, execve_argv, execve_envp);
-        assert(0);
+        if (!empty_process) {
+            execve(command, execve_argv, execve_envp);
+            assert(0);
+        }
+        exit(0);
     }
 
     // wait for the containered process to exit
@@ -161,18 +165,18 @@ int main(int argc, char **argv) {
     long benchmark_time = atol(argv[1]);
     long benchmark_time_nanoseconds = benchmark_time * NANOSECONDS_IN_SECOND;
 
+    empty_process = atoi(argv[2]);
     /* name */
-    char *name = argv[2];
-    char *rootfs_abs_path = argv[3];
-    char *command = argv[4];
-    int thread_num = argv[5];
+    char *name = argv[3];
+    char *rootfs_abs_path = argv[4];
+    char *command = argv[5];
 
     int len = 12;
     char rand_name[len];
     genRandomString(len, rand_name);
     name = rand_name;
     int argv_index = 0;
-    for (int i = 4; i < argc && argv_index < MAX_COMMAND_LENGTH; ++i, ++argv_index) {
+    for (int i = 5; i < argc && argv_index < MAX_COMMAND_LENGTH; ++i, ++argv_index) {
         execve_argv[argv_index] = argv[i];
     }
     execve_argv[argv_index] = NULL;
