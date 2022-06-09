@@ -167,16 +167,15 @@ int main(int argc, char **argv) {
 
     empty_process = atoi(argv[2]);
     /* name */
-    char *name = argv[3];
-    char *rootfs_abs_path = argv[4];
-    char *command = argv[5];
+    char *rootfs_abs_path = argv[3];
+    char *command = argv[4];
 
     int len = 12;
     char rand_name[len];
     genRandomString(len, rand_name);
-    name = rand_name;
+    char* name = rand_name;
     int argv_index = 0;
-    for (int i = 5; i < argc && argv_index < MAX_COMMAND_LENGTH; ++i, ++argv_index) {
+    for (int i = 4; i < argc && argv_index < MAX_COMMAND_LENGTH; ++i, ++argv_index) {
         execve_argv[argv_index] = argv[i];
     }
     execve_argv[argv_index] = NULL;

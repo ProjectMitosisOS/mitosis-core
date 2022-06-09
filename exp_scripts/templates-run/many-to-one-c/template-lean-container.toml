@@ -29,21 +29,22 @@ order = 2
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec} name=bench_lean_container'
+cmd = 'make bench_lean_mitosis mac_id=0 LEAN_BENCH_EXE_PATH=${exe_name} LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
 order = 3
 loop = 12
 
 [template.placeholder]
 working_set = [
     1048576,
-#    4194304,
-#    8388608,
-#    16777216,
-#    33554432,
-#    67108864,
-#    134217728,
-#    268435456,
-#    536870912,
-#    1073741824,
+    #    4194304,
+    #    8388608,
+    #    16777216,
+    #    33554432,
+    #    67108864,
+    #    134217728,
+    #    268435456,
+    #    536870912,
+    #    1073741824,
 ]
+exe_name = "exp/bench_lean_container"
 run_sec = 30
