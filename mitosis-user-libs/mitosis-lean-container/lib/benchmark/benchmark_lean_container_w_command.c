@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
     spec.numa_start = -1;
     spec.numa_end = -1;
 
-    pid = setup_cached_namespace(NULL);
+    pid = setup_cached_namespace(rootfs_path);
     
     ret = init_cgroup();
     assert(ret == 0);
@@ -168,7 +168,7 @@ clean:
     ret = remove_lean_container_template(name);
     assert(ret == 0);
 
-    ret = remove_cached_namespace(pid, NULL);
+    ret = remove_cached_namespace(pid, rootfs_path);
     assert(ret == 0);
 
     printf("clean resources!\n");
