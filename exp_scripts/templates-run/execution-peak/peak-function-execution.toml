@@ -1,0 +1,14 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make bench_func_exe BENCH_SEC=${run_sec} LEAN_BENCH_EXE_PATH=${exe_name} empty_process=0 ROOTFS_ABS_PATH=exp/fork-functions/${func_path} command=/usr/bin/python func_args="function.py" '
+order = 0
+loop = 1
+
+[template.placeholder]
+func_name = ["compression"]
+exe_name = "exp/bench_process_fork"
+run_sec = 15
