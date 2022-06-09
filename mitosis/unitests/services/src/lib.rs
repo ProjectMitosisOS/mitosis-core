@@ -42,6 +42,7 @@ fn test_rpc_two() {
         .connect_session_at(
             pool_idx,
             0xdeadbeaf, // Notice: it is very important to ensure that session ID is unique!
+            0xdeadbeaf,
             UDHyperMeta {
                 // the remote machine's RDMA gid. Since we are unit test, we use the local gid
                 gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
@@ -68,6 +69,7 @@ fn test_rpc_two() {
     caller
         .sync_call(
             0xdeadbeaf,                              // remote session ID
+            0xdeadbeaf,                              // local session ID
             mitosis::rpc_handlers::RPCId::Echo as _, // RPC ID
             0xffffffff as u64,                       // send an arg of u64
         )
@@ -137,6 +139,7 @@ fn test_rpc() {
     caller
         .connect(
             73,
+            73,
             client_session,
             UDHyperMeta {
                 gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
@@ -161,7 +164,7 @@ fn test_rpc() {
     // now call two RPCs
     let mut caller = caller_timeout.into_inner();
     caller
-        .sync_call(73, mitosis::rpc_handlers::RPCId::Nil as _, 128 as u64)
+        .sync_call(73, 73, mitosis::rpc_handlers::RPCId::Nil as _, 128 as u64)
         .unwrap();
     let mut caller_timeout = Timeout::new(caller, timeout_usec);
     let res = block_on(&mut caller_timeout);
@@ -176,6 +179,7 @@ fn test_rpc() {
     let mut caller = caller_timeout.into_inner();
     caller
         .sync_call(
+            73,
             73,
             mitosis::rpc_handlers::RPCId::Echo as _,
             0xdeadbeaf as u64,
@@ -196,6 +200,7 @@ fn test_rpc() {
     caller
         .connect(
             73 + 1,
+            73 + 1,
             client_session_1,
             UDHyperMeta {
                 gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
@@ -215,6 +220,7 @@ fn test_rpc() {
     let mut caller = caller_timeout.into_inner();
     caller
         .sync_call(
+            73 + 1,
             73 + 1,
             mitosis::rpc_handlers::RPCId::Echo as _,
             0xdeadbeaf as u64,
