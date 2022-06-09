@@ -2,13 +2,11 @@
 [template]
 
 [[template.pass]]
-role = 'child'
-path = ''
-cmd = 'make bench_func_exe BENCH_SEC=${run_sec} LEAN_BENCH_EXE_PATH=${exe_name} empty_process=0 ROOTFS_ABS_PATH=exp/fork-functions/${func_path} command=/usr/bin/python func_args="function.py" '
-order = 0
-loop = 1
+role = 'parent'
+path = 'exp/fork-functions'
+cmd = 'cd ${micro_func_name} && python function.py -profile=0 -run_once=1'
+order=0
+loop=2
 
 [template.placeholder]
-func_name = ["compression"]
-exe_name = "exp/bench_process_fork"
-run_sec = 15
+micro_func_name = ["micro", "json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]

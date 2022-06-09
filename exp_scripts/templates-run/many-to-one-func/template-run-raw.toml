@@ -29,7 +29,7 @@ order = 2
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec} name=bench_process_fork'
+cmd = 'make bench_lean_mitosis mac_id=0 LEAN_BENCH_EXE_PATH=${exe_name} LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
 order = 3
 loop = 10
 
@@ -45,4 +45,5 @@ micro_func_name = [
 #    "pyaes",
 #    "recognition"
 ]
+exe_name = "exp/bench_process_fork"
 run_sec = 40
