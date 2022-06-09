@@ -58,10 +58,11 @@ LEAN_BENCH_EXE_PATH=exp/bench_lean_container
 BENCH_SEC=5
 name=bench_lean_container
 command="lean_child"
+empty_process=0
 
 mac_id=1
 handler_id=73
 
 bench_lean_mitosis:
-	sudo ${LEAN_BENCH_EXE_PATH} ${BENCH_SEC} ${name} ${ROOTFS_ABS_PATH} ${command} ${mac_id} ${handler_id}
+	sudo ${LEAN_BENCH_EXE_PATH} ${BENCH_SEC} ${empty_process} ${name} ${ROOTFS_ABS_PATH} ${command} ${mac_id} ${handler_id}
 
