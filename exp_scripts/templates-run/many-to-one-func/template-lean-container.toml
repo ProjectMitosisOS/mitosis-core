@@ -22,7 +22,7 @@ order = 1
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
-cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=1 -pin=1 -profile=0 -handler_id=73'
+cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=0 -pin=1 -profile=0 -handler_id=73'
 order = 2
 
 
@@ -31,7 +31,7 @@ role = 'child'
 path = ''
 cmd = 'make bench_lean_mitosis mac_id=0 LEAN_BENCH_EXE_PATH=${exe_name} LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
 order = 3
-loop = 10
+loop = 24
 
 [template.placeholder]
 micro_func_name = [

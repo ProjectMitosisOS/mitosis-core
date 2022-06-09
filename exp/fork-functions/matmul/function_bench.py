@@ -4,11 +4,7 @@ import sys
 import numpy as np
 
 sys.path.append("../../common")  # include outer path
-from mitosis_wrapper import *
-
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['MKL_NUM_THREADS'] = '1'
-
+from func_bench_wrapper import *
 
 def handler():
     n = 64
@@ -16,8 +12,7 @@ def handler():
     B = np.random.rand(n, n)
     C = np.matmul(A, B)
 
-
-@mitosis_bench
+@func_exec_bench
 def bench():
     handler()
 

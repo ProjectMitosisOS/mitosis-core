@@ -64,9 +64,10 @@ template-run-micro-prepare=templates-run/micro-c/template-run-micro-prepare.toml
 template-run-micro-touch-ratio=templates-run/micro-c/template-run-micro-touch-ratio.toml
 
 template-run-func-peak-lean-container=templates-run/many-to-one-func/template-lean-container.toml
-template-run-func-peak-raw=templates-run/many-to-one-func/template-run-raw.toml
 template-run-c-peak-lean-container=templates-run/many-to-one-c/template-lean-container.toml
-template-run-c-peak-raw=templates-run/many-to-one-c/template-run-raw.toml
+template-run-empty-fork=templates-run/execution-peak/empty-fork.toml
+template-run-peak-function-exec=templates-run/execution-peak/peak-function-execution.toml
+template-run-peak-c-exec=templates-run/execution-peak/peak-c-execution.toml
 
 
 run_out=out
@@ -123,14 +124,19 @@ micro-touch-ratio:
 
 peak-func-lean-container:
 	$(call runner, $(template-run-func-peak-lean-container), ${run_out}/$@)
-peak-func-raw-process:
-	$(call runner, $(template-run-func-peak-raw), ${run_out}/$@)
 
 peak-c-lean-container:
 	$(call runner, $(template-run-c-peak-lean-container), ${run_out}/$@)
-peak-c-raw-process:
-	$(call runner, $(template-run-c-peak-raw), ${run_out}/$@)
 
+peak-empty-fork:
+	$(call runner, $(template-run-empty-fork), ${run_out}/$@)
+
+## Raw running function execution peak
+peak-function-exec:
+	$(call runner, $(template-run-peak-function-exec), ${run_out}/$@)
+## Raw running C++ micro execution peak
+peak-c-exec:
+	$(call runner, $(template-run-peak-c-exec), ${run_out}/$@)
 
 ### End of tests
 

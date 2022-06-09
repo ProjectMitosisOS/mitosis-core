@@ -1,5 +1,3 @@
-#include "core/lean_container.h"
-
 #include <time.h>
 #include <stdio.h>
 #include <errno.h>
@@ -25,9 +23,10 @@
 #define MAX_COMMAND_LENGTH 256
 
 static long count = 0;
-char *execve_argv[MAX_COMMAND_LENGTH];
-char *execve_envp[MAX_COMMAND_LENGTH];
+static char *execve_argv[MAX_COMMAND_LENGTH];
+static char *execve_envp[MAX_COMMAND_LENGTH];
 static int empty_process;
+
 typedef struct thread_args {
     int worker_id;
 } thargs_t;
@@ -87,16 +86,15 @@ void report(char *name, struct timespec *start, struct timespec *end) {
 /**
  * Body function for starting lean container
  * */
-static inline int test_setup(char *name, int namespace, char *rootfs_path, char *command) {
+static int test_setup(char *name, int namespace, char *rootfs_path, char *command) {
     pid_t pid = fork();
-
     if (pid < 0) {
-        debug_printf("set process failed!");
+        debug_printf("set lean container failed!");
         return -1;
     }
 
     if (pid) {
-        debug_printf("this is the process launcher process!\n");
+        debug_printf("this is the lean container launcher process!\n");
     } else {
         // we are now running in the lean container!
         // exit immediately to avoid performance overhead in benchmark
@@ -149,6 +147,7 @@ int main(int argc, char **argv) {
     /* benchmark in seconds */
     long benchmark_time = atol(argv[1]);
     long benchmark_time_nanoseconds = benchmark_time * NANOSECONDS_IN_SECOND;
+
     empty_process = atoi(argv[2]);
     /* name */
     char *rootfs_abs_path = argv[3];
@@ -157,28 +156,20 @@ int main(int argc, char **argv) {
     int len = 12;
     char rand_name[len];
     genRandomString(len, rand_name);
-    char* name = rand_name;
+    char *name = rand_name;
     int argv_index = 0;
     for (int i = 4; i < argc && argv_index < MAX_COMMAND_LENGTH; ++i, ++argv_index) {
         execve_argv[argv_index] = argv[i];
     }
     execve_argv[argv_index] = NULL;
 
-    printf("Running for %ld seconds, the name %s\n", benchmark_time, name);
+    printf("Running for %ld seconds, lean container name %s\n", benchmark_time, name);
 //    master(thread_num, benchmark_time);
 
-    struct ContainerSpec spec;
     struct timespec start, now;
     int ret;
     pid_t pid;
     long elapsed_time;
-
-    spec.cpu_start = -1;
-    spec.cpu_end = -1;
-    spec.memory_in_mb = -1;
-    spec.numa_start = -1;
-    spec.numa_end = -1;
-
 
     clock_gettime(CLOCK_REALTIME, &start);
 
@@ -195,5 +186,6 @@ int main(int argc, char **argv) {
     }
 
     printf("total: start %ld raw processes in %f second(s)\n", count, elapsed_time / NANOSECONDS_IN_SECOND);
+
     return 0;
 }
