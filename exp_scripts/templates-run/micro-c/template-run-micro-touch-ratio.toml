@@ -4,19 +4,19 @@
 [[template.pass]]
 role = 'parent'
 path = ''
-cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod ID=0'
 order = 0
 
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod ID=${@incr}'
 order = 0
 
 [[template.pass]]
 role = 'child'
 path = 'exp'
-cmd = 'sleep 1 && ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
+cmd = 'sleep 1 && ./connector -gid=${parent_gid} -mac_id=0 -nic_id=0'
 order = 1
 
 [[template.pass]]
@@ -28,7 +28,7 @@ order = 2
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
+cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child'
 order = 3
 
 [template.placeholder]

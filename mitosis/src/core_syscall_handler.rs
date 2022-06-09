@@ -70,10 +70,11 @@ pub struct MitosisSysCallHandler {
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
+        #[cfg(feature = "resume-profile")]
         {
             let pg_fault_sz = self.fault_page_size() / 1024;
             let meta_workingset_sz = self.meta_workingset_size() / 1024;
-            crate::log::debug!(
+            crate::log::info!(
                 "workingset size {} KB, page fault size {} KB",
                 meta_workingset_sz,
                 pg_fault_sz
@@ -384,6 +385,8 @@ impl MitosisSysCallHandler {
                             crate::log::error!("failed to lookup handler id: {:?}", handler_id);
                             return -1;
                         }
+                        #[cfg(feature = "resume-profile")]
+                        crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
 
                         // fetch the descriptor with one-sided RDMA
                         let desc_buf = RemotePagingService::remote_descriptor_fetch(
