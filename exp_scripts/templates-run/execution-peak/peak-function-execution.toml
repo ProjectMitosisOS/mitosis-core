@@ -4,9 +4,10 @@
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
-cmd = 'cd ${micro_func_name} && python function.py -profile=0 -run_once=1'
+cmd = 'cd ${micro_func_name} && python function_bench.py -run_sec=${run_sec}'
 order=0
-loop=2
+loop=16
 
 [template.placeholder]
-micro_func_name = ["micro", "json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
+micro_func_name = ["json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
+run_sec=30

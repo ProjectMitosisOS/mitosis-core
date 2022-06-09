@@ -1,25 +1,24 @@
 import json
 import os
 import sys
-import numpy as np
 
 sys.path.append("../../common")  # include outer path
-from mitosis_wrapper import *
+from func_bench_wrapper import *
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 
-
-def handler():
-    n = 64
-    A = np.random.rand(n, n)
-    B = np.random.rand(n, n)
-    C = np.matmul(A, B)
+f = open('linux.json')
+content = f.read()
 
 
-@mitosis_bench
+def lambda_handler():
+    json_data = json.loads(content)
+    str_json = json.dumps(json_data, indent=4)
+
+@func_exec_bench
 def bench():
-    handler()
+    lambda_handler()
 
 
 if __name__ == '__main__':
