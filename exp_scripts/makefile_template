@@ -10,13 +10,13 @@ STR_CHILD_HOSTS='val07'
 
 #USE_PROXY_COMMAND=false # true or false
 USE_PROXY_COMMAND=true # true or false
+FILTER=
 
 ## Plot related
 PLOT=1 # If plot the target figure
 
 ### end of configurations ###
 
-FILTER=
 
 
 STR_ALL_HOSTS='${PARENT_HOST}',${STR_CHILD_HOSTS}
@@ -41,6 +41,7 @@ template-build-exp=templates-build/template-build-exp.toml
 template-clean=templates-build/template-clean.toml
 template-build-mitosis-prefetch=templates-build/template-build-mitosis-prefetch.toml
 template-build-mitosis-cow=templates-build/template-build-mitosis-cow.toml
+template-build-mitosis-cow-profile=templates-build/template-build-mitosis-cow-profile.toml
 template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
 template-build-mitosis-eager-resume=templates-build/template-build-mitosis-eager-resume.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
@@ -154,6 +155,11 @@ build-mitosis-prefetch: build-cpp
 
 build-mitosis-cow: build-cpp
 	$(call builder, $(template-build-mitosis-cow))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
+
+build-mitosis-cow-profile: build-cpp
+	$(call builder, $(template-build-mitosis-cow-profile))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 

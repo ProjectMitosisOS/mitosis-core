@@ -4,21 +4,29 @@
 [[template.pass]]
 role = 'parent'
 path = ''
-cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod ID=0'
+order = 0
 
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
-cmd = 'sleep 1 && cd ${micro_func_name} && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="${micro_func_name}" '
+cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="${micro_func_name}" '
+order = 1
 
 [[template.pass]]
 role = 'parent'
 path = 'exp'
-cmd = 'sleep 5; for i in seq 1 3; do for i in seq 1 3 ;do ${loop_cmd} ;done; done'
+cmd = './connector -gid=${parent_gid} -mac_id=0 -nic_id=0'
+order = 1
 
+[[template.pass]]
+role = 'parent'
+path = 'exp'
+cmd = 'for i in seq 1 3; do for i in seq 1 3 ;do ${loop_cmd} ;done; done'
+order=2
 
 [template.placeholder]
 micro_func_name = ["micro", "json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
-loop_cmd="./simple_child -mac_id=0"
+loop_cmd = "./simple_child -mac_id=0"
 #loop_cmd="echo 3 | sudo tee /proc/sys/vm/drop_caches;./simple_child -mac_id=0"
 

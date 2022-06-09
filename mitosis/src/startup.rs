@@ -115,7 +115,9 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size)) };
 
     // cache for storing the remote page table cache
-    unsafe { crate::global_pt_cache::init(crate::remote_pt_cache::RemotePageTableCache::default()) };
+    unsafe {
+        crate::global_pt_cache::init(crate::remote_pt_cache::RemotePageTableCache::default())
+    };
 
     // TODO: other services
 
@@ -125,13 +127,13 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 
     // establish an RPC to myself
     // for i in 0..config.rpc_threads_num {
-    //     probe_remote_rpc_end(
-    //         1 + config.max_cluster_size * i,
-    //         unsafe { crate::service_rpc::get_ref() }
-    //             .get_connect_info(i)
-    //             .expect("Self RPC handler connection info uninitialized"),
-    //     )
-    //     .expect("failed to connect to my RPC handlers!");
+    // probe_remote_rpc_end(
+    //     0,
+    //     unsafe { crate::service_rpc::get_ref() }
+    //         .get_connect_info(0)
+    //         .expect("Self RPC handler connection info uninitialized"),
+    // )
+    // .expect("failed to connect to my RPC handlers!");
     // }
     // crate::log::info!("Probe myself RPC handlers done");
 
@@ -191,9 +193,8 @@ pub fn probe_remote_rpc_end(
     let len = unsafe { crate::get_rpc_caller_pool_ref().len() };
     for i in 0..len {
         let session_id = calculate_session_id(remote_machine_id, i, len);
-        let my_session_id = calculate_session_id(unsafe { *crate::mac_id::get_ref() }, 
-                i, len);
-        assert_ne!(session_id, my_session_id);
+        let my_session_id = calculate_session_id(unsafe { *crate::mac_id::get_ref() }, i, len);
+        // assert_ne!(session_id, my_session_id);
 
         unsafe { crate::get_rpc_caller_pool_mut() }.connect_session_at(
             i,

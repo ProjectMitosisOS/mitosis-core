@@ -65,7 +65,8 @@ where
         let req_sz = header_factory::CallStubFactory::new(my_session_id, rpc_id)
             .generate(&arg, msg.get_bytes_mut())
             .unwrap();
-
+        #[cfg(feature = "resume-profile")]
+        crate::log::info!("rpc req size:{}", req_sz);
         session.post(msg, req_sz, signal_flag)?;
 
         // 16 is really really a magic number

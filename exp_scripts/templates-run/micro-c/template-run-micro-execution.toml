@@ -4,13 +4,19 @@
 [[template.pass]]
 role = 'parent'
 path = ''
-cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod ID=0'
 order = 0
 
 [[template.pass]]
 role = 'parent'
 path = 'exp' ## c-version
 cmd = './bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=0'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'exp'
+cmd = './connector -gid=${parent_gid} -mac_id=0 -nic_id=0'
 order = 1
 
 [[template.pass]]
