@@ -399,14 +399,14 @@ impl MitosisSysCallHandler {
 
                         // deserialize
                         let des = {
-                            /*  legacy version
-                            let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
-                            if des.is_none() {
-                                crate::log::error!("failed to deserialize descriptor");
-                                return -1;
-                            }
-                            des.unwrap().to_descriptor()
-                            */
+                            // legacy version
+                            // let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
+                            // if des.is_none() {
+                            //     crate::log::error!("failed to deserialize descriptor");
+                            //     None
+                            // } else {
+                            //     Some(des.unwrap().to_descriptor())
+                            // }
 
                             // optimized version
                             ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
