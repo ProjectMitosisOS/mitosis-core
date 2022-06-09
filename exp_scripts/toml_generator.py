@@ -76,6 +76,7 @@ def handle_template(config):
         name_mat.append(names)
 
     for (j, key) in enumerate(placeholder[keyword_place]):
+        key = str(key).replace('/', '-').replace('_', '-')
         fname = '{}/run-{}.toml'.format(str(out_dir), str(key))
         out_dict = get_intersection(dict(config['global']).copy(), template_dict)
         out_dict['pass'] = []
