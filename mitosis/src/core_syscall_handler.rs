@@ -675,7 +675,7 @@ impl MitosisSysCallHandler {
                     }
                 }
 
-                crate::log::info!(
+                crate::log::debug!(
                     "[handle_page_fault] Failed to read the remote page, fault addr: 0x{:x}",
                     fault_addr
                 );
