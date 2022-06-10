@@ -14,6 +14,13 @@ struct ContainerSpec {
     int numa_end;
 };
 
+enum FreezerState {
+    ERROR = -1,
+    FROZEN,
+    FREEZING,
+    THAWED,
+};
+
 // (de)initiate the mitosis cgroupfs
 // return 0 on success
 // return negative value on failure
@@ -36,6 +43,8 @@ int setup_lean_container(char* name, char* rootfs_path, int _namespace);
 // returns 0 on success
 int pause_container(char* name);
 int unpause_container(char* name);
+int get_container_freezer_state(char* name);
+int wait_until(char* name, enum FreezerState expected);
 
 // setup lean container, with an additional call to fork (a.k.a: double fork)
 // so that the process is created in a new pid namespace
