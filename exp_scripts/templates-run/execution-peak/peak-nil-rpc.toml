@@ -1,0 +1,26 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'make insmod ID=0'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make insmod ID=${@incr}'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = './bench_nil_rpc -mac_id=0 -gid=${parent_gid} -nic_id=0 -threads=${thread_num} -run_sec=${run_sec} '
+order = 1
+
+[template.placeholder]
+name = ["nil_rpc"]
+micro_func_name = "micro"
+run_sec = 30
+thread_num = 12
