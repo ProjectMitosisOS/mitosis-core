@@ -79,3 +79,15 @@ fork_resume_remote(int sd, unsigned long mac_id, unsigned long handler_id) {
     return 0;
 }
 
+static inline int
+nil_rpc(int sd, unsigned long mac_id, unsigned long handler_id) {
+    resume_remote_req_t req;
+    req.machine_id = mac_id;
+    req.handler_id = handler_id;
+
+    if (ioctl(sd, NilRPC, &req) == -1) {
+        return -1;
+    }
+
+    return 0;
+}

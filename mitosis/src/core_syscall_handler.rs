@@ -201,6 +201,18 @@ impl FileOperations for MitosisSysCallHandler {
                 self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
             }
             LibMITOSISCmd::PreparePing => self.syscall_prepare(arg, true),
+            LibMITOSISCmd::NilRPC => {
+                let mut req: resume_remote_req_t = Default::default();
+                unsafe {
+                    _copy_from_user(
+                        (&mut req as *mut resume_remote_req_t).cast::<c_void>(),
+                        arg as *mut c_void,
+                        core::mem::size_of_val(&req) as u64,
+                    )
+                };
+                let (mac_id, handler_id) = (req.machine_id, req.handler_id);
+                self.syscall_nil_rpc(mac_id as _, handler_id as _)
+            }
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -323,9 +335,9 @@ impl MitosisSysCallHandler {
         //        self.resume_counter
         //            .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
 
-        // let cpu_id = 0;        
+        // let cpu_id = 0;
         let cpu_id = crate::get_calling_cpu_id();
-        assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref())});
+        assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref()) });
 
         // send an RPC to the remote to query the descriptor address
         let caller = unsafe {
@@ -485,6 +497,68 @@ impl MitosisSysCallHandler {
                 -1
             }
         }
+    }
+
+    #[inline]
+    fn syscall_nil_rpc(&mut self, machine_id: c_ulong, handler_id: c_ulong) -> c_long {
+        let cpu_id = crate::get_calling_cpu_id();
+        assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref()) });
+
+        // send an RPC to the remote to query the descriptor address
+        let caller = unsafe {
+            crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
+                .expect("the caller should be properly initialized")
+        };
+
+        // ourself must have been connected in the startup process
+        let remote_session_id = unsafe {
+            crate::startup::calculate_session_id(
+                machine_id as _,
+                cpu_id,
+                *crate::max_caller_num::get_ref(),
+            )
+        };
+
+        let my_session_id = unsafe {
+            crate::startup::calculate_session_id(
+                *crate::mac_id::get_ref(),
+                cpu_id,
+                *crate::max_caller_num::get_ref(),
+            )
+        };
+
+        let res = caller.sync_call::<usize>(
+            remote_session_id,
+            my_session_id,
+            crate::rpc_handlers::RPCId::Nil as _,
+            handler_id as _,
+        );
+        if res.is_err() {
+            crate::log::error!("failed to call {:?}", res);
+            crate::log::info!(
+                "sanity check pending reqs {:?}",
+                caller.get_pending_reqs(remote_session_id)
+            );
+            return -1;
+        };
+
+        let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
+
+        use crate::rpc_handlers::DescriptorLookupReply;
+        use os_network::serialize::Serialize;
+        let _reply = match block_on(&mut timeout_caller) {
+            Ok((msg, reply)) => {
+                // first re-purpose the data
+                caller
+                    .register_recv_buf(msg)
+                    .expect("register msg buffer cannot fail");
+                return 0;
+            }
+            Err(e) => {
+                crate::log::error!("client receiver reply err {:?}", e);
+                return -1;
+            }
+        };
     }
 }
 
