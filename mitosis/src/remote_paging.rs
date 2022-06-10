@@ -22,6 +22,7 @@ pub struct AccessInfo {
 impl AccessInfo {
     pub fn new(descriptor: &crate::descriptors::RDMADescriptor) -> core::option::Option<Self> {
         let factory = crate::random_select_dc_factory_on_core()?;
+        // FIXME: get from global (mapping from gid into ah)
         let ah = os_network::rdma::IBAddressHandlerMeta::create_ah(
             factory.get_context(),
             os_network::rdma::IBAddressHandlerMeta {
