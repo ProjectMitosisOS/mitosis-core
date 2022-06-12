@@ -22,7 +22,7 @@ order = 1
 [[template.pass]]
 role = 'parent'
 path = 'exp'
-cmd = './simple_child -mac_id=0 -wait_finish_sec=0; for i in seq 1 3 ;do ./simple_child -mac_id=0 ;done; for i in seq 1 3 ;do ./simple_child -mac_id=0 ;done'
+cmd = './simple_child -mac_id=0 -wait_finish_sec=0; for i in seq 1 ${time} ;do ./simple_child -mac_id=0 ;done; for i in seq 1 ${time} ;do ./simple_child -mac_id=0 ;done'
 order = 2
 
 [template.placeholder]
@@ -39,4 +39,5 @@ working_set = [
     1073741824,
 ]
 micro_func_name = "micro"
+time = 1
 
