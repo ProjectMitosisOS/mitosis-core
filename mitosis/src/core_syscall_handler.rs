@@ -693,11 +693,13 @@ impl MitosisSysCallHandler {
     }
 
     /// Page fault size (in Bytes)
+    #[allow(dead_code)]
     #[inline]
     fn fault_page_size(&self) -> usize {
         self.caller_status.fault_page_cnt * 4096 as usize
     }
 
+    #[allow(dead_code)]
     #[inline]
     fn meta_workingset_size(&self) -> usize {
         if let Some(meta) = self.caller_status.resume_related.as_ref() {

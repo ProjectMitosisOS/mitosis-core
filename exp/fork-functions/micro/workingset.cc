@@ -22,6 +22,7 @@ DEFINE_int64(working_set, 16777216, "working set size");
 DEFINE_int64(handler_id, 73, "rfork handler id");
 DEFINE_int32(whether_prepare, 0, "whether to prepare");
 DEFINE_int32(profile, 1, "profile the result");
+DEFINE_int32(random, 1, "whether touch randomly");
 DEFINE_int32(touch_ratio, 100, "Working set touch ratio");
 DEFINE_int32(exclude_execution, 0, "Return immediately after checkpoint");
 
@@ -29,6 +30,7 @@ extern "C"
 {
     void init_buffer(uint64_t workingset);
     void handler(const char *name, uint64_t workingset, int profile);
+    void handler_random(const char *name, uint64_t workingset, int profile);
 }
 
 template <class DT = std::chrono::milliseconds,
@@ -64,8 +66,16 @@ int main(int argc, char **argv)
     init_buffer(FLAGS_working_set);
 
     // cold start
-    handler("cold start", FLAGS_working_set, FLAGS_profile);
-    handler("warm start", FLAGS_working_set * FLAGS_touch_ratio / 100, FLAGS_profile);
+    if (FLAGS_random)
+    {
+        handler_random("random cold start", FLAGS_working_set, FLAGS_profile);
+        handler_random("random warm start", FLAGS_working_set * FLAGS_touch_ratio / 100, FLAGS_profile);
+    }
+    else
+    {
+        handler("cold start", FLAGS_working_set, FLAGS_profile);
+        handler("warm start", FLAGS_working_set * FLAGS_touch_ratio / 100, FLAGS_profile);
+    }
 
 #if 1
     // prepare
@@ -80,8 +90,13 @@ int main(int argc, char **argv)
     }
 
     // warm start
-    if (!FLAGS_exclude_execution)
-        handler("cow start", FLAGS_working_set * FLAGS_touch_ratio / 100, FLAGS_profile);
+    if (!FLAGS_exclude_execution) {
+        if (FLAGS_random) { 
+            handler_random("random cow start", FLAGS_working_set * FLAGS_touch_ratio / 100, FLAGS_profile);
+        } else {
+            handler("cow start", FLAGS_working_set * FLAGS_touch_ratio / 100, FLAGS_profile);
+        }
+    }
     _Exit(0);
 #else
     if (fork() == 0)
