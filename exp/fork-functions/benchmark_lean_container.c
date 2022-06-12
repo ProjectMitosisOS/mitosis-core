@@ -89,8 +89,8 @@ void report(char *name, struct timespec *start, struct timespec *end) {
     if (elapsed_time_since_last_report > interval) {
         long op = count - last_count;
         double latency = (elapsed_time_since_last_report / NANOSECONDS_IN_MILLISECOND) / op;
-        long qps = (op / (elapsed_time_since_last_report / NANOSECONDS_IN_SECOND));
-        printf("[%s] Throughput: %ld containers/sec, latency %f ms\n", name, qps, latency);
+        double qps = ((double)op / (elapsed_time_since_last_report / NANOSECONDS_IN_SECOND));
+        printf("[%s] Throughput: %f containers/sec, latency %f ms\n", name, qps, latency);
 
         last_timestamp = elapsed_time;
         last_count = count;
