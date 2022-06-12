@@ -31,6 +31,8 @@ struct ResumeDataStruct {
 }
 
 impl ResumeDataStruct {
+    /// Count the number of entries in my page table
+    #[allow(dead_code)]
     pub fn pg_table_entry_cnt(&self) -> usize {
         self.descriptor.page_table.len()
     }

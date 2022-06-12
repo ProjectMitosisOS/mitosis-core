@@ -21,9 +21,12 @@ pub fn check_global_configurations() {
     }
 
     if cfg!(feature = "prefetch") {
-        crate::log::info!("[check]: Prefetch optimization is enabled.")
+        crate::log::info!(
+            "[check]: Prefetch optimization is enabled, prefetch sz {}.",
+            crate::PREFETCH_STEP
+        );
     } else {
-        crate::log::info!("[check]: Disable prefetching.")
+        crate::log::info!("[check]: Disable prefetching.");
     }
 
     if cfg!(feature = "page-cache") {

@@ -28,7 +28,7 @@ DEFINE_int32(exclude_execution, 0, "Return immediately after checkpoint");
 extern "C"
 {
     void init_buffer(uint64_t workingset);
-    void  handler(const char *name, uint64_t workingset, int profile);
+    void handler(const char *name, uint64_t workingset, int profile);
 }
 
 template <class DT = std::chrono::milliseconds,
