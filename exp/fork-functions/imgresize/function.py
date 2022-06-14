@@ -16,23 +16,20 @@ TMP = '/tmp/'
 
 def resize(image, file_name):
     path = TMP + "resized-" + file_name
-    image.thumbnail((128, 128))
+    image.thumbnail((769, 769))
     image.save(path)
     return [path]
 
 def image_processing(file_name, image_path):
     path_list = []
-    start = time()
     with Image.open(image_path) as image:
         path_list += resize(image, file_name)
-
-    latency = time() - start
-    return latency, path_list
+    return
 
 @tick_execution_time
 def handler():
-    in_key = 'test.jpg'
-    latency, path_list = image_processing(in_key, in_key)
+    in_key = 'test.jpeg'
+    image_processing(in_key, in_key)
 
 @mitosis_bench
 def bench():
