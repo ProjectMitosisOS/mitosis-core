@@ -22,7 +22,7 @@ order = 1
 [[template.pass]]
 role = 'parent'
 path = 'exp' ## c-version
-cmd = './bench_workingset --working_set=${working_set} -random=0 --whether_prepare=1 -exclude_execution=0 -profile=0'
+cmd = "./bench_workingset --working_set=${working_set} -random=0 -profile=0 -whether_prepare=1 -exclude_execution=0  -touch_ratio=${touch_ratio}"
 order = 2
 
 
@@ -34,17 +34,8 @@ order = 3
 loop = 16
 
 [template.placeholder]
-working_set = [
-    1048576,
-#        4194304,
-#        8388608,
-#        16777216,
-#        33554432,
-#        67108864,
-#        134217728,
-#        268435456,
-#        536870912,
-#        1073741824,
-]
+working_set = 67108864
+touch_ratio = [100]
+#touch_ratio = [0, 20, 40, 50, 55, 60, 65, 70, 80, 85, 90, 95, 100]
 exe_name = "exp/bench_lean_container"
-run_sec = 60
+run_sec = 30
