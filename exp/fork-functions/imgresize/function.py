@@ -31,7 +31,7 @@ def image_processing(file_name, image_path):
 
 @tick_execution_time
 def handler():
-    in_key = 'test.jpeg'
+    in_key = 'test.jpg'
     latency, path_list = image_processing(in_key, in_key)
 
 @mitosis_bench
