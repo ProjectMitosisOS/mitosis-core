@@ -76,10 +76,12 @@ impl Drop for MitosisSysCallHandler {
         {
             let pg_fault_sz = self.fault_page_size() / 1024;
             let meta_workingset_sz = self.meta_workingset_size() / 1024;
+            let fetch_page_sz = self.fetched_page_size() / 1024;
             crate::log::info!(
-                "workingset size {} KB, page fault size {} KB",
+                "workingset size {} KB, page fault size {} KB, fetch page size {} KB",
                 meta_workingset_sz,
-                pg_fault_sz
+                pg_fault_sz,
+                fetch_page_sz
             );
         }
         self.cache_my_pt();
@@ -704,6 +706,15 @@ impl MitosisSysCallHandler {
     fn meta_workingset_size(&self) -> usize {
         if let Some(meta) = self.caller_status.resume_related.as_ref() {
             meta.pg_table_entry_cnt() * 4096 as usize
+        } else {
+            0
+        }
+    }
+
+    #[cfg(feature = "resume-profile")]
+    fn fetched_page_size(&self) -> usize {
+        if let Some(meta) = self.caller_status.resume_related.as_ref() {
+            meta.descriptor.remote_fetched_page_count * 4096 as usize
         } else {
             0
         }

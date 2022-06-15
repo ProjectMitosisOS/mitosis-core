@@ -45,12 +45,11 @@ impl ParentDescriptor {
     /// Deprecated
     ///
     /// Transform the parent descriptor to a child descriptor
-    /// When prefetch is enabled, this function can fail if no sufficient 
-    /// DCQP in the current kernel. 
+    /// When prefetch is enabled, this function can fail if no sufficient
+    /// DCQP in the current kernel.
     #[inline]
     pub fn to_descriptor(&self) -> ChildDescriptor {
         let mut page_table = crate::remote_mapping::RemotePageTable::new();
-
 
         for (vma_idx, vma_pg_table) in self.page_table.iter().enumerate() {
             let start = self.vma[vma_idx].get_start();
@@ -83,7 +82,9 @@ impl ParentDescriptor {
             #[cfg(feature = "prefetch")]
             prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info),
             #[cfg(feature = "eager-resume")]
-            eager_fetched_pages: Default::default()
+            eager_fetched_pages: Default::default(),
+            #[cfg(feature = "resume-profile")]
+            remote_fetched_page_count: 0,
         }
     }
 }

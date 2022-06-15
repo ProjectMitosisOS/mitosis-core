@@ -40,6 +40,7 @@ template_args="{\
 template-build-exp=templates-build/template-build-exp.toml
 template-clean=templates-build/template-clean.toml
 template-build-mitosis-prefetch=templates-build/template-build-mitosis-prefetch.toml
+template-build-mitosis-prefetch-profile=templates-build/template-build-mitosis-prefetch-profile.toml
 template-build-mitosis-cow=templates-build/template-build-mitosis-cow.toml
 template-build-mitosis-cow-profile=templates-build/template-build-mitosis-cow-profile.toml
 template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
@@ -65,9 +66,11 @@ template-run-micro-touch-ratio=templates-run/micro-c/template-run-micro-touch-ra
 
 template-run-func-peak-lean-container=templates-run/many-to-one-func/template-lean-container.toml
 template-run-c-peak-lean-container=templates-run/many-to-one-c/template-lean-container.toml
+template-run-c-touch-ratio=templates-run/many-to-one-c/template-touch-ratio.toml
 template-run-empty-fork=templates-run/execution-peak/empty-fork.toml
 template-run-peak-function-exec=templates-run/execution-peak/peak-function-execution.toml
 template-run-peak-c-exec=templates-run/execution-peak/peak-c-execution.toml
+template-run-peak-nil-rpc=templates-run/execution-peak/peak-nil-rpc.toml
 
 
 run_out=out
@@ -128,6 +131,10 @@ peak-func-lean-container:
 peak-c-lean-container:
 	$(call runner, $(template-run-c-peak-lean-container), ${run_out}/$@)
 
+peak-c-touch-ratio:
+	$(call runner, $(template-run-c-touch-ratio), ${run_out}/$@)
+
+
 peak-empty-fork:
 	$(call runner, $(template-run-empty-fork), ${run_out}/$@)
 
@@ -137,6 +144,10 @@ peak-function-exec:
 ## Raw running C++ micro execution peak
 peak-c-exec:
 	$(call runner, $(template-run-peak-c-exec), ${run_out}/$@)
+
+
+peak-nil-rpc:
+	$(call runner, $(template-run-peak-nil-rpc), ${run_out}/$@)
 
 ### End of tests
 
@@ -158,6 +169,12 @@ build-mitosis-prefetch: build-cpp
 	$(call builder, $(template-build-mitosis-prefetch))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
+
+build-mitosis-prefetch-profile: build-cpp
+	$(call builder, $(template-build-mitosis-prefetch-profile))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
+
 
 build-mitosis-cow: build-cpp
 	$(call builder, $(template-build-mitosis-cow))
