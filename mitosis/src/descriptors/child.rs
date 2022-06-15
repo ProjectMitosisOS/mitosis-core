@@ -49,6 +49,8 @@ pub struct ChildDescriptor {
     pub prefetcher: DCAsyncPrefetcher<'static>,
     #[cfg(feature = "eager-resume")]
     pub eager_fetched_pages: hashbrown::HashSet<VirtAddrType>,
+    #[cfg(feature = "resume-profile")]
+    pub remote_fetched_page_count: usize,
 }
 
 impl ChildDescriptor {
@@ -212,7 +214,7 @@ impl ChildDescriptor {
 
                 // now sending the RDMA request
                 let res = dc_qp.post(&payload.as_ref());
-                if res.is_err() { 
+                if res.is_err() {
                     crate::log::error!("failed to batch read pages {:?}", res);
                 }
 
@@ -263,7 +265,7 @@ impl ChildDescriptor {
     /// @param access_info: remote network meta info
     #[inline]
     pub unsafe fn read_remote_page(
-        &self,
+        &mut self,
         remote_va: PhyAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
@@ -280,6 +282,8 @@ impl ChildDescriptor {
             4096,
             access_info,
         );
+        #[cfg(feature = "resume-profile")]
+        self.incr_fetched_remote_count(1);
         return match res {
             Ok(_) => Some(new_page_p),
             Err(e) => {
@@ -297,7 +301,7 @@ impl ChildDescriptor {
     /// @param access_info: remote network meta info
     #[inline]
     pub unsafe fn read_remote_page_wo_prefetch(
-        &self,
+        &mut self,
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
     ) -> Option<*mut crate::bindings::page> {
@@ -314,6 +318,8 @@ impl ChildDescriptor {
             4096,
             access_info,
         );
+        #[cfg(feature = "resume-profile")]
+        self.incr_fetched_remote_count(1);
         return match res {
             Ok(_) => Some(new_page_p),
             Err(e) => {
@@ -369,9 +375,9 @@ impl ChildDescriptor {
                 //     *mut addr | 1
                 let page = PhysAddr::decode(remote_pa as _) as *mut page;
 
-                // clean the entry in the page table, since 
+                // clean the entry in the page table, since
                 // the OS is responsible for reclaiming this page
-                l1_page[idx] = 0;            
+                l1_page[idx] = 0;
 
                 return Some(page);
             }
@@ -424,6 +430,8 @@ impl ChildDescriptor {
 
             // wait for the request to complete
             let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
+            #[cfg(feature = "resume-profile")]
+            self.incr_fetched_remote_count(crate::PREFETCH_STEP + 1);
             match block_on(&mut timeout_dc) {
                 Ok(_) => Ok(()),
                 Err(e) => {
@@ -464,6 +472,11 @@ impl ChildDescriptor {
                 Err(_e) => panic!("not implemented"),
             }
         }
+    }
+
+    #[cfg(feature = "resume-profile")]
+    fn incr_fetched_remote_count(&mut self, page_cnt: usize) {
+        self.remote_fetched_page_count += page_cnt;
     }
 }
 
@@ -565,6 +578,8 @@ impl os_network::serialize::Serialize for ChildDescriptor {
             prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info.unwrap()),
             #[cfg(feature = "eager-resume")]
             eager_fetched_pages: Default::default(),
+            #[cfg(feature = "resume-profile")]
+            remote_fetched_page_count: 0
         })
     }
 
