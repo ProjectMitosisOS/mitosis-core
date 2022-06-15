@@ -301,6 +301,7 @@ fn test_ud_rpc_elegant() {
     caller
         .connect(
             73,
+            73, 
             client_session,
             UDHyperMeta {
                 gid: os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
@@ -332,7 +333,7 @@ fn test_ud_rpc_elegant() {
     let mut caller = caller_timeout.into_inner();
 
     // client make a simple call    
-    caller.sync_call(73,TEST_RPC_ID, 128 as u64).unwrap(); 
+    caller.sync_call(73,73,TEST_RPC_ID, 128 as u64).unwrap(); 
     
     // receive at the server
     rpc_server.reset_timer(timeout_usec);

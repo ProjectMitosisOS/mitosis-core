@@ -10,7 +10,6 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 
 
-@tick_execution_time
 def handler():
     n = 64
     A = np.random.rand(n, n)

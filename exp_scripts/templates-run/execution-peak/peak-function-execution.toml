@@ -1,0 +1,13 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = 'exp/fork-functions'
+cmd = 'cd ${micro_func_name} && python function_bench.py -run_sec=${run_sec}'
+order=0
+loop=16
+
+[template.placeholder]
+micro_func_name = ["json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
+run_sec=30

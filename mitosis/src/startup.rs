@@ -21,16 +21,19 @@ pub fn check_global_configurations() {
     }
 
     if cfg!(feature = "prefetch") {
-        crate::log::info!("[check]: Prefetch optimization is enabled.")
+        crate::log::info!(
+            "[check]: Prefetch optimization is enabled, prefetch sz {}.",
+            crate::PREFETCH_STEP
+        );
     } else {
-        crate::log::info!("[check]: Disable prefetching.")
+        crate::log::info!("[check]: Disable prefetching.");
     }
 
     if cfg!(feature = "page-cache") {
         crate::log::info!("[check]: Cache remote page table optimization is enabled.")
     } else {
         crate::log::info!("[check]: Not cache remote page table.")
-    }    
+    }
 
     crate::log::info!("********* All configuration check passes !*********");
 }
@@ -115,7 +118,9 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size)) };
 
     // cache for storing the remote page table cache
-    unsafe { crate::global_pt_cache::init(crate::remote_pt_cache::RemotePageTableCache::default()) };
+    unsafe {
+        crate::global_pt_cache::init(crate::remote_pt_cache::RemotePageTableCache::default())
+    };
 
     // TODO: other services
 
@@ -124,16 +129,16 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     crate::log::info!("All RPC thread handlers initialized!");
 
     // establish an RPC to myself
-    for i in 0..config.rpc_threads_num {
-        probe_remote_rpc_end(
-            config.machine_id + config.max_cluster_size * i,
-            unsafe { crate::service_rpc::get_ref() }
-                .get_connect_info(i)
-                .expect("Self RPC handler connection info uninitialized"),
-        )
-        .expect("failed to connect to my RPC handlers!");
-    }
-    crate::log::info!("Probe myself RPC handlers done");
+    // for i in 0..config.rpc_threads_num {
+    // probe_remote_rpc_end(
+    //     0,
+    //     unsafe { crate::service_rpc::get_ref() }
+    //         .get_connect_info(0)
+    //         .expect("Self RPC handler connection info uninitialized"),
+    // )
+    // .expect("failed to connect to my RPC handlers!");
+    // }
+    // crate::log::info!("Probe myself RPC handlers done");
 
     crate::log::info!(
         "All initialization done, takes {} ms",
@@ -146,6 +151,8 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
+        crate::service_rpc::drop();
+
         crate::log::debug!("drop dc targets");
         crate::dc_target_service::drop();
 
@@ -156,12 +163,11 @@ pub fn end_instance() {
         crate::dc_pool_service_async::drop();
 
         crate::service_caller_pool::drop();
-        crate::service_rpc::drop();
 
         crate::log::debug!("drop shadow process service");
         crate::sp_service::drop();
         crate::mem_pool::drop();
-        
+
         crate::global_pt_cache::drop();
     };
     end_rdma();
@@ -190,9 +196,13 @@ pub fn probe_remote_rpc_end(
     let len = unsafe { crate::get_rpc_caller_pool_ref().len() };
     for i in 0..len {
         let session_id = calculate_session_id(remote_machine_id, i, len);
+        let my_session_id = calculate_session_id(unsafe { *crate::mac_id::get_ref() }, i, len);
+        // assert_ne!(session_id, my_session_id);
+
         unsafe { crate::get_rpc_caller_pool_mut() }.connect_session_at(
             i,
             session_id, // Notice: it is very important to ensure that session ID is unique!
+            my_session_id,
             UDHyperMeta {
                 // the remote machine's RDMA gid. Since we are unit test, we use the local gid
                 gid: os_network::rdma::RawGID::new(connect_info.gid.clone()).unwrap(),

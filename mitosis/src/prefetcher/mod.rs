@@ -7,7 +7,7 @@ pub use strategies::{ConstPrefetcher, StepPrefetcher};
 
 /// The maximum number of pages to prefetch
 /// To achieve a better performance, we must restrict it to a small number
-pub const K_MAX_PREFETCH_NUM: usize = 4;
+pub const K_MAX_PREFETCH_NUM: usize = crate::PREFETCH_STEP;
 
 /// Check whether myself needs to be prefetch.
 ///

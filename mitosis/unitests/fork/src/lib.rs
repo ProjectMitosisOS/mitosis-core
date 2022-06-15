@@ -19,8 +19,11 @@ use os_network::block_on;
 impl linux_kernel_module::KernelModule for Module {
     fn init() -> linux_kernel_module::KernelResult<Self> {
         let mut config: mitosis::Config = Default::default();
-        config.set_num_nics_used(2).set_rpc_threads(2).set_init_dc_targets(12);
-        
+        config
+            .set_num_nics_used(2)
+            .set_rpc_threads(2)
+            .set_init_dc_targets(12);
+
         assert!(start_instance(config.clone()).is_some());
 
         // now make some simple checks for self-called RPC
@@ -31,6 +34,9 @@ impl linux_kernel_module::KernelModule for Module {
                 .expect("the caller should be properly inited")
         };
 
+        // probe myself is disabled
+        // so the code here is legacy
+        /* 
         let self_session_id = mitosis::startup::calculate_session_id(
             config.get_machine_id(),
             pool_idx,
@@ -39,7 +45,8 @@ impl linux_kernel_module::KernelModule for Module {
 
         caller
             .sync_call(
-                self_session_id,                                      // remote session ID
+                self_session_id, // remote session ID
+                self_session_id,
                 mitosis::rpc_handlers::RPCId::Echo as _, // RPC ID
                 0xffffffff as u64,                       // send an arg of u64
             )
@@ -50,10 +57,13 @@ impl linux_kernel_module::KernelModule for Module {
             Ok(v) => {
                 let (msg, reply) = v; // msg, reply
                 log::debug!("sanity check rpc two call result: {:?}", reply);
-                caller.register_recv_buf(msg).expect("register msg buffer cannot fail");
+                caller
+                    .register_recv_buf(msg)
+                    .expect("register msg buffer cannot fail");
             }
             Err(e) => log::error!("client call error: {:?}", e),
         };
+        */
 
         Ok(Self {
             service: SysCallsService::<MitosisSysCallHandler>::new()?,

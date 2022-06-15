@@ -10,13 +10,13 @@ STR_CHILD_HOSTS='val07'
 
 #USE_PROXY_COMMAND=false # true or false
 USE_PROXY_COMMAND=true # true or false
+FILTER=
 
 ## Plot related
 PLOT=1 # If plot the target figure
 
 ### end of configurations ###
 
-FILTER=
 
 
 STR_ALL_HOSTS='${PARENT_HOST}',${STR_CHILD_HOSTS}
@@ -40,7 +40,9 @@ template_args="{\
 template-build-exp=templates-build/template-build-exp.toml
 template-clean=templates-build/template-clean.toml
 template-build-mitosis-prefetch=templates-build/template-build-mitosis-prefetch.toml
+template-build-mitosis-prefetch-profile=templates-build/template-build-mitosis-prefetch-profile.toml
 template-build-mitosis-cow=templates-build/template-build-mitosis-cow.toml
+template-build-mitosis-cow-profile=templates-build/template-build-mitosis-cow-profile.toml
 template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
 template-build-mitosis-eager-resume=templates-build/template-build-mitosis-eager-resume.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
@@ -61,6 +63,15 @@ template-run-micro-startup-execution=templates-run/micro-c/template-run-micro-st
 template-run-micro-execution=templates-run/micro-c/template-run-micro-execution.toml
 template-run-micro-prepare=templates-run/micro-c/template-run-micro-prepare.toml
 template-run-micro-touch-ratio=templates-run/micro-c/template-run-micro-touch-ratio.toml
+
+template-run-func-peak-lean-container=templates-run/many-to-one-func/template-lean-container.toml
+template-run-c-peak-lean-container=templates-run/many-to-one-c/template-lean-container.toml
+template-run-c-touch-ratio=templates-run/many-to-one-c/template-touch-ratio.toml
+template-run-empty-fork=templates-run/execution-peak/empty-fork.toml
+template-run-peak-function-exec=templates-run/execution-peak/peak-function-execution.toml
+template-run-peak-c-exec=templates-run/execution-peak/peak-c-execution.toml
+template-run-peak-nil-rpc=templates-run/execution-peak/peak-nil-rpc.toml
+
 
 run_out=out
 build_out=run-build.toml
@@ -112,7 +123,31 @@ micro-c-startup-execution:
 micro-touch-ratio:
 	$(call runner, $(template-run-micro-touch-ratio), ${run_out}/$@)
 
+## Thpt evaluations
 
+peak-func-lean-container:
+	$(call runner, $(template-run-func-peak-lean-container), ${run_out}/$@)
+
+peak-c-lean-container:
+	$(call runner, $(template-run-c-peak-lean-container), ${run_out}/$@)
+
+peak-c-touch-ratio:
+	$(call runner, $(template-run-c-touch-ratio), ${run_out}/$@)
+
+
+peak-empty-fork:
+	$(call runner, $(template-run-empty-fork), ${run_out}/$@)
+
+## Raw running function execution peak
+peak-function-exec:
+	$(call runner, $(template-run-peak-function-exec), ${run_out}/$@)
+## Raw running C++ micro execution peak
+peak-c-exec:
+	$(call runner, $(template-run-peak-c-exec), ${run_out}/$@)
+
+
+peak-nil-rpc:
+	$(call runner, $(template-run-peak-nil-rpc), ${run_out}/$@)
 
 ### End of tests
 
@@ -124,22 +159,35 @@ micro-function: micro-function-execution micro-function-prepare micro-function-s
 micro: micro-c micro-function
 
 micro-execution: micro-c-execution micro-function-execution
+
+
 # Built all cpp
 build-cpp:
 	$(call builder, $(template-build-exp))
 
-build-mitosis-prefetch: clean build-cpp
+build-mitosis-prefetch: build-cpp
 	$(call builder, $(template-build-mitosis-prefetch))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
-build-mitosis-cow: clean build-cpp
-	$(call builder, $(template-build-mitosis-cow))
+build-mitosis-prefetch-profile: build-cpp
+	$(call builder, $(template-build-mitosis-prefetch-profile))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
 
-build-mitosis-cache: clean build-cpp
+build-mitosis-cow: build-cpp
+	$(call builder, $(template-build-mitosis-cow))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
+
+build-mitosis-cow-profile: build-cpp
+	$(call builder, $(template-build-mitosis-cow-profile))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
+
+
+build-mitosis-cache: build-cpp
 	$(call builder, $(template-build-mitosis-cache))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
@@ -153,4 +201,3 @@ build-mitosis-eager-resume: build-cpp
 clean: gen-clean
 	pkill python; sleep 0.1
 	python bootstrap.py -f $(build_out) ${RUNNER_FLAG}
-

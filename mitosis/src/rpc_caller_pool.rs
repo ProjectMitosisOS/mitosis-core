@@ -59,6 +59,7 @@ impl<'a> CallerPool<'a> {
         &'a mut self,
         idx: usize,
         session_id: usize,
+        my_session_id : usize,
         meta: UDHyperMeta,
     ) -> core::option::Option<()> {
         // fetch by sidr connect
@@ -71,7 +72,7 @@ impl<'a> CallerPool<'a> {
         let caller = self.get_caller(idx)?;
         if caller.session_connected(session_id) {
             crate::log::warn!("The session {} has already connected.", session_id);
-            return Some(());
+            return None;
         }
 
         let client_session = caller.get_transport_mut().create(meta).unwrap();
@@ -80,6 +81,7 @@ impl<'a> CallerPool<'a> {
         caller
             .connect(
                 session_id,
+                my_session_id,
                 client_session,
                 UDHyperMeta {
                     gid: my_gid,

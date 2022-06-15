@@ -4,28 +4,33 @@
 [[template.pass]]
 role = 'parent'
 path = ''
-cmd = 'make insmod'
+cmd = 'make insmod ID=0'
+order = 0
 
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'make insmod'
+cmd = 'make insmod ID=${@incr}'
+order = 0
 
 [[template.pass]]
 role = 'child'
 path = 'exp'
-cmd = 'sleep 1 && ./connector -gid=${parent_gid} -mac_id=${@incr} -nic_id=0'
+cmd = './connector -gid=${parent_gid} -mac_id=0 -nic_id=0'
+order = 1
 
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
 #cmd = 'sleep 1 && ./bench_workingset --working_set=${working_set} --whether_prepare=1 -exclude_execution=1 --profile=0 --touch_ratio=${touch_ratio}'
 cmd = 'cd ${micro_func_name} && python function.py -working_set=${working_set} -pin=1 -profile=0 -handler_id=73 -exclude_execution=1'
+order = 2
 
 [[template.pass]]
 role = 'child'
 path = ''
-cmd = 'sleep 3 && make bench_lean_mitosis mac_id=${@incr} LEAN_APP_NAME=simple_child'
+cmd = 'make bench_lean_mitosis mac_id=0 LEAN_APP_NAME=simple_child'
+order = 3
 
 [template.placeholder]
 working_set = [1048576,
