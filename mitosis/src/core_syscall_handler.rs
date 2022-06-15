@@ -31,6 +31,8 @@ struct ResumeDataStruct {
 }
 
 impl ResumeDataStruct {
+    /// Count the number of entries in my page table
+    #[allow(dead_code)]
     pub fn pg_table_entry_cnt(&self) -> usize {
         self.descriptor.page_table.len()
     }
@@ -54,24 +56,32 @@ impl Default for CallerData {
     }
 }
 
+use core::sync::atomic::AtomicUsize;
+
 /// The MitosisSysCallService has the following two jobs:
 ///  1. handle up parent/child system calls
 ///  2. register the corresponding pagefault handler
+#[allow(dead_code)]
 pub struct MitosisSysCallHandler {
     caller_status: CallerData,
     // structure to encapsulate caller's status
     my_file: *mut crate::bindings::file,
+
+    resume_counter: AtomicUsize,
 }
 
 impl Drop for MitosisSysCallHandler {
     fn drop(&mut self) {
+        #[cfg(feature = "resume-profile")]
         {
             let pg_fault_sz = self.fault_page_size() / 1024;
             let meta_workingset_sz = self.meta_workingset_size() / 1024;
-            crate::log::debug!(
-                "workingset size {} KB, page fault size {} KB",
+            let fetch_page_sz = self.fetched_page_size() / 1024;
+            crate::log::info!(
+                "workingset size {} KB, page fault size {} KB, fetch page size {} KB",
                 meta_workingset_sz,
-                pg_fault_sz
+                pg_fault_sz,
+                fetch_page_sz
             );
         }
         self.cache_my_pt();
@@ -135,6 +145,7 @@ impl FileOperations for MitosisSysCallHandler {
         Ok(Self {
             my_file: file as *mut _,
             caller_status: Default::default(),
+            resume_counter: AtomicUsize::new(0),
         })
     }
 
@@ -146,7 +157,7 @@ impl FileOperations for MitosisSysCallHandler {
         match cmd {
             LibMITOSISCmd::Nil => 0, // a nill core do nothing
             LibMITOSISCmd::Prepare => self.syscall_prepare(arg, false),
-            LibMITOSISCmd::ResumeLocal => self.syscall_local_resume(arg),
+            LibMITOSISCmd::ResumeLocal => unimplemented!(),
             LibMITOSISCmd::ResumeRemote => {
                 let mut req: resume_remote_req_t = Default::default();
                 unsafe {
@@ -159,13 +170,13 @@ impl FileOperations for MitosisSysCallHandler {
                 let (mac_id, handler_id) = (req.machine_id, req.handler_id);
                 if cfg!(feature = "resume-profile") {
                     let mut profile = crate::KRdmaKit::Profile::new();
-                    let res = self.syscall_local_resume_w_rpc(mac_id as _, handler_id as _);
+                    let res = self.syscall_resume_w_rpc(mac_id as _, handler_id as _);
                     profile.tick_record(0);
                     profile.increase_op(1);
                     profile.report(1);
                     res
                 } else {
-                    self.syscall_local_resume_w_rpc(mac_id as _, handler_id as _)
+                    self.syscall_resume_w_rpc(mac_id as _, handler_id as _)
                 }
             }
             LibMITOSISCmd::Connect => {
@@ -194,6 +205,18 @@ impl FileOperations for MitosisSysCallHandler {
                 self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
             }
             LibMITOSISCmd::PreparePing => self.syscall_prepare(arg, true),
+            LibMITOSISCmd::NilRPC => {
+                let mut req: resume_remote_req_t = Default::default();
+                unsafe {
+                    _copy_from_user(
+                        (&mut req as *mut resume_remote_req_t).cast::<c_void>(),
+                        arg as *mut c_void,
+                        core::mem::size_of_val(&req) as u64,
+                    )
+                };
+                let (mac_id, handler_id) = (req.machine_id, req.handler_id);
+                self.syscall_nil_rpc(mac_id as _, handler_id as _)
+            }
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -278,6 +301,7 @@ impl MitosisSysCallHandler {
     /// This function is only used for testing
     /// will be removed in the future
     #[inline]
+    #[allow(dead_code)]
     fn syscall_local_resume(&mut self, _handler_id: c_ulong) -> c_long {
         unimplemented!();
         /*
@@ -306,13 +330,19 @@ impl MitosisSysCallHandler {
 
     /// This is just a sample test function
     #[inline]
-    fn syscall_local_resume_w_rpc(&mut self, machine_id: c_ulong, handler_id: c_ulong) -> c_long {
+    fn syscall_resume_w_rpc(&mut self, machine_id: c_ulong, handler_id: c_ulong) -> c_long {
         if self.caller_status.resume_related.is_some() {
             crate::log::error!("We don't support multiple resume yet. ");
             return -1;
         }
 
+        //        self.resume_counter
+        //            .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+
+        // let cpu_id = 0;
         let cpu_id = crate::get_calling_cpu_id();
+        assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref()) });
+
         // send an RPC to the remote to query the descriptor address
         let caller = unsafe {
             crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
@@ -328,15 +358,31 @@ impl MitosisSysCallHandler {
             )
         };
 
-        caller
-            .sync_call::<usize>(
-                remote_session_id,
-                crate::rpc_handlers::RPCId::Query as _,
-                handler_id as _,
+        let my_session_id = unsafe {
+            crate::startup::calculate_session_id(
+                *crate::mac_id::get_ref(),
+                cpu_id,
+                *crate::max_caller_num::get_ref(),
             )
-            .unwrap();
+        };
 
-        let mut timeout_caller = TimeoutWRef::new(caller, TIMEOUT_USEC);
+        let res = caller.sync_call::<usize>(
+            remote_session_id,
+            my_session_id,
+            crate::rpc_handlers::RPCId::Query as _,
+            handler_id as _,
+        );
+
+        if res.is_err() {
+            crate::log::error!("failed to call {:?}", res);
+            crate::log::info!(
+                "sanity check pending reqs {:?}",
+                caller.get_pending_reqs(remote_session_id)
+            );
+            return -1;
+        };
+
+        let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
 
         use crate::rpc_handlers::DescriptorLookupReply;
         use os_network::serialize::Serialize;
@@ -355,6 +401,8 @@ impl MitosisSysCallHandler {
                             crate::log::error!("failed to lookup handler id: {:?}", handler_id);
                             return -1;
                         }
+                        #[cfg(feature = "resume-profile")]
+                        crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
 
                         // fetch the descriptor with one-sided RDMA
                         let desc_buf = RemotePagingService::remote_descriptor_fetch(
@@ -370,14 +418,14 @@ impl MitosisSysCallHandler {
 
                         // deserialize
                         let des = {
-                            /*  legacy version
-                            let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
-                            if des.is_none() {
-                                crate::log::error!("failed to deserialize descriptor");
-                                return -1;
-                            }
-                            des.unwrap().to_descriptor()
-                            */
+                            // legacy version
+                            // let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
+                            // if des.is_none() {
+                            //     crate::log::error!("failed to deserialize descriptor");
+                            //     None
+                            // } else {
+                            //     Some(des.unwrap().to_descriptor())
+                            // }
 
                             // optimized version
                             ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
@@ -418,6 +466,7 @@ impl MitosisSysCallHandler {
                             // access info cannot failed to create
                             access_info: access_info.unwrap(),
                         });
+
                         return 0;
                     }
                     None => {
@@ -440,6 +489,7 @@ impl MitosisSysCallHandler {
         gid: &alloc::string::String,
         nic_idx: usize,
     ) -> c_long {
+        crate::log::debug!("connect remote machine id: {}", machine_id);
         let info = HandlerConnectInfo::create(gid, nic_idx as _, nic_idx as _);
         match probe_remote_rpc_end(machine_id, info) {
             Some(_) => {
@@ -451,6 +501,68 @@ impl MitosisSysCallHandler {
                 -1
             }
         }
+    }
+
+    #[inline]
+    fn syscall_nil_rpc(&mut self, machine_id: c_ulong, handler_id: c_ulong) -> c_long {
+        let cpu_id = crate::get_calling_cpu_id();
+        assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref()) });
+
+        // send an RPC to the remote to query the descriptor address
+        let caller = unsafe {
+            crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
+                .expect("the caller should be properly initialized")
+        };
+
+        // ourself must have been connected in the startup process
+        let remote_session_id = unsafe {
+            crate::startup::calculate_session_id(
+                machine_id as _,
+                cpu_id,
+                *crate::max_caller_num::get_ref(),
+            )
+        };
+
+        let my_session_id = unsafe {
+            crate::startup::calculate_session_id(
+                *crate::mac_id::get_ref(),
+                cpu_id,
+                *crate::max_caller_num::get_ref(),
+            )
+        };
+
+        let res = caller.sync_call::<usize>(
+            remote_session_id,
+            my_session_id,
+            crate::rpc_handlers::RPCId::Nil as _,
+            handler_id as _,
+        );
+        if res.is_err() {
+            crate::log::error!("failed to call {:?}", res);
+            crate::log::info!(
+                "sanity check pending reqs {:?}",
+                caller.get_pending_reqs(remote_session_id)
+            );
+            return -1;
+        };
+
+        let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
+
+        use crate::rpc_handlers::DescriptorLookupReply;
+        use os_network::serialize::Serialize;
+        let _reply = match block_on(&mut timeout_caller) {
+            Ok((msg, reply)) => {
+                // first re-purpose the data
+                caller
+                    .register_recv_buf(msg)
+                    .expect("register msg buffer cannot fail");
+                return 0;
+            }
+            Err(e) => {
+                crate::log::error!("client receiver reply err {:?}", e);
+                return -1;
+            }
+        };
     }
 }
 
@@ -567,7 +679,7 @@ impl MitosisSysCallHandler {
                     }
                 }
 
-                crate::log::info!(
+                crate::log::debug!(
                     "[handle_page_fault] Failed to read the remote page, fault addr: 0x{:x}",
                     fault_addr
                 );
@@ -583,15 +695,26 @@ impl MitosisSysCallHandler {
     }
 
     /// Page fault size (in Bytes)
+    #[allow(dead_code)]
     #[inline]
     fn fault_page_size(&self) -> usize {
         self.caller_status.fault_page_cnt * 4096 as usize
     }
 
+    #[allow(dead_code)]
     #[inline]
     fn meta_workingset_size(&self) -> usize {
         if let Some(meta) = self.caller_status.resume_related.as_ref() {
             meta.pg_table_entry_cnt() * 4096 as usize
+        } else {
+            0
+        }
+    }
+
+    #[cfg(feature = "resume-profile")]
+    fn fetched_page_size(&self) -> usize {
+        if let Some(meta) = self.caller_status.resume_related.as_ref() {
+            meta.descriptor.remote_fetched_page_count * 4096 as usize
         } else {
             0
         }

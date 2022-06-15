@@ -38,20 +38,20 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     unsafe { input.memcpy_deserialize(&mut key) };
 
     let process_service = unsafe { crate::get_sps_mut() };
-    let addr = process_service.query_descriptor_buf(key);
+    let buf = process_service.query_descriptor_buf(key);
 
-    if addr.is_none() {
+    if buf.is_none() {
         crate::log::error!("empty addr, key:{}!", key);
 
         // send an error reply
         return 0; // a null reply indicate that the we don't have the key
     }
 
-    let reply = match addr {
-        Some(addr) => {
+    let reply = match buf {
+        Some((addr, len)) => {
             DescriptorLookupReply {
                 pa: addr.get_pa(),
-                sz: addr.len(),
+                sz: len,
                 ready: true,
             }
         }

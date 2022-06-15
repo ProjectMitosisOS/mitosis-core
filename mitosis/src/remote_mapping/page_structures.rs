@@ -13,6 +13,8 @@ pub use x86_64::{
     VirtAddr,
 };
 
+pub const K_MAGIC_IN_PREFETCH: u64 = 1;
+
 /// We cannot use the PhysAddr in x86_64
 /// This is because it will raise a
 /// "physical addresses must not have any bits in the range 52 to 64 set" error
@@ -52,8 +54,20 @@ impl Drop for PageTable {
                     }
                 }
             }
-            // last page level do nothing
-            None => {}
+
+            None => {
+                for entry in self.iter() {
+                    if *entry != 0 {
+                        let physaddr = PhysAddr::new(*entry);
+                        assert_ne!(*entry, K_MAGIC_IN_PREFETCH);
+                        if physaddr.is_prefetch() {
+                            // free the page
+                            let page = PhysAddr::decode(*entry as _) as *mut crate::bindings::page;
+                            unsafe { crate::bindings::pmem_free_page(page) };
+                        }
+                    }
+                }
+            }
         }
     }
 }

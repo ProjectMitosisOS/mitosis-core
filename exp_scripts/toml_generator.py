@@ -76,6 +76,7 @@ def handle_template(config):
         name_mat.append(names)
 
     for (j, key) in enumerate(placeholder[keyword_place]):
+        key = str(key).replace('/', '-').replace('_', '-')
         fname = '{}/run-{}.toml'.format(str(out_dir), str(key))
         out_dict = get_intersection(dict(config['global']).copy(), template_dict)
         out_dict['pass'] = []
@@ -85,9 +86,13 @@ def handle_template(config):
                 item['host']
             for (k, host) in enumerate(item['host']):
                 key = '${@incr}'
+                order = 0 if 'order' not in item.keys() else item['order']
+                loop = 1 if 'loop' not in item.keys() else item['loop']
+
                 out_dict['pass'].append({
                     'host': host, 'path': template_dict['path'] + '/' + item['path'],
-                    'cmd': cmd if key not in cmd else cmd.replace(key, str(1 + k))
+                    'cmd': cmd if key not in cmd else cmd.replace(key, str(1 + k)),
+                    'order': order, 'loop': loop
                 })
         with open(fname, 'w') as f:
             toml.dump(out_dict, f)

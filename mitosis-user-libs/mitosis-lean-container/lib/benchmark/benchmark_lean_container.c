@@ -122,6 +122,7 @@ int main(int argc, char** argv) {
         clock_gettime(CLOCK_REALTIME, &now);
         count++;
         report(&start, &now);
+        break;
         elapsed_time = get_passed_nanosecond(&start, &now);
         if (elapsed_time > benchmark_time_nanoseconds) {
             break;

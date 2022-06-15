@@ -1,6 +1,8 @@
 KMS_DIR=mitosis-kms
 KMODULE_NAME=fork
 
+ID=0
+
 # Build kernel module file
 # e.g. make km KMODULE_NAME=fork
 drop_caches:
@@ -10,7 +12,7 @@ km:
 	cd ${KMS_DIR} ; python build.py ${KMODULE_NAME}
 
 insmod:
-	sudo rmmod ${KMODULE_NAME} ; sudo insmod ${KMS_DIR}/${KMODULE_NAME}.ko
+	sudo rmmod ${KMODULE_NAME} ; sudo insmod ${KMS_DIR}/${KMODULE_NAME}.ko mac_id=${ID}$
 
 rmmod:
 	sudo rmmod ${KMODULE_NAME}
@@ -39,7 +41,7 @@ unmount_dev:
 	sudo python3 ${LEAN_CONTAINER_DIR}/mount_device.py --rootfs ${ROOTFS_DIR} --device ${DEVICE} --unmount
 
 clean_fs: unmount_dev
-	sudo rm -r ${ROOTFS_DIR}
+	-sudo rm -r ${ROOTFS_DIR}
 
 
 #CONTAINER_NAME=my_test_container
@@ -54,11 +56,15 @@ build_lean_lib:
 
 LEAN_BENCH_EXE_PATH=exp/bench_lean_container
 BENCH_SEC=5
-name=bench_lean_container
 command="lean_child"
+empty_process=0
 
 mac_id=1
 handler_id=73
 
 bench_lean_mitosis:
-	sudo ${LEAN_BENCH_EXE_PATH} ${BENCH_SEC} ${name} ${ROOTFS_ABS_PATH} ${command} ${mac_id} ${handler_id}
+	sudo ${LEAN_BENCH_EXE_PATH} ${BENCH_SEC} ${empty_process} ${ROOTFS_ABS_PATH} ${command} ${mac_id} ${handler_id}
+
+func_args=
+bench_func_exe:
+	sudo ${LEAN_BENCH_EXE_PATH} ${BENCH_SEC} ${empty_process} ${ROOTFS_ABS_PATH} ${command} ${func_args}

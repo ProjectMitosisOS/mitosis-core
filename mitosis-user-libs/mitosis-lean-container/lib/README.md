@@ -10,5 +10,5 @@ cd build
 cmake ..
 make
 sudo ./test_lean_container_template
-sudo ./test_setup_lean_container
+sudo ./test_process
 ```

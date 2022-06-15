@@ -42,10 +42,17 @@ where
     SS: RPCConn,
     SS::ReqPayload: ToBytes,
 {
+    pub fn get_pending_reqs(&self, session_id: usize) -> core::option::Option<usize> {
+        self.connected_sessions
+            .get(&session_id)
+            .map(|(s, _)| s.get_pending_reqs())
+    }
+
     /// Note, this call should use Future to wait
     pub fn sync_call<Args>(
         &mut self,
         session_id: usize,
+        my_session_id : usize,
         rpc_id: usize,
         arg: Args,
     ) -> Result<(), SS::IOResult> {
@@ -53,10 +60,23 @@ where
             .connected_sessions
             .get_mut(&session_id)
             .expect("failed to get session");
-        let req_sz = header_factory::CallStubFactory::new(session_id, rpc_id)
+
+        let signal_flag = session.get_pending_reqs() == 0;
+        let req_sz = header_factory::CallStubFactory::new(my_session_id, rpc_id)
             .generate(&arg, msg.get_bytes_mut())
             .unwrap();
-        session.post(msg, req_sz, true)
+        #[cfg(feature = "resume-profile")]
+        crate::log::info!("rpc req size:{}", req_sz);
+        session.post(msg, req_sz, signal_flag)?;
+
+        // 16 is really really a magic number
+        if session.get_pending_reqs() > 8 {    
+            let res = crate::block_on(session); // should never fail
+            assert!(res.is_ok());
+            assert!(session.get_pending_reqs() == 0);
+        }        
+
+        Ok(())
     }
 
     pub fn session_connected(&self, session_id: usize) -> bool {
@@ -76,6 +96,7 @@ where
     pub fn connect(
         &mut self,
         session_id: usize,
+        my_session_id : usize,
         mut s: SS,
         meta: SS::HyperMeta,
     ) -> Result<(), SS::IOResult>
@@ -83,7 +104,7 @@ where
         SS::ReqPayload: ToBytes,
     {
         let mut msg_buf = SS::ReqPayload::create(R::MTU, 0);
-        let req_sz = ConnectStubFactory::new(session_id)
+        let req_sz = ConnectStubFactory::new(my_session_id)
             .generate(&meta, msg_buf.get_bytes_mut())
             .unwrap();
         s.post(&msg_buf, req_sz, true)?;

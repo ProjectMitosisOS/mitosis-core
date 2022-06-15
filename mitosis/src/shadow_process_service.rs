@@ -21,6 +21,7 @@ struct ProcessBundler {
     #[allow(dead_code)]
     process: ShadowProcess,
     serialized_buf: RMemory,
+    serialized_buf_len: usize,
 
     #[allow(dead_code)] // place holder to prevent NIC release the resources
     bound_dc_targets: Vec<Arc<DCTarget>>,
@@ -28,9 +29,10 @@ struct ProcessBundler {
 
 impl ProcessBundler {
     fn new(process: ShadowProcess, targets: Arc<DCTarget>) -> Self {
+        let len = process.get_descriptor_ref().serialization_buf_len();
         crate::log::debug!(
             "Alloc serialization buf sz {} KB",
-            process.get_descriptor_ref().serialization_buf_len() / 1024
+            len / 1024
         );
         let mut buf = unsafe { get_mem_pool_mut() }.pop_one();
         crate::log::debug!("serialization buf allocation done!");
@@ -46,6 +48,7 @@ impl ProcessBundler {
         Self {
             process: process,
             serialized_buf: buf,
+            serialized_buf_len: len,
             bound_dc_targets: bound_targets,
         }
     }
@@ -66,10 +69,10 @@ impl ShadowProcessService {
         }
     }
 
-    pub fn query_descriptor_buf(&self, key: usize) -> core::option::Option<&RMemory> {
+    pub fn query_descriptor_buf(&self, key: usize) -> core::option::Option<(&RMemory, usize)> {
         self.registered_processes
             .get(&key)
-            .map(|s| &s.serialized_buf)
+            .map(|s| (&s.serialized_buf, s.serialized_buf_len))
     }
 
     pub fn query_descriptor(

@@ -10,7 +10,7 @@ cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod'
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
-cmd = 'sleep 1; for i in seq 1 3; do for i in seq 1 3 ;do cd ${micro_func_name} && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="${micro_func_name}";cd ../../../;make insmod;cd exp/fork-functions ;done; done'
+cmd = 'for i in seq 1 3; do for i in seq 1 3 ;do cd ${micro_func_name} && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="${micro_func_name}";cd ../../../;make insmod;cd exp/fork-functions ;done; done'
 
 
 [template.placeholder]

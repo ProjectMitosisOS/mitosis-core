@@ -5,6 +5,7 @@
 role = 'builder'
 path = ''
 cmd = 'source $HOME/.cargo/env; cp mitosis-kms/${Kbuild} mitosis-kms/Kbuild && make km ; make insmod'
+order = 0
 
 [template.placeholder]
 name = ["build"]
