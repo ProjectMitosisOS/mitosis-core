@@ -1,0 +1,36 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod ID=0'
+order = 0
+
+# here is the prepare part
+[[template.pass]]
+role = 'parent'
+path = 'exp/fork-functions'
+cmd = 'cd ${micro_func_name} && python function.py'
+order = 1
+
+# for children to connect
+[[template.pass]]
+role = 'parent'
+path = 'exp'
+cmd = './connector -gid=${parent_gid} -mac_id=0 -nic_id=0'
+order = 1
+
+# here we should do nothing? Because we just need another lb to send rpc requests
+# just wait here
+[[template.pass]]
+role = 'parent'
+path = 'exp'
+cmd = 'sleep 800'
+order=2
+
+[template.placeholder]
+micro_func_name = ["image"]
+parent_gid = "TBD"
+# loop_cmd = "./simple_child -mac_id=0"
+#loop_cmd="echo 3 | sudo tee /proc/sys/vm/drop_caches;./simple_child -mac_id=0"
