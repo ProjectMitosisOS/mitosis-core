@@ -17,6 +17,7 @@ parser.add_argument("-pin", type=int, default=0, help="whether pin the descripto
 parser.add_argument("-touch_ratio", type=int, default=100, help="child touch ratio")
 parser.add_argument("-app_name", type=str, default="micro", help="application name")
 parser.add_argument("-run_once", type=int, default=0, help="If only run the self function")
+parser.add_argument("-hang", type=int, default=0, help="If hanging the application")
 args = parser.parse_args()
 
 handler_id = args.handler_id
@@ -27,6 +28,7 @@ app_name = args.app_name
 touch_ratio = args.touch_ratio
 ret_imm = args.exclude_execution != 0
 run_once = args.run_once != 0
+hanged = args.hang != 0
 ret = ret_imm == 1
 
 def mitosis_bench(handler):
@@ -56,9 +58,13 @@ def mitosis_bench(handler):
         if run_once:
             os._exit(0)
         result = handler(*args, **kwargs)
+        if hanged:
+            time.sleep(1)
         prepare(handler_id)
         if not ret_imm:
             result = handler(*args, **kwargs)
+        if hanged:
+            time.sleep(10)
         os._exit(0)
 
     return wrapper

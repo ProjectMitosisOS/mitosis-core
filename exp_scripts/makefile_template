@@ -54,6 +54,7 @@ template-build-lean-container=templates-build/template-build-lean-container.toml
 template-run-micro-func-startup=templates-run/micro-func/template-run-micro-startup.toml
 template-run-micro-func-startup-execution=templates-run/micro-func/template-run-micro-startup-execution.toml
 template-run-micro-func-execution=templates-run/micro-func/template-run-micro-execution.toml
+template-run-micro-func-execution-hanged=templates-run/micro-func/template-run-micro-execution-hanged.toml
 template-run-micro-func-prepare=templates-run/micro-func/template-run-micro-prepare.toml
 
 
@@ -91,7 +92,7 @@ endef
 define runner
 	rm -rf $(2)
 	python toml_generator.py -f $(1) -o $(2) -d ${template_args}
-	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
+#	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
 endef
 
 
@@ -105,6 +106,10 @@ micro-function-startup-execution:
 
 micro-function-execution:
 	$(call runner, $(template-run-micro-func-execution), ${run_out}/$@)
+
+micro-function-execution-hanged:
+	$(call runner, $(template-run-micro-func-execution-hanged), ${run_out}/$@)
+
 micro-function-prepare:
 	$(call runner, $(template-run-micro-func-prepare), ${run_out}/$@)
 
