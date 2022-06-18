@@ -28,16 +28,16 @@ order = 2
 [[template.pass]]
 role = 'child'
 path = 'exp'
-cmd = './simple_child -mac_id=0'
+cmd = 'free -m; ./simple_child -mac_id=0'
 order=3
 
 [[template.pass]]
 role = 'child'
 path = 'exp_scripts'
-cmd = 'sleep 3; ./mmcount.sh'
+cmd = 'sleep 2; free -m;'
 order=3
 
 [template.placeholder]
-micro_func_name = ["micro", "json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
+micro_func_name = ["json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
 #loop_cmd="echo 3 | sudo tee /proc/sys/vm/drop_caches;./simple_child -mac_id=0"
 
