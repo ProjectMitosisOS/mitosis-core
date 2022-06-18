@@ -30,8 +30,8 @@ pub mod remote_mapping;
 
 pub const MAX_RPC_THREADS_CNT: usize = 10;
 
-// Prefetch page count (fetch by async operation). The real fetched page count would be `1 + PREFETCH_STEP`
-pub const PREFETCH_STEP: usize = 1;
+// Prefetch page count (fetch by async operation). The real fetched page count would be `PREFETCH_STEP`
+pub const PREFETCH_STEP: usize = 2;
 
 pub fn get_calling_cpu_id() -> usize {
     unsafe { crate::bindings::pmem_get_current_cpu() as _ }
