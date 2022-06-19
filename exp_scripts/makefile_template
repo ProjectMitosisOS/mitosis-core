@@ -55,6 +55,8 @@ template-run-micro-func-startup=templates-run/micro-func/template-run-micro-star
 template-run-micro-func-startup-execution=templates-run/micro-func/template-run-micro-startup-execution.toml
 template-run-micro-func-execution=templates-run/micro-func/template-run-micro-execution.toml
 template-run-micro-func-execution-hanged=templates-run/micro-func/template-run-micro-execution-hanged.toml
+template-run-micro-func-execution-hanged-cache=templates-run/micro-func/template-run-micro-execution-hanged-cache.toml
+
 template-run-micro-func-prepare=templates-run/micro-func/template-run-micro-prepare.toml
 
 
@@ -109,6 +111,9 @@ micro-function-execution:
 
 micro-function-execution-hanged:
 	$(call runner, $(template-run-micro-func-execution-hanged), ${run_out}/$@)
+
+micro-function-execution-hanged-cache:
+	$(call runner, $(template-run-micro-func-execution-hanged-cache), ${run_out}/$@)	
 
 micro-function-prepare:
 	$(call runner, $(template-run-micro-func-prepare), ${run_out}/$@)
