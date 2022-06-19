@@ -727,6 +727,7 @@ impl MitosisSysCallHandler {
         #[cfg(feature = "page-cache")]
         if let Some(resume_related) = self.caller_status.resume_related.as_ref() {
             // copy to the kernel cache
+            
             let pg_table = resume_related.descriptor.page_table.copy();
             unsafe {
                 crate::get_pt_cache_mut().insert(
@@ -734,7 +735,7 @@ impl MitosisSysCallHandler {
                     resume_related.handler_id,
                     pg_table,
                 );
-            }
+            } 
         }
     }
 }
