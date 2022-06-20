@@ -340,7 +340,11 @@ impl MitosisSysCallHandler {
         //            .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
 
         // let cpu_id = 0;
-        let cpu_id = crate::get_calling_cpu_id();
+        let cpu_id = crate::get_calling_cpu_id();        
+
+        // hold the lock on this CPU
+        unsafe { crate::global_locks::get_ref()[cpu_id].lock() };
+
         assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref()) });
 
         // send an RPC to the remote to query the descriptor address
@@ -379,6 +383,7 @@ impl MitosisSysCallHandler {
                 "sanity check pending reqs {:?}",
                 caller.get_pending_reqs(remote_session_id)
             );
+            unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
             return -1;
         };
 
@@ -433,6 +438,7 @@ impl MitosisSysCallHandler {
 
                         if des.is_none() {
                             // crate::log::error!("failed to deserialize the child descriptor");
+                            unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
                             return -1;
                         }
 
@@ -443,6 +449,7 @@ impl MitosisSysCallHandler {
                         //AccessInfo::new_from_cache(des.machine_info.mac_id, &des.machine_info);
                         if access_info.is_none() {
                             crate::log::error!("failed to create access info");
+                            unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
                             return -1;
                         }
 
@@ -468,10 +475,11 @@ impl MitosisSysCallHandler {
                             // access info cannot failed to create
                             access_info: access_info.unwrap(),
                         });
-
+                        unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
                         return 0;
                     }
                     None => {
+                        unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
                         crate::log::error!("Deserialize error");
                         return -1;
                     }
@@ -479,6 +487,7 @@ impl MitosisSysCallHandler {
             }
             Err(e) => {
                 crate::log::error!("client receiver reply err {:?}", e);
+                unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
                 return -1;
             }
         };

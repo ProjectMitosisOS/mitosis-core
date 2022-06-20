@@ -40,6 +40,8 @@ pub fn get_calling_cpu_id() -> usize {
 declare_global!(mac_id, usize);
 declare_global!(max_caller_num, usize);
 
+declare_global!(global_locks, alloc::vec::Vec<crate::linux_kernel_module::mutex::LinuxMutex<()>>);
+
 declare_global!(max_cluster_size, usize);
 
 // FIXME: currently, we assume that all machines in the cluster has the
