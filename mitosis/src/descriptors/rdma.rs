@@ -21,6 +21,8 @@ pub struct RDMADescriptor {
     pub rkey: u32,
     pub dct_key: usize,
     pub dct_num: u32,
+
+    pub mac_id : usize, 
 }
 
 use alloc::sync::Arc;
@@ -43,6 +45,8 @@ impl RDMADescriptor {
             rkey: key,
             dct_key: target.get_dc_key(),
             dct_num: target.get_dct_num(),
+
+            mac_id : unsafe { *crate::mac_id::get_ref() }
         };
 
         Some((target, my))

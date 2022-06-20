@@ -2,6 +2,8 @@ use alloc::vec::Vec;
 
 use os_network::rdma::dc::*;
 
+use hashbrown::HashMap;
+
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
@@ -11,6 +13,44 @@ pub struct DCPool<'a> {
     nic_idxs: Vec<usize>,
     // TODO: should initialize a DC Target pool
     // a simple DC key cannot protect all the stuffs in a fine-grained way
+}
+
+pub struct AccessInfoPool {
+    pool: Vec<HashMap<usize, crate::remote_paging::AccessInfo>>,
+}
+
+// TODO: currently the mapping is not done good
+impl AccessInfoPool {
+    pub fn new(sz: usize) -> Self {
+        let mut res = Vec::new();
+        for _ in 0..sz {
+            res.push(Default::default());
+        }
+
+        Self { pool: res }
+    }
+
+    pub fn query(
+        &self,
+        idx: usize,
+        id: usize,
+    ) -> core::option::Option<&crate::remote_paging::AccessInfo> {
+        self.pool[idx].get(&id)
+    }
+
+    pub fn insert(&mut self, idx: usize, id: usize, access: crate::remote_paging::AccessInfo) {
+        self.pool[idx].insert(id, access);
+    }
+}
+
+impl Drop for AccessInfoPool {
+    fn drop(&mut self) {
+        for pool in &mut self.pool {
+            for (_, v) in pool {
+                unsafe { v.ah.free() };
+            }
+        }
+    }
 }
 
 impl<'a> DCPool<'a> {
@@ -27,7 +67,7 @@ impl<'a> DCPool<'a> {
     }
 
     /// Pop the DCQP and the lkey corresponding to it
-    /// This function is not **thread-safe**, 
+    /// This function is not **thread-safe**,
     /// must be used by a single thread / protected by a mutex
     #[inline]
     pub fn pop_one_qp(&mut self) -> core::option::Option<(DCConn<'a>, u32)> {
@@ -53,10 +93,9 @@ impl<'a> DCPool<'a> {
 
     /// Arg: DCQP, its corresponding lkey
     #[inline]
-    pub fn push_one_qp(&mut self, qp: (DCConn<'a>, u32)) { 
+    pub fn push_one_qp(&mut self, qp: (DCConn<'a>, u32)) {
         self.pool.push(qp)
     }
-
 }
 
 use os_network::Factory;
