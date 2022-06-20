@@ -20,6 +20,10 @@ master_cli = TcpRpcClient(servers=["%s:%d" % (remote_host, 8090)])
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+# Trigger for first touch
+for i in range(process):
+    s.sendto(b"data", (remote_host, port + i))
+
 # start
 master_cli.call("tick_rule_start")
 
