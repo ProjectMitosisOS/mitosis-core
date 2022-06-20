@@ -31,7 +31,7 @@ impl linux_kernel_module::KernelModule for Module {
         let mut config: mitosis::Config = Default::default();
 
         config
-            .set_num_nics_used(2)
+            .set_num_nics_used(1)
             .set_rpc_threads(2)
             .set_init_dc_targets(12)
             .set_machine_id(id as usize);

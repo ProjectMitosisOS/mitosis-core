@@ -34,6 +34,7 @@ impl<'a> DCFactory<'a> {
 pub struct DCConn<'a> {
     dc: Arc<DC>,
     phantom: PhantomData<&'a ()>,
+    watermark : u64,
 }
 
 use core::sync::atomic::compiler_fence;
@@ -95,6 +96,7 @@ impl<'a> Clone for DCConn<'a> {
         Self { 
             dc : self.dc.clone(), 
             phantom: PhantomData,    
+            watermark : 0,
         }
     }
 }
@@ -113,6 +115,7 @@ impl crate::conn::Factory for DCFactory<'_> {
             Some(dc) => Ok(DCConn::<'_> {
                 dc: dc,
                 phantom: PhantomData,
+                watermark : 0,
             }),
             None => Err(super::ConnErr::CreateQPErr),
         }

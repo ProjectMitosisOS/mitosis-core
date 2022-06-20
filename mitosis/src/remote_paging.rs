@@ -13,12 +13,13 @@ pub const TIMEOUT_USEC: i64 = 5000; // 5ms
 
 /// Derive copy is rather dangerous
 /// This structure is aimed for global usage
-#[derive(Debug,Copy, Clone)]
+#[derive(Debug)]
 pub struct AccessInfo {
     pub(crate) ah: os_network::rdma::IBAddressHandler,
     pub(crate) rkey: u32,
     pub(crate) dct_num: u32,
     pub(crate) dct_key: usize,
+    pub(crate) mac_id : usize,
 }
 
 impl AccessInfo {
@@ -34,12 +35,19 @@ impl AccessInfo {
                 port_num: descriptor.port_num as _,
                 gid: descriptor.gid,
             },
-        )?;
+        );
+
+        if ah.is_none() { 
+            crate::log::error!("failed to create ah @ mac_id: {}", descriptor.mac_id);
+            return None;
+        }
+        
         Some(Self {
-            ah: ah,
+            ah: ah.unwrap(),
             rkey: descriptor.rkey,
             dct_num: descriptor.dct_num,
             dct_key: descriptor.dct_key,
+            mac_id : descriptor.mac_id,
         })
     }
 
@@ -47,12 +55,30 @@ impl AccessInfo {
     /// we first lookup the local CPU's cache
     /// If hit, we will directly return 
     pub fn new_from_cache(mac_id : usize,  des : &crate::descriptors::RDMADescriptor) -> core::option::Option<Self> { 
+        /* 
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
-        if unsafe { crate::get_accessinfo_service_mut().query(pool_idx, mac_id).is_none() } { 
-            let res = Self::new(des)?;
-            unsafe { crate::get_accessinfo_service_mut().insert(pool_idx, mac_id, res)};
+
+        // for sanity check
+        if mac_id >= 24 { 
+            crate::log::error!("fatal: error machine ID: {}", mac_id);
+            return None;
         }
-        unsafe { Some(*(crate::get_accessinfo_service_mut().query(pool_idx, mac_id)?)) }
+        if unsafe { crate::get_accessinfo_service_mut().query(pool_idx, mac_id).is_none() } { 
+            let res = Self::new(des);
+            if res.is_none() { 
+                crate::log::error!("Failed to create the RDMA address handler @ {} for {}", pool_idx, mac_id);
+                return None;
+            }
+            unsafe { crate::get_accessinfo_service_mut().insert(pool_idx, mac_id, res.unwrap())};
+        }
+        unsafe { Some(*(crate::get_accessinfo_service_mut().query(pool_idx, mac_id)?)) } */
+        unimplemented!();
+    }
+}
+
+impl Drop for AccessInfo { 
+    fn drop(&mut self) {
+        unsafe { self.ah.free() };
     }
 }
 
@@ -70,6 +96,7 @@ impl RemotePagingService {
         caller: &mut crate::rpc_caller_pool::UDCaller<'static>,
         session_id: usize,
     ) -> Result<RMemory, <os_network::rdma::dc::DCConn<'static> as Conn>::IOResult> {
+
         let descriptor_buf = RMemory::new(d.sz, 0);
         let point = caller.get_ss(session_id).unwrap().0.get_ss_meta();
 

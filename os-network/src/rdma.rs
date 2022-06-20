@@ -39,7 +39,6 @@ impl Clone for IBAddressHandler {
     }
 }
 
-
 impl IBAddressHandlerMeta {
     pub fn new(ctx: &RContext) -> Self {
         Self {

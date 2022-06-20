@@ -74,8 +74,8 @@ impl ChildDescriptor {
         let mut task = Task::new();
         // 1. Unmap origin vma regions
         task.unmap_self();
-        // let access_info = AccessInfo::new(&self.machine_info).unwrap();
-        let access_info = AccessInfo::new_from_cache(self.machine_info.mac_id, &self.machine_info).unwrap();
+        let access_info = AccessInfo::new(&self.machine_info).unwrap();
+        // let access_info = AccessInfo::new_from_cache(self.machine_info.mac_id, &self.machine_info).unwrap();
 
         // 2. Map new vma regions
         #[cfg(not(feature = "eager-resume"))]
@@ -565,8 +565,8 @@ impl os_network::serialize::Serialize for ChildDescriptor {
             unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.pop_one_qp())? };
 
         #[cfg(feature = "prefetch")]
-        //let access_info = AccessInfo::new(&machine_info);
-        let access_info = AccessInfo::new_from_cache(machine_info.mac_id, &machine_info);
+        let access_info = AccessInfo::new(&machine_info);
+        // let access_info = AccessInfo::new_from_cache(machine_info.mac_id, &machine_info);
         #[cfg(feature = "prefetch")]
         if access_info.is_none() {
             return None;
