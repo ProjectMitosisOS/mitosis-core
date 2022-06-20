@@ -33,7 +33,7 @@ cmd = 'make bench_lean_mitosis mac_id=0 LEAN_BENCH_EXE_PATH=${exe_name} LEAN_APP
 #path = 'exp'
 #cmd = './simple_child'
 order = 3
-loop = 48
+loop = 24
 
 [template.placeholder]
 micro_func_name = [
