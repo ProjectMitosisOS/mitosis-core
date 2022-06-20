@@ -1,7 +1,18 @@
+import argparse
 import sys
 import time
 
 import zerorpc
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-port", type=int, default=8080, help="rpc server port")
+parser.add_argument("-remote_host", type=str, default="localhost", help="rpc server host")
+parser.add_argument("-process", type=int, default=1, help="rpc parallel num")
+args = parser.parse_args()
+port = args.port
+process = args.process
+remote_host = args.remote_host
+from agileutil.rpc.client import TcpRpcClient
 
 
 def report(name, start, end):
@@ -10,11 +21,10 @@ def report(name, start, end):
     sys.stdout.flush()
 
 
-c = zerorpc.Client()
-c.connect("tcp://127.0.0.1:8080")
+clients = []
 
+cli = TcpRpcClient(servers=["%s:%d" % (remote_host, port + i) for i in range(process)], timeout=10)
 start = time.time()
-res = c.handle()
+res = cli.call("handler")  # TODO: async rpc
 end = time.time()
 report("trigger", start, end)
-print("[trigger] result", res)

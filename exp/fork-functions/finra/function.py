@@ -1,3 +1,4 @@
+import argparse
 import json
 
 from util import *
@@ -6,12 +7,16 @@ import os
 import sys
 import time
 import mmap
-import zerorpc
+from agileutil.rpc.client import TcpRpcClient
+from agileutil.rpc.server import rpc, TcpRpcServer
 
 sys.path.append("../../common")  # include outer path
-from mitosis_wrapper import *
 
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
+parser = argparse.ArgumentParser()
+parser.add_argument("-port", type=int, default=8080, help="rpc server port")
+args = parser.parse_args()
+port = args.port
 
 
 def public_data(event):
@@ -93,28 +98,15 @@ def bargin_balance(events):
 events = []
 
 
-class HelloRPC(object):
-    def hello(self, name):
-        print("called hello")
-        return "Hello, %s" % name
-
-    def handle(self):
-        # TODO: use as sub process ?
-        return handler()
-
-# @tick_execution_time
+@rpc
 def handler():
-    global events
-    events[0] = c.private_data(req)
+    global events, cli
+    events[0] = cli.call('private_data', req)
     res = bargin_balance(events)
     return res
 
 
 events = [None, public_data(req)]
-c = zerorpc.Client()
-c.connect("tcp://127.0.0.1:8090")
-s = zerorpc.Server(HelloRPC())
-s.bind("tcp://0.0.0.0:8080")
-s.run()
-
-
+cli = TcpRpcClient(servers=['127.0.0.1:8090'])
+server = TcpRpcServer('0.0.0.0', port)
+server.serve()
