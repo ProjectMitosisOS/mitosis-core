@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 
@@ -39,7 +40,8 @@ def private_data(event):
 
 @rpc
 def tick_rule_start():
-    global start
+    global start, counter
+    counter = 0
     start = time.time()
 
 
@@ -49,6 +51,12 @@ def report_finish_event():
     counter += 1
     end = time.time()
     report("tick %d" % counter, start, end)
+
+
+@rpc
+def exit():
+    global server
+    os._exit(0)
 
 
 server = TcpRpcServer('0.0.0.0', 8090)

@@ -3,7 +3,7 @@ import json
 import socket
 
 from util import *
-import yfinance as yf
+import pandas as pd
 import os
 import sys
 import time
@@ -17,8 +17,11 @@ sys.path.append("../../common")  # include outer path
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
 parser = argparse.ArgumentParser()
 parser.add_argument("-port", type=int, default=8080, help="rpc server port")
+parser.add_argument("-handler_id", type=int, default=73, help="rfork handler id")
+
 args = parser.parse_args()
 port = args.port
+handler_id = args.handler_id
 
 
 def public_data(event):
@@ -37,10 +40,9 @@ def public_data(event):
     extra_data = {}
     item_cnt = 0
     for ticker in tickers:
-        tickerObj = yf.Ticker(ticker)
         # Get last closing price
         tickTime = 1000 * time.time()
-        data = tickerObj.history(period="1d")
+        data = pd.read_csv("yfinance.csv")
         externalServicesTime += 1000 * time.time() - tickTime
         prices[ticker] = data['Close'].unique()[0]
         item_cnt += data.count()
@@ -97,22 +99,24 @@ def bargin_balance(events):
     return agg_timestamp(response, events, startTime, endTime, 0)
 
 
-events = []
-# events = [None, None]
-events = [None, public_data(req)]
-cli = TcpRpcClient(servers=['127.0.0.1:8090'])
-
-
 @rpc
 def handler():
     global events, cli
-    events[0] = cli.call('private_data', req)
     res = bargin_balance(events)
     cli.call('report_finish_event')
+    os._exit(0)
 
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(('127.0.0.1', port))
+cli = TcpRpcClient(servers=['127.0.0.1:8090'])
+events = [cli.call('private_data', req), public_data(req)]
+res = bargin_balance(events)
+data, addr = s.recvfrom(4096)  # first touch
+
+fd = syscall_lib.open()
+syscall_lib.call_prepare_ping(fd, handler_id)
+
 while True:
     data, addr = s.recvfrom(4096)
     handler()
