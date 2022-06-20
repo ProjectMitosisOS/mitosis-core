@@ -18,7 +18,7 @@ void wait() {
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(8080);
+    serv_addr.sin_port = htons(FLAGS_port);
 
     bind(listenfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
     char recv_buf[20];
