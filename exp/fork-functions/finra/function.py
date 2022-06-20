@@ -1,23 +1,11 @@
-import argparse
-import os
-import socket
-
 import pandas as pd
-import zerorpc
 
 from util import *
 
 sys.path.append("../../common")  # include outer path
-import syscall_lib
+from mitosis_wrapper import *
+
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
-parser = argparse.ArgumentParser()
-parser.add_argument("-port", type=int, default=8080, help="rpc server port")
-parser.add_argument("-handler_id", type=int, default=73, help="rfork handler id")
-
-args = parser.parse_args()
-port = args.port
-handler_id = args.handler_id
-
 
 def public_data(event):
     """
@@ -94,25 +82,36 @@ def bargin_balance(events):
     return agg_timestamp(response, events, startTime, endTime, 0)
 
 
+def private_data(event):
+    startTime = 1000 * time.time()
+
+    portfolio = event['body']['portfolio']
+
+    data = portfolios[portfolio]
+
+    valid = True
+
+    for trade in data:
+        side = trade['Side']
+        # Tag ID: 552, Tag Name: Side, Valid values: 1,2,8
+        if not (side == 1 or side == 2 or side == 8):
+            valid = False
+            break
+    response = {'statusCode': 200, 'body': {'valid': valid, 'portfolio': portfolio}}
+    endTime = 1000 * time.time()
+    return timestamp(response, event, startTime, endTime, 0)
+
+
+events = [private_data(req), public_data(req)]
+
+@tick_execution_time
 def handler():
-    global events, cli
-    # cli = zerorpc.Client()
-    # cli.connect("tcp://127.0.0.1:8090")
     res = bargin_balance(events)
-    cli.report_finish_event()
 
 
+@mitosis_bench
+def bench():
+    handler()
 
-cli = zerorpc.Client()
-cli.connect("tcp://127.0.0.1:8090")
-events = [cli.private_data(req), public_data(req)]
-
-
-
-## Handle mitosis
-fd = syscall_lib.open()
-
-handler()
-syscall_lib.call_prepare_ping(fd, handler_id)
-handler()
-os._exit(0)
+if __name__ == '__main__':
+    bench()
