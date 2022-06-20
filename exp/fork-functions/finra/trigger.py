@@ -29,3 +29,4 @@ master_cli.tick_rule_start()
 for i in range(process):
     print("send to %s:%d" % (remote_host, port + i))
     s.sendto(b"data", (remote_host, port + i))
+
