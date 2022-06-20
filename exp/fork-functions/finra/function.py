@@ -1,3 +1,4 @@
+import argparse
 import json
 
 from util import *
@@ -6,31 +7,16 @@ import os
 import sys
 import time
 import mmap
+from agileutil.rpc.client import TcpRpcClient
+from agileutil.rpc.server import rpc, TcpRpcServer
 
 sys.path.append("../../common")  # include outer path
-from mitosis_wrapper import *
 
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
-portfolios = {
-    "1234": [
-        {
-            "Security": "GOOG",
-            "LastQty": 10,
-            "LastPx": 1363.85123,
-            "Side": 1,
-            "TrdSubType": 0,
-            "TradeDate": "200507"
-        },
-        {
-            "Security": "MSFT",
-            "LastQty": 20,
-            "LastPx": 183.851234,
-            "Side": 1,
-            "TrdSubType": 0,
-            "TradeDate": "200507"
-        }
-    ]
-}
+parser = argparse.ArgumentParser()
+parser.add_argument("-port", type=int, default=8080, help="rpc server port")
+args = parser.parse_args()
+port = args.port
 
 
 def public_data(event):
@@ -64,27 +50,6 @@ def public_data(event):
 
     endTime = 1000 * time.time()
     return timestamp(response, event, startTime, endTime, externalServicesTime)
-
-
-def private_data(event):
-    startTime = 1000 * time.time()
-
-    portfolio = event['body']['portfolio']
-
-    data = portfolios[portfolio]
-
-    valid = True
-
-    for trade in data:
-        side = trade['Side']
-        # Tag ID: 552, Tag Name: Side, Valid values: 1,2,8
-        if not (side == 1 or side == 2 or side == 8):
-            valid = False
-            break
-
-    response = {'statusCode': 200, 'body': {'valid': valid, 'portfolio': portfolio}}
-    endTime = 1000 * time.time()
-    return timestamp(response, event, startTime, endTime, 0)
 
 
 def checkMarginBalance(portfolioData, marketData, portfolio):
@@ -133,22 +98,15 @@ def bargin_balance(events):
 events = []
 
 
-def init():
-    global events
-    events = [private_data(req), public_data(req)]
-
-
-# @tick_execution_time
+@rpc
 def handler():
-    global events
+    global events, cli
+    events[0] = cli.call('private_data', req)
     res = bargin_balance(events)
+    return res
 
 
-# @mitosis_bench
-def bench():
-    handler()
-
-
-if __name__ == '__main__':
-    init()
-    bench()
+events = [None, public_data(req)]
+cli = TcpRpcClient(servers=['127.0.0.1:8090'])
+server = TcpRpcServer('0.0.0.0', port)
+server.serve()
