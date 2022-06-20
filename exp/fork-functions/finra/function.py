@@ -9,6 +9,7 @@ import time
 import mmap
 from agileutil.rpc.client import TcpRpcClient
 from agileutil.rpc.server import rpc, TcpRpcServer
+import asyncio
 
 sys.path.append("../../common")  # include outer path
 
