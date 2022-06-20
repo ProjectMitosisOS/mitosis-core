@@ -1,5 +1,6 @@
 import argparse
 import json
+import socket
 
 from util import *
 import yfinance as yf
@@ -39,7 +40,7 @@ def public_data(event):
         tickerObj = yf.Ticker(ticker)
         # Get last closing price
         tickTime = 1000 * time.time()
-        data = tickerObj.history(period="max")
+        data = tickerObj.history(period="1d")
         externalServicesTime += 1000 * time.time() - tickTime
         prices[ticker] = data['Close'].unique()[0]
         item_cnt += data.count()
@@ -97,6 +98,9 @@ def bargin_balance(events):
 
 
 events = []
+# events = [None, None]
+events = [None, public_data(req)]
+cli = TcpRpcClient(servers=['127.0.0.1:8090'])
 
 
 @rpc
@@ -104,10 +108,11 @@ def handler():
     global events, cli
     events[0] = cli.call('private_data', req)
     res = bargin_balance(events)
-    return res
+    cli.call('report_finish_event')
 
 
-events = [None, public_data(req)]
-cli = TcpRpcClient(servers=['127.0.0.1:8090'])
-server = TcpRpcServer('0.0.0.0', port)
-server.serve()
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(('127.0.0.1', port))
+while True:
+    data, addr = s.recvfrom(4096)
+    handler()
