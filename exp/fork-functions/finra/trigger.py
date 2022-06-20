@@ -1,4 +1,5 @@
 import argparse
+import socket
 import sys
 import time
 
@@ -14,19 +15,14 @@ process = args.process
 remote_host = args.remote_host
 from agileutil.rpc.client import TcpRpcClient
 
-
-def report(name, start, end):
-    passed_us = (end - start) * 1000000
-    print("[%s] duration: %.2f ms" % (str(name), passed_us / 1000))
-    sys.stdout.flush()
-
-
 clients = []
+master_cli = TcpRpcClient(servers=["%s:%d" % (remote_host, 8090)])
 
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# start
+master_cli.call("tick_rule_start")
+
+# Trigger without waiting
 for i in range(process):
-    clients.append(TcpRpcClient(servers=["%s:%d" % (remote_host, port + i)], timeout=10))
-start = time.time()
-for cli in clients:
-    res = cli.call("handler")  # TODO: async rpc
-end = time.time()
-report("trigger", start, end)
+    s.sendto(b"data", (remote_host, port + i))
