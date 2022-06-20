@@ -23,5 +23,4 @@ master_cli.tick_rule_start()
 for host in child_hosts:
     # Trigger without waiting
     for i in range(process):
-        # print("send to %s:%d" % (host, port + i))
         s.sendto(b"data", (host, port + i))
