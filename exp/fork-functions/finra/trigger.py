@@ -23,8 +23,10 @@ def report(name, start, end):
 
 clients = []
 
-cli = TcpRpcClient(servers=["%s:%d" % (remote_host, port + i) for i in range(process)], timeout=10)
+for i in range(process):
+    clients.append(TcpRpcClient(servers=["%s:%d" % (remote_host, port + i)], timeout=10))
 start = time.time()
-res = cli.call("handler")  # TODO: async rpc
+for cli in clients:
+    res = cli.call("handler")  # TODO: async rpc
 end = time.time()
 report("trigger", start, end)
