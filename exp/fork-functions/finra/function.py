@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import mmap
+import zerorpc
 
 sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
@@ -131,24 +132,30 @@ def bargin_balance(events):
 
 
 events = []
+class HelloRPC(object):
+    def hello(self, name):
+        print("called hello")
+        return "Hello, %s" % name
+
+    def handle(self):
+        # TODO: use as sub process ?
+        return handler()
 
 
 def init():
     global events
     events = [private_data(req), public_data(req)]
+    s = zerorpc.Server(HelloRPC())
+    s.bind("tcp://0.0.0.0:8080")
+    s.run()
 
 
 # @tick_execution_time
 def handler():
     global events
     res = bargin_balance(events)
-
-
-# @mitosis_bench
-def bench():
-    handler()
+    return res
 
 
 if __name__ == '__main__':
     init()
-    bench()
