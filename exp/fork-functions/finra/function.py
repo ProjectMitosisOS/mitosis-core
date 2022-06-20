@@ -1,19 +1,14 @@
 import argparse
-import json
+import os
 import socket
 
-from util import *
 import pandas as pd
-import os
-import sys
-import time
-import mmap
-from agileutil.rpc.client import TcpRpcClient
-from agileutil.rpc.server import rpc, TcpRpcServer
-import asyncio
+import zerorpc
+
+from util import *
 
 sys.path.append("../../common")  # include outer path
-
+import syscall_lib
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
 parser = argparse.ArgumentParser()
 parser.add_argument("-port", type=int, default=8080, help="rpc server port")
@@ -99,24 +94,25 @@ def bargin_balance(events):
     return agg_timestamp(response, events, startTime, endTime, 0)
 
 
-@rpc
 def handler():
     global events, cli
+    # cli = zerorpc.Client()
+    # cli.connect("tcp://127.0.0.1:8090")
     res = bargin_balance(events)
-    cli.call('report_finish_event')
-    os._exit(0)
+    cli.report_finish_event()
 
 
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.bind(('127.0.0.1', port))
-cli = TcpRpcClient(servers=['127.0.0.1:8090'])
-events = [cli.call('private_data', req), public_data(req)]
-res = bargin_balance(events)
-data, addr = s.recvfrom(4096)  # first touch
 
+cli = zerorpc.Client()
+cli.connect("tcp://127.0.0.1:8090")
+events = [cli.private_data(req), public_data(req)]
+
+
+
+## Handle mitosis
 fd = syscall_lib.open()
-syscall_lib.call_prepare_ping(fd, handler_id)
 
-while True:
-    data, addr = s.recvfrom(4096)
-    handler()
+handler()
+syscall_lib.call_prepare_ping(fd, handler_id)
+handler()
+os._exit(0)

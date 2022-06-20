@@ -11,6 +11,7 @@ include_directories(../mitosis-user-libs/mitosis-lean-container/lib)
 set(samples
         connector       ## Init connector
         simple_child    ## simple child demo
+        simple_child_socket    ## simple child w/ socket trigger
         simple_parent   ## simple parent demo
         bench_exe_time_parent ## get execution time
         bench_prepare_time  ## get prepare time
@@ -24,6 +25,7 @@ set(samples
 
 add_executable(connector common/connector.cc)
 add_executable(simple_child common/simple_child.cc)
+add_executable(simple_child_socket common/simple_child_socket.cc)
 add_executable(simple_parent common/simple_parent.cc)
 add_executable(bench_lean_container fork-functions/benchmark_lean_container.c
         ../mitosis-user-libs/mitosis-lean-container/lib/core/lean_container.c
