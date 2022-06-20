@@ -1,7 +1,26 @@
 import ctypes
 import sys
 import time
-
+portfolios = {
+    "1234": [
+        {
+            "Security": "GOOG",
+            "LastQty": 10,
+            "LastPx": 1363.85123,
+            "Side": 1,
+            "TrdSubType": 0,
+            "TradeDate": "200507"
+        },
+        {
+            "Security": "MSFT",
+            "LastQty": 20,
+            "LastPx": 183.851234,
+            "Side": 1,
+            "TrdSubType": 0,
+            "TradeDate": "200507"
+        }
+    ]
+}
 def timestamp(response, event, startTime, endTime, externalServicesTime):
     stampBegin = 1000*time.time()
     prior = event['duration'] if 'duration' in event else 0
