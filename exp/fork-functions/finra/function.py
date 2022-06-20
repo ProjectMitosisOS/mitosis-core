@@ -12,26 +12,6 @@ sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
 
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
-portfolios = {
-    "1234": [
-        {
-            "Security": "GOOG",
-            "LastQty": 10,
-            "LastPx": 1363.85123,
-            "Side": 1,
-            "TrdSubType": 0,
-            "TradeDate": "200507"
-        },
-        {
-            "Security": "MSFT",
-            "LastQty": 20,
-            "LastPx": 183.851234,
-            "Side": 1,
-            "TrdSubType": 0,
-            "TradeDate": "200507"
-        }
-    ]
-}
 
 
 def public_data(event):
@@ -65,27 +45,6 @@ def public_data(event):
 
     endTime = 1000 * time.time()
     return timestamp(response, event, startTime, endTime, externalServicesTime)
-
-
-def private_data(event):
-    startTime = 1000 * time.time()
-
-    portfolio = event['body']['portfolio']
-
-    data = portfolios[portfolio]
-
-    valid = True
-
-    for trade in data:
-        side = trade['Side']
-        # Tag ID: 552, Tag Name: Side, Valid values: 1,2,8
-        if not (side == 1 or side == 2 or side == 8):
-            valid = False
-            break
-
-    response = {'statusCode': 200, 'body': {'valid': valid, 'portfolio': portfolio}}
-    endTime = 1000 * time.time()
-    return timestamp(response, event, startTime, endTime, 0)
 
 
 def checkMarginBalance(portfolioData, marketData, portfolio):
@@ -132,6 +91,8 @@ def bargin_balance(events):
 
 
 events = []
+
+
 class HelloRPC(object):
     def hello(self, name):
         print("called hello")
@@ -141,21 +102,19 @@ class HelloRPC(object):
         # TODO: use as sub process ?
         return handler()
 
-
-def init():
-    global events
-    events = [private_data(req), public_data(req)]
-    s = zerorpc.Server(HelloRPC())
-    s.bind("tcp://0.0.0.0:8080")
-    s.run()
-
-
 # @tick_execution_time
 def handler():
     global events
+    events[0] = c.private_data(req)
     res = bargin_balance(events)
     return res
 
 
-if __name__ == '__main__':
-    init()
+events = [None, public_data(req)]
+c = zerorpc.Client()
+c.connect("tcp://127.0.0.1:8090")
+s = zerorpc.Server(HelloRPC())
+s.bind("tcp://0.0.0.0:8080")
+s.run()
+
+
