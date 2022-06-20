@@ -31,7 +31,7 @@ role = 'child'
 path = ''
 cmd = 'make bench_lean_mitosis mac_id=0 LEAN_BENCH_EXE_PATH=${exe_name} LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
 order = 3
-loop = 24
+loop = 1
 
 [template.placeholder]
 micro_func_name = [
