@@ -4,7 +4,7 @@
 
 #target="wxd@val00"
 
-target=("val01" "val02") ## all the client and server hosts
+target=("val01" "val02" "val03" "val04" "val05") ## all the client and server hosts
 #target=("val00" "val01") ## all the client and server hosts
 
 #target = "wxd@cube1"

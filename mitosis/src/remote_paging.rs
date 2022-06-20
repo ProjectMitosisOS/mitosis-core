@@ -11,7 +11,9 @@ use crate::linux_kernel_module;
 
 pub const TIMEOUT_USEC: i64 = 5000; // 5ms
 
-#[derive(Debug)]
+/// Derive copy is rather dangerous
+/// This structure is aimed for global usage
+#[derive(Debug,Copy, Clone)]
 pub struct AccessInfo {
     pub(crate) ah: os_network::rdma::IBAddressHandler,
     pub(crate) rkey: u32,
@@ -20,6 +22,8 @@ pub struct AccessInfo {
 }
 
 impl AccessInfo {
+    // FIXME: what if the context of the access info doesn't match the one 
+    // in the core_id? 
     pub fn new(descriptor: &crate::descriptors::RDMADescriptor) -> core::option::Option<Self> {
         let factory = crate::random_select_dc_factory_on_core()?;
         // FIXME: get from global (mapping from gid into ah)
@@ -37,6 +41,18 @@ impl AccessInfo {
             dct_num: descriptor.dct_num,
             dct_key: descriptor.dct_key,
         })
+    }
+
+    /// create the access info
+    /// we first lookup the local CPU's cache
+    /// If hit, we will directly return 
+    pub fn new_from_cache(mac_id : usize,  des : &crate::descriptors::RDMADescriptor) -> core::option::Option<Self> { 
+        let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
+        if unsafe { crate::get_accessinfo_service_mut().query(pool_idx, mac_id).is_none() } { 
+            let res = Self::new(des)?;
+            unsafe { crate::get_accessinfo_service_mut().insert(pool_idx, mac_id, res)};
+        }
+        unsafe { Some(*(crate::get_accessinfo_service_mut().query(pool_idx, mac_id)?)) }
     }
 }
 

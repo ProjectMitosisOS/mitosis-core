@@ -18,6 +18,7 @@ rmmod:
 	sudo rmmod ${KMODULE_NAME}
 
 clean:
+	rm -rf ${KMS_DIR}/Cargo.lock
 	rm -rf ${KMS_DIR}/target
 
 LEAN_APP_NAME=hello

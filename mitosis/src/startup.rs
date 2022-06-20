@@ -76,6 +76,8 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
             dc_factories.push(DCFactory::new(c));
         }
         crate::dc_factories::init(dc_factories);
+        
+        crate::access_info_service::init(crate::dc_pool::AccessInfoPool::new(config.max_core_cnt));
     };
 
     // RPC service
@@ -152,6 +154,7 @@ pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
         crate::service_rpc::drop();
+        crate::access_info_service::drop();
 
         crate::log::debug!("drop dc targets");
         crate::dc_target_service::drop();

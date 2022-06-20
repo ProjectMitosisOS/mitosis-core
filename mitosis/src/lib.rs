@@ -234,6 +234,8 @@ pub mod remote_paging;
 
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
+declare_global!(access_info_service, crate::dc_pool::AccessInfoPool);
+
 
 #[cfg(feature = "prefetch")]
 type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::DCPool<'static>>>;
@@ -257,6 +259,11 @@ pub unsafe fn get_dc_pool_async_service_ref() -> &'static crate::AsyncDCPool {
 #[inline]
 pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_mut()
+}
+
+#[inline]
+pub unsafe fn get_accessinfo_service_mut() -> &'static mut crate::dc_pool::AccessInfoPool {
+    crate::access_info_service::get_mut()
 }
 
 #[inline]

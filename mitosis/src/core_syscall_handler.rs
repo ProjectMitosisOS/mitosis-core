@@ -438,7 +438,9 @@ impl MitosisSysCallHandler {
 
                         let mut des = des.unwrap();
 
-                        let access_info = AccessInfo::new(&des.machine_info);
+                        //let access_info = AccessInfo::new(&des.machine_info);
+                        let access_info =
+                            AccessInfo::new_from_cache(des.machine_info.mac_id, &des.machine_info);
                         if access_info.is_none() {
                             crate::log::error!("failed to create access info");
                             return -1;
@@ -727,7 +729,7 @@ impl MitosisSysCallHandler {
         #[cfg(feature = "page-cache")]
         if let Some(resume_related) = self.caller_status.resume_related.as_ref() {
             // copy to the kernel cache
-            
+
             let pg_table = resume_related.descriptor.page_table.copy();
             unsafe {
                 crate::get_pt_cache_mut().insert(
@@ -735,7 +737,7 @@ impl MitosisSysCallHandler {
                     resume_related.handler_id,
                     pg_table,
                 );
-            } 
+            }
         }
     }
 }
