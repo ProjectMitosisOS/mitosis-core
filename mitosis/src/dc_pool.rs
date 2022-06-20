@@ -11,8 +11,6 @@ use crate::linux_kernel_module;
 pub struct DCPool<'a> {
     pool: Vec<(DCConn<'a>, u32)>,
     nic_idxs: Vec<usize>,
-    // TODO: should initialize a DC Target pool
-    // a simple DC key cannot protect all the stuffs in a fine-grained way
 }
 
 pub struct AccessInfoPool {
@@ -45,11 +43,12 @@ impl AccessInfoPool {
 
 impl Drop for AccessInfoPool {
     fn drop(&mut self) {
+        /* 
         for pool in &mut self.pool {
             for (_, v) in pool {
                 unsafe { v.ah.free() };
             }
-        }
+        } */
     }
 }
 

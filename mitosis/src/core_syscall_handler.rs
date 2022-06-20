@@ -432,15 +432,15 @@ impl MitosisSysCallHandler {
                         };
 
                         if des.is_none() {
-                            crate::log::error!("failed to deserialize the child descriptor");
+                            // crate::log::error!("failed to deserialize the child descriptor");
                             return -1;
                         }
 
                         let mut des = des.unwrap();
 
-                        //let access_info = AccessInfo::new(&des.machine_info);
-                        let access_info =
-                            AccessInfo::new_from_cache(des.machine_info.mac_id, &des.machine_info);
+                        let access_info = AccessInfo::new(&des.machine_info);
+                        //let access_info =
+                        //AccessInfo::new_from_cache(des.machine_info.mac_id, &des.machine_info);
                         if access_info.is_none() {
                             crate::log::error!("failed to create access info");
                             return -1;
