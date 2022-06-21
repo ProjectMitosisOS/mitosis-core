@@ -1,4 +1,8 @@
-numpy==1.16.3
+toml
+paramiko
+numpy
+zerorpc
+pandas
 chameleon==3.10.1
 six==1.10.0
 pyaes==1.6.1
@@ -9,5 +13,3 @@ future==0.18.2
 torch==1.4.0
 torchvision==0.5.0
 python-igraph==0.8.0
-zerorpc
-pandas
