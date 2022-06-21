@@ -59,7 +59,10 @@ def mitosis_bench(handler):
     def wrapper(*args, **kwargs):
         result = handler(*args, **kwargs)
         if run_once:
+            if hanged:
+                time.sleep(10)
             os._exit(0)
+
         result = handler(*args, **kwargs)
         if hanged:
             time.sleep(1)
