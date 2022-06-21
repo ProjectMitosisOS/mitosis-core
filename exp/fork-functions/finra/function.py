@@ -8,9 +8,6 @@ from mitosis_wrapper import *
 
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
 
-import yfinance as yf
-
-
 def public_data(event):
     """
     Fetch public market data from yahoo finance api
