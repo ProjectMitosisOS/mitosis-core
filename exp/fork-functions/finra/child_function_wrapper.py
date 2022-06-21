@@ -23,7 +23,7 @@ def runcmd(command):
                             shell=True,
                             stdout=subprocess.PIPE)
     out, err = proc.communicate()
-    master_cli.report_finish_event(loop)
+    master_cli.report_finish_event()
     print(out)
 
 

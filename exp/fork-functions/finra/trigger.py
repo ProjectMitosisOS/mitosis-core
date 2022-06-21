@@ -23,7 +23,7 @@ s_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 s_tcp.connect(("localhost", 6000))
 # start
-master_cli.tick_rule_start(process)
+master_cli.tick_rule_start(process * len(child_hosts))
 
 s_tcp.sendall(b"data")
 s_tcp.recv(1024).decode()
