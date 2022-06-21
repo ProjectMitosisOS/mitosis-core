@@ -1,3 +1,5 @@
+import socket
+
 import numpy as np
 import pandas as pd
 
@@ -7,6 +9,7 @@ sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
 
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
+
 
 def public_data(event):
     """
@@ -128,4 +131,16 @@ def bench():
 
 
 if __name__ == '__main__':
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("localhost", 6000))
+    s.listen(1)
+    conn, address = s.accept()
+    data = conn.recv(1024).decode()
+    # Body of bench
     bench()
+
+    # notify the trigger
+    conn.sendall('Parent finish'.encode())  # send back
+    conn.close()
+    s.close()
