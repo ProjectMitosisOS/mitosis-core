@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from util import *
@@ -6,6 +7,9 @@ sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
 
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
+
+import yfinance as yf
+
 
 def public_data(event):
     """
@@ -16,24 +20,22 @@ def public_data(event):
     externalServicesTime = 0
     portfolioType = event['body']['portfolioType']
 
-    tickers_for_portfolio_types = {'S&P': ['GOOG', 'AMZN', 'MSFT', 'SVFAU']}
+    tickers_for_portfolio_types = {'S&P': ['GOOG', 'AMZN', 'MSFT', 'SVFAU', 'AB', 'ABC', 'ABCB']}
+    # stocks_list = list(pd.read_csv("stocks.csv")['Symbol'])
     tickers = tickers_for_portfolio_types[portfolioType]
 
     prices = {}
-    extra_data = {}
-    item_cnt = 0
+    whole_set = pd.read_csv("yfinance.csv")
     for ticker in tickers:
         # Get last closing price
         tickTime = 1000 * time.time()
-        data = pd.read_csv("yfinance.csv")
+        # data = pd.read_csv("yfinance.csv")
         externalServicesTime += 1000 * time.time() - tickTime
-        prices[ticker] = data['Close'].unique()[0]
-        item_cnt += data.count()
-        extra_data[ticker] = data
+        prices[ticker] = whole_set['Close'].unique()[0]
+
     # prices = {'GOOG': 1732.38, 'AMZN': 3185.27, 'MSFT': 221.02}
-    # print("item count", item_cnt)
     response = {'statusCode': 200,
-                'body': {'marketData': prices, 'whole_set': extra_data}}
+                'body': {'marketData': prices, 'whole_set': whole_set}}
 
     endTime = 1000 * time.time()
     return timestamp(response, event, startTime, endTime, externalServicesTime)
@@ -59,24 +61,37 @@ def checkMarginBalance(portfolioData, marketData, portfolio):
     return result
 
 
+def analyse_whole_set(whole_set):
+    finance_columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends', 'Stock Splits']
+    avg_data = [np.average(whole_set[key]) for key in finance_columns]
+    sum_data = [np.sum(whole_set[key]) for key in finance_columns]
+    std_data = [np.std(whole_set[key]) for key in finance_columns]
+    return avg_data, sum_data, std_data
+
+
 def bargin_balance(events):
     startTime = 1000 * time.time()
     marketData = {}
+    whole_set = {}
     validFormat = True
 
     for event in events:
         body = event['body']
         if 'marketData' in body:
             marketData = body['marketData']
+            whole_set = body['whole_set']
         elif 'valid' in body:
             portfolio = event['body']['portfolio']
             validFormat = validFormat and body['valid']
 
     portfolioData = portfolios[portfolio]
     marginSatisfied = checkMarginBalance(portfolioData, marketData, portfolio)
-
+    whole_data = analyse_whole_set(whole_set)
     response = {'statusCode': 200,
-                'body': {'validFormat': validFormat, 'marginSatisfied': marginSatisfied}}
+                'body': {'validFormat': validFormat,
+                         'marginSatisfied': marginSatisfied,
+                         'whole_data': whole_data
+                         }}
 
     endTime = 1000 * time.time()
     return agg_timestamp(response, events, startTime, endTime, 0)
@@ -104,6 +119,7 @@ def private_data(event):
 
 events = [private_data(req), public_data(req)]
 
+
 @tick_execution_time
 def handler():
     res = bargin_balance(events)
@@ -112,6 +128,7 @@ def handler():
 @mitosis_bench
 def bench():
     handler()
+
 
 if __name__ == '__main__':
     bench()
