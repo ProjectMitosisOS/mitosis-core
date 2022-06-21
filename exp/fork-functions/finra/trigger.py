@@ -18,9 +18,10 @@ master_cli.connect("tcp://%s:%d" % ("127.0.0.1", 8090))
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # start
-master_cli.tick_rule_start()
+master_cli.tick_rule_start(process)
 
 for host in child_hosts:
     # Trigger without waiting
     for i in range(process):
         s.sendto(b"data", (host, port + i))
+
