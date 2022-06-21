@@ -6,10 +6,6 @@ import numpy as np
 import zerorpc
 import util
 
-start = time.time()
-finish_list = []
-
-
 def report(name, start, end):
     passed_us = (end - start) * 1000000
     print("[%s] duration: %.2f ms" % (str(name), passed_us / 1000))
@@ -17,17 +13,21 @@ def report(name, start, end):
 
 
 class RPCServer(object):
-    def tick_rule_start(self, process):
-        global start, finish_list
-        finish_list = [False for _ in range(process)]
-        start = time.time()
+    def __init__(self):
+        self.process = 0
+        self.start = time.time()
+        self.finish_cnt = 0
 
-    def report_finish_event(self, key):
-        global finish_list
-        finish_list[key] = True
-        if np.all(finish_list):
+    def tick_rule_start(self, process):
+        self.finish_cnt = 0
+        self.process = process
+        self.start = time.time()
+
+    def report_finish_event(self):
+        self.finish_cnt += 1
+        if self.finish_cnt == self.process:
             end = time.time()
-            report("rule %d" % len(finish_list), start, end)
+            report("rule %d" % self.process, self.start, end)
 
 
 s = zerorpc.Server(RPCServer())
