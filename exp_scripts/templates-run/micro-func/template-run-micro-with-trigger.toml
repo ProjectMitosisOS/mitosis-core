@@ -28,7 +28,7 @@ order = 2
 [[template.pass]]
 role = 'child'
 path = 'exp'
-cmd = "python fork-functions/finra/child_function_wrapper.py -master_host=${parent_host} -command='./simple_child_socket -mac_id=0' "
+cmd = "python fork-functions/finra/child_function_wrapper.py -master_host=${parent_host} -command='./simple_child -mac_id=0' "
 order = 2
 loop = 50
 

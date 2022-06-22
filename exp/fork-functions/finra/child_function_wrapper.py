@@ -1,3 +1,4 @@
+import socket
 import subprocess
 import argparse
 
@@ -17,8 +18,13 @@ master_cli = zerorpc.Client()
 master_cli.connect("tcp://%s:%d" % (master_host, 8090))
 
 
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(("0.0.0.0", 8080 + loop))
+data, addr = s.recvfrom(1024)
+
 def runcmd(command):
-    cmd = "%s -port=%d" % (command, 8080 + loop)
+    cmd = command
+    # cmd = "%s -port=%d" % (command, 8080 + loop)
     proc = subprocess.Popen(cmd,
                             shell=True,
                             stdout=subprocess.PIPE)
