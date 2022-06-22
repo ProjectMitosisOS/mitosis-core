@@ -11,9 +11,9 @@ use crate::linux_kernel_module::c_types::*;
 use crate::remote_paging::{AccessInfo, RemotePagingService};
 use crate::syscalls::FileOperations;
 
-use os_network::block_on;
 use os_network::bytes::ToBytes;
 use os_network::timeout::TimeoutWRef;
+use os_network::{block_on, Factory};
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
@@ -56,6 +56,7 @@ impl Default for CallerData {
     }
 }
 
+use crate::rdma_context::SERVICE_ID_BASE;
 use core::sync::atomic::AtomicUsize;
 
 /// The MitosisSysCallService has the following two jobs:
@@ -340,7 +341,7 @@ impl MitosisSysCallHandler {
         //            .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
 
         // let cpu_id = 0;
-        let cpu_id = crate::get_calling_cpu_id();        
+        let cpu_id = crate::get_calling_cpu_id();
 
         // hold the lock on this CPU
         unsafe { crate::global_locks::get_ref()[cpu_id].lock() };
@@ -415,6 +416,17 @@ impl MitosisSysCallHandler {
                             caller,
                             remote_session_id,
                         );
+                        // {
+                        //     let server_service_id = SERVICE_ID_BASE;
+                        //     let ctx = unsafe { crate::get_rdma_context_ref(0).unwrap() };
+                        //     let client_factory = os_network::rdma::rc::RCFactory::new(ctx);
+                        //     let conn_meta = os_network::rdma::ConnMeta {
+                        //         gid: ctx.get_gid_as_string(),
+                        //         service_id: server_service_id,
+                        //         qd_hint: 0,
+                        //     };
+                        //     let mut rc = client_factory.create(conn_meta);
+                        // }
                         crate::log::debug!("sanity check fetched desc_buf {:?}", desc_buf.is_ok());
                         if desc_buf.is_err() {
                             crate::log::error!("failed to fetch descriptor {:?}", desc_buf.err());
@@ -648,9 +660,14 @@ impl MitosisSysCallHandler {
                     }
                 }
                 #[cfg(not(feature = "page-cache"))]
-                resume_related
-                    .descriptor
-                    .read_remote_page(fault_addr, &resume_related.access_info)
+                {
+                    // resume_related
+                    //     .descriptor
+                    //     .read_remote_page(fault_addr, &resume_related.access_info);
+                    resume_related
+                        .descriptor
+                        .read_remote_page(fault_addr, &resume_related.access_info)
+                }
             }
         };
         match new_page {
