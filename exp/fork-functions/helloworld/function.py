@@ -12,7 +12,11 @@ os.environ['MKL_NUM_THREADS'] = '1'
 
 @tick_execution_time
 def handler():
-    print("hello world")
+    if profile == 1:
+        print("hello world")
+    else:
+        s = "hello world"
+        t = s.find('d')
 
 
 @mitosis_bench
