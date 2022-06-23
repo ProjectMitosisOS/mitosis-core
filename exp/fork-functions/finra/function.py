@@ -9,7 +9,8 @@ sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
 
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
-
+master_port = 7000
+parent_port = 8000
 
 def public_data(event):
     """
@@ -120,9 +121,14 @@ def private_data(event):
 events = [private_data(req), None]
 
 
+parent_host = 'val02'
+
 @tick_execution_time
 def handler():
+    global parent_host
     res = bargin_balance(events)
+    s_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s_udp.sendto(b"finish", (parent_host, master_port))
 
 
 @mitosis_bench
@@ -131,17 +137,17 @@ def bench():
 
 
 if __name__ == '__main__':
-    global events
+    global parent_host
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind(("localhost", 6000))
+    s.bind(('', parent_port))
     s.listen(1)
     conn, address = s.accept()
-    data = conn.recv(1024).decode()
+    data = conn.recv(1024).decode() # receive start message
+    parent_host = str(data)
     # Body of bench
-    events = [private_data(req), public_data(req)]
+    events[1] = public_data(req)
     bench()
-
     # notify the trigger
     conn.sendall('Parent finish'.encode())  # send back
     conn.close()

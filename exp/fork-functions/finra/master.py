@@ -1,10 +1,16 @@
-import os
+import socket
 import sys
 import time
 
-import numpy as np
-import zerorpc
-import util
+master_port = 7000
+trigger_port = 9000
+
+FINISH = "finish"
+ALL_DONE = "all done"
+
+host = ''
+start = time.time()
+
 
 def report(name, start, end):
     passed_us = (end - start) * 1000000
@@ -12,24 +18,26 @@ def report(name, start, end):
     sys.stdout.flush()
 
 
-class RPCServer(object):
-    def __init__(self):
-        self.process = 0
-        self.start = time.time()
-        self.finish_cnt = 0
+def server():
+    global start, end
+    ip_port = (host, master_port)
+    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # udp协议
+    server.bind(ip_port)
+    process_cnt = 0
+    cnt = 0
 
-    def tick_rule_start(self, process):
-        self.finish_cnt = 0
-        self.process = process
-        self.start = time.time()
-
-    def report_finish_event(self):
-        self.finish_cnt += 1
-        if self.finish_cnt == self.process:
+    while True:
+        data, client_addr = server.recvfrom(4096)
+        data = data.decode()
+        if data == FINISH:
+            cnt += 1
+        else:
+            cnt = 0
+            process_cnt = int(data)
+            start = time.time()
+        if process_cnt <= cnt:
             end = time.time()
-            report("rule %d" % self.process, self.start, end)
+            report("rule %d" % (cnt - 3), start, end)
 
 
-s = zerorpc.Server(RPCServer())
-s.bind("tcp://0.0.0.0:8090")
-s.run()
+server()

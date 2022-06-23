@@ -8,7 +8,9 @@
 
 DEFINE_int64(mac_id, 0, "machine id");
 DEFINE_int64(handler_id, 73, "rfork handler id");
-DEFINE_int64(port, 8080, "socket port");
+DEFINE_int64(loop, 0, "socket port");
+
+#define PARENT_PORT 8000
 
 void wait() {
     int listenfd = 0, connfd = 0;
@@ -18,7 +20,7 @@ void wait() {
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(FLAGS_port);
+    serv_addr.sin_port = htons(FLAGS_loop + PARENT_PORT);
 
     bind(listenfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
     char recv_buf[20];
