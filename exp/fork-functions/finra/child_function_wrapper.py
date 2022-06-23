@@ -1,3 +1,4 @@
+import os
 import socket
 import subprocess
 import argparse
@@ -24,13 +25,8 @@ data, addr = s.recvfrom(1024)
 
 def runcmd(command):
     cmd = command
-    # cmd = "%s -port=%d" % (command, 8080 + loop)
-    proc = subprocess.Popen(cmd,
-                            shell=True,
-                            stdout=subprocess.PIPE)
-    out, err = proc.communicate()
+    proc = subprocess.Popen(cmd, shell=True)
     master_cli.report_finish_event()
-    print(out)
 
 
 if __name__ == '__main__':

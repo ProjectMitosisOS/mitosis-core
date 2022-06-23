@@ -29,7 +29,6 @@ s_tcp.sendall(b"data")
 s_tcp.recv(1024).decode()
 
 if args.child_hosts == '':
-    print("finish parent bench")
     master_cli.report_finish_event()
 else:
     for host in child_hosts:

@@ -30,15 +30,15 @@ role = 'child'
 path = 'exp'
 cmd = "python fork-functions/finra/child_function_wrapper.py -master_host=${parent_host} -command='./simple_child -mac_id=0' "
 order = 2
-loop = 1
+loop = 20
 
 
-[[template.pass]]
-role = 'parent'
-path = 'exp/fork-functions/finra'
-cmd = "python trigger.py -child_hosts='${child_hosts}' -process=1"
-order = 3
-loop = 1
+#[[template.pass]]
+#role = 'parent'
+#path = 'exp/fork-functions/finra'
+#cmd = "python trigger.py -child_hosts='${child_hosts}' -process=4"
+#order = 3
+#loop = 1
 
 
 [template.placeholder]
