@@ -18,14 +18,15 @@ loop = args.loop
 master_cli = zerorpc.Client()
 master_cli.connect("tcp://%s:%d" % (master_host, 8090))
 
-
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(("0.0.0.0", 8080 + loop))
 data, addr = s.recvfrom(1024)
 
+
 def runcmd(command):
     cmd = command
     proc = subprocess.Popen(cmd, shell=True)
+    proc.wait()
     master_cli.report_finish_event()
 
 

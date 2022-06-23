@@ -122,7 +122,6 @@ events = [private_data(req), None]
 
 @tick_execution_time
 def handler():
-    events[1] = public_data(req)
     res = bargin_balance(events)
 
 
@@ -132,6 +131,7 @@ def bench():
 
 
 if __name__ == '__main__':
+    global events
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(("localhost", 6000))
@@ -139,6 +139,7 @@ if __name__ == '__main__':
     conn, address = s.accept()
     data = conn.recv(1024).decode()
     # Body of bench
+    events = [private_data(req), public_data(req)]
     bench()
 
     # notify the trigger
