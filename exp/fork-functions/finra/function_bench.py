@@ -117,13 +117,12 @@ def private_data(event):
     return timestamp(response, event, startTime, endTime, 0)
 
 
-events = [private_data(req), None]
+events = [private_data(req), public_data(req)]
 
 
 @tick_execution_time
 def handler(time):
     for _ in range(time):
-        events[1] = public_data(req)
         res = bargin_balance(events)
 
 handler(2)
