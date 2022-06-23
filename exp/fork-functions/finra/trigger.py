@@ -18,12 +18,11 @@ trigger_port = 9000
 
 s_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s_udp.sendto(str(3 + len(child_hosts) * process).encode(), ('', master_port))
+s_udp.sendto(str(1 + len(child_hosts) * process).encode(), ('', master_port))
 
 s_tcp.connect((parent_host, parent_port))
 s_tcp.sendall(parent_host.encode())
 
-start = time.time()  # tick start
 s_tcp.recv(1024).decode()
 
 for host in child_hosts:

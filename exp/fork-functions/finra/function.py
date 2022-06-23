@@ -7,10 +7,13 @@ from util import *
 
 sys.path.append("../../common")  # include outer path
 from mitosis_wrapper import *
+import syscall_lib
+import os
 
 req = {"body": {"portfolioType": "S&P", "portfolio": "1234"}}
 master_port = 7000
 parent_port = 8000
+
 
 def public_data(event):
     """
@@ -118,10 +121,10 @@ def private_data(event):
     return timestamp(response, event, startTime, endTime, 0)
 
 
-events = [private_data(req), None]
-
+events = [private_data(req), public_data(req)]
 
 parent_host = 'val02'
+
 
 @tick_execution_time
 def handler():
@@ -131,9 +134,9 @@ def handler():
     s_udp.sendto(b"finish", (parent_host, master_port))
 
 
-@mitosis_bench
-def bench():
-    handler()
+def prepare(key):
+    fd = syscall_lib.open()
+    syscall_lib.call_prepare_ping(fd, key)
 
 
 if __name__ == '__main__':
@@ -143,11 +146,15 @@ if __name__ == '__main__':
     s.bind(('', parent_port))
     s.listen(1)
     conn, address = s.accept()
-    data = conn.recv(1024).decode() # receive start message
+    handler()
+    # waiting
+    data = conn.recv(1024).decode()  # receive start message
     parent_host = str(data)
     # Body of bench
     events[1] = public_data(req)
-    bench()
+    prepare(handler_id)
+    handler()
+    os._exit(0)
     # notify the trigger
     conn.sendall('Parent finish'.encode())  # send back
     conn.close()
