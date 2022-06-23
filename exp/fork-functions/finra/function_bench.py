@@ -126,25 +126,24 @@ def handler(time):
         events[1] = public_data(req)
         res = bargin_balance(events)
 
+handler(2)
 
 def bench():
-    times = [1,
-             6,
-             7,
-             10,
-             50,
-             80,
-             100,
-             120,
-             140,
-             160,
-             180,
-             200]
-    handler(10)  # used for warm up
+    times = [1]
     for t in times:
         print(t)
         handler(t)
 
 
 if __name__ == '__main__':
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("localhost", 6000))
+    s.listen(1)
+    conn, address = s.accept()
+    data = conn.recv(1024).decode()
+
     bench()
+    conn.sendall('Parent finish'.encode())  # send back
+    conn.close()
+    s.close()
