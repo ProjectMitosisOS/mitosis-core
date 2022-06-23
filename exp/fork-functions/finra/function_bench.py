@@ -129,10 +129,7 @@ def handler(time):
 handler(2)
 
 def bench():
-    times = [1]
-    for t in times:
-        print(t)
-        handler(t)
+    handler(1)
 
 
 if __name__ == '__main__':
