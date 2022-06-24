@@ -31,15 +31,15 @@ path = 'exp'
 cmd = "./simple_child_socket -mac_id=0"
 #cmd = "python fork-functions/finra/child_function_wrapper.py -master_host=${parent_host} -command='./simple_child -mac_id=0' "
 order = 2
-loop = 57
+loop = 1
 
 #
-#[[template.pass]]
-#role = 'parent'
-#path = 'exp/fork-functions/finra'
-#cmd = "python trigger.py -child_hosts='${child_hosts}' -parent_host=${parent_host} -process=1"
-#order = 3
-#loop = 1
+[[template.pass]]
+role = 'parent'
+path = 'exp/fork-functions/finra'
+cmd = "python trigger.py -child_hosts='${child_hosts}' -parent_host=${parent_host} -process=1"
+order = 3
+loop = 1
 
 
 [template.placeholder]
