@@ -37,7 +37,7 @@ def server():
             start = time.time()
         if process_cnt <= cnt:
             end = time.time()
-            report("rule %d" % cnt, start, end)
+            report("rule %d" % (cnt - 1), start, end)
 
 
 server()
