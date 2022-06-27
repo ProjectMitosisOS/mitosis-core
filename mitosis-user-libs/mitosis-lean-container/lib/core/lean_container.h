@@ -14,11 +14,19 @@ struct ContainerSpec {
     int numa_end;
 };
 
+// FreezerState and ContainerState can be safely casted to each other
 enum FreezerState {
-    ERROR = -1,
-    FROZEN,
-    FREEZING,
-    THAWED,
+    FREEZER_ERROR = -1,
+    FREEZER_FROZEN,
+    FREEZER_FREEZING,
+    FREEZER_THAWED,
+};
+
+enum ContainerState {
+    CONTAINER_ERROR = FREEZER_ERROR,
+    CONTAINER_PAUSED = FREEZER_FROZEN,
+    CONTAINER_PAUSING = FREEZER_FREEZING,
+    CONTAINER_RUNNING = FREEZER_THAWED,
 };
 
 // (de)initiate the mitosis cgroupfs

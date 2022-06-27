@@ -557,7 +557,7 @@ int pause_container(char* name) {
     }
 
     close(fd);
-    wait_until(name, FROZEN);
+    wait_until(name, FREEZER_FROZEN);
     return 0;
 }
 
@@ -567,7 +567,7 @@ int wait_until(char* name, enum FreezerState expected) {
         container_freezer_state = get_container_freezer_state(name);
         if (container_freezer_state == expected)
             return 0;
-        if (container_freezer_state == ERROR)
+        if (container_freezer_state == FREEZER_ERROR)
             return -1;
     }
 }
@@ -590,18 +590,18 @@ int get_container_freezer_state(char* name) {
     close(fd);
     if (ret <= 0) {
         fprintf(stderr, "fail to read state from %s\n", freezer_state);
-        return ERROR;
+        return FREEZER_ERROR;
     }
 
     if (strncmp("FROZEN", state, strlen("FROZEN")) == 0) {
-        return FROZEN;
+        return FREEZER_FROZEN;
     } else if (strncmp("FREEZING", state, strlen("FREEZING")) == 0) {
-        return FREEZING;
+        return FREEZER_FREEZING;
     } else if (strncmp("THAWED", state, strlen("THAWED")) == 0) {
-        return THAWED;
+        return FREEZER_THAWED;
     } else {
         fprintf(stderr, "unknown freezer state %s\n", state);
-        return ERROR;
+        return FREEZER_ERROR;
     }
 }
 
@@ -629,6 +629,6 @@ int unpause_container(char* name) {
     }
 
     close(fd);
-    wait_until(name, THAWED);
+    wait_until(name, FREEZER_THAWED);
     return 0;
 }
