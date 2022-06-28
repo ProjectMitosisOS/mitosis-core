@@ -265,3 +265,25 @@ this is the process in the lean container, pid in container: 2
 restore!
 xxxxx (Output of containered process)
 ```
+
+## Unit tests for lean containers
+
+Build all the tests.
+
+```
+cd lib
+mkdir build
+cd build
+cmake ..
+make
+```
+
+Run all the tests directly with root privilege. All the test programs will exit normally if they successfully pass all the checks.
+
+Unit test list:
+
+- test_cached_namespace: test the creation/destruction of cached namespace
+- test_lean_container_template: test the creation/destruction of lean container template
+- test_setup_lean_container: test the interface `setup_lean_container`
+- test_setup_lean_container_w_double_fork: test the interface `setup_lean_container_w_double_fork`
+- test_lean_container_pause: test the pause/unpause interface of lean container
