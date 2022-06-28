@@ -533,6 +533,11 @@ int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int _names
     }
 }
 
+// pause the container using the freezer subsystem in cgroupfs
+// the pause procedure is shown below:
+// 1. write "FROZEN" to a specific file `freezer.state` in cgroupfs
+// 2. wait synchronously until the `freezer.state` becomes "FROZEN"
+// see https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt for more detail
 int pause_container(char* name) {
     char buf[BUF_SIZE];
     char freezer_state[BUF_SIZE];
@@ -557,9 +562,59 @@ int pause_container(char* name) {
     }
 
     close(fd);
+    wait_until(name, FREEZER_FROZEN);
     return 0;
 }
 
+int wait_until(char* name, enum FreezerState expected) {
+    int container_freezer_state;
+    while (1) {
+        container_freezer_state = get_container_state(name);
+        if (container_freezer_state == expected)
+            return 0;
+        if (container_freezer_state == FREEZER_ERROR)
+            return -1;
+    }
+}
+
+int get_container_state(char* name) {
+    char buf[BUF_SIZE];
+    char freezer_state[BUF_SIZE];
+    char state[BUF_SIZE];
+
+    sprintf(buf, freezer_cgroup_directory_prefix, name);
+    sprintf(freezer_state, "%s%s", buf, "/freezer.state");
+
+    int fd = open(freezer_state, O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        return -1;
+    }
+
+    ssize_t ret = read(fd, state, BUF_SIZE);
+    close(fd);
+    if (ret <= 0) {
+        fprintf(stderr, "fail to read state from %s\n", freezer_state);
+        return FREEZER_ERROR;
+    }
+
+    if (strncmp("FROZEN", state, strlen("FROZEN")) == 0) {
+        return FREEZER_FROZEN;
+    } else if (strncmp("FREEZING", state, strlen("FREEZING")) == 0) {
+        return FREEZER_FREEZING;
+    } else if (strncmp("THAWED", state, strlen("THAWED")) == 0) {
+        return FREEZER_THAWED;
+    } else {
+        fprintf(stderr, "unknown freezer state %s\n", state);
+        return FREEZER_ERROR;
+    }
+}
+
+// unpause the container using the freezer subsystem in cgroupfs
+// the unpause procedure is shown below:
+// 1. write "THAWED" to a specific file `freezer.state` in cgroupfs
+// 2. wait synchronously until the `freezer.state` becomes "THAWED"
+// see https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt for more detail
 int unpause_container(char* name) {
     char buf[BUF_SIZE];
     char freezer_state[BUF_SIZE];
@@ -584,5 +639,6 @@ int unpause_container(char* name) {
     }
 
     close(fd);
+    wait_until(name, FREEZER_THAWED);
     return 0;
 }
