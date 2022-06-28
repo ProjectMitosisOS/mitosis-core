@@ -69,11 +69,13 @@ int main() {
         printf("container state expected %d, returns %d\n", CONTAINER_RUNNING, ret);
     }
 
+    // kill the process in the container
     ret = kill(pid, SIGKILL);
     if (ret < 0) {
         printf("failed to kill process %d\n", pid);
     }
 
+    // wait the containered process to exit
     pid_t child = waitpid(pid, NULL, 0);
     if (child != pid) {
         printf("child pid: %d, expected: %d\n", child, pid);
