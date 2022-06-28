@@ -54,7 +54,7 @@ int main() {
         printf("pause_container %s, returns %d\n", name, ret);
     }
 
-    ret = get_container_freezer_state(name);
+    ret = get_container_state(name);
     if (ret != CONTAINER_PAUSED) {
         printf("container state expected %d, returns %d\n", CONTAINER_PAUSED, ret);
     }
@@ -64,7 +64,7 @@ int main() {
         printf("unpause_container %s, returns %d\n", name, ret);
     }
 
-    ret = get_container_freezer_state(name);
+    ret = get_container_state(name);
     if (ret != CONTAINER_RUNNING) {
         printf("container state expected %d, returns %d\n", CONTAINER_RUNNING, ret);
     }

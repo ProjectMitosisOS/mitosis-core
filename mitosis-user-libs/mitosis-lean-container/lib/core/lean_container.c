@@ -564,7 +564,7 @@ int pause_container(char* name) {
 int wait_until(char* name, enum FreezerState expected) {
     int container_freezer_state;
     while (1) {
-        container_freezer_state = get_container_freezer_state(name);
+        container_freezer_state = get_container_state(name);
         if (container_freezer_state == expected)
             return 0;
         if (container_freezer_state == FREEZER_ERROR)
@@ -572,7 +572,7 @@ int wait_until(char* name, enum FreezerState expected) {
     }
 }
 
-int get_container_freezer_state(char* name) {
+int get_container_state(char* name) {
     char buf[BUF_SIZE];
     char freezer_state[BUF_SIZE];
     char state[BUF_SIZE];
