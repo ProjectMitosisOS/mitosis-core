@@ -533,6 +533,11 @@ int setup_lean_container_w_double_fork(char* name, char* rootfs_path, int _names
     }
 }
 
+// pause the container using the freezer subsystem in cgroupfs
+// the pause procedure is shown below:
+// 1. write "FROZEN" to a specific file `freezer.state` in cgroupfs
+// 2. wait synchronously until the `freezer.state` becomes "FROZEN"
+// see https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt for more detail
 int pause_container(char* name) {
     char buf[BUF_SIZE];
     char freezer_state[BUF_SIZE];
@@ -605,6 +610,11 @@ int get_container_state(char* name) {
     }
 }
 
+// unpause the container using the freezer subsystem in cgroupfs
+// the unpause procedure is shown below:
+// 1. write "THAWED" to a specific file `freezer.state` in cgroupfs
+// 2. wait synchronously until the `freezer.state` becomes "THAWED"
+// see https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt for more detail
 int unpause_container(char* name) {
     char buf[BUF_SIZE];
     char freezer_state[BUF_SIZE];
