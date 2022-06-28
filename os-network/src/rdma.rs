@@ -13,7 +13,7 @@ pub struct IBAddressHandlerMeta {
     pub gid: ib_gid,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Copy)]
 pub struct IBAddressHandler {
     pub inner: *mut ib_ah,
 }
@@ -22,12 +22,20 @@ impl IBAddressHandler {
     pub unsafe fn get_inner(&self) -> *mut ib_ah { 
         self.inner
     }
+
+    pub unsafe fn free(&mut self) {
+        if self.inner != core::ptr::null_mut() { 
+            KRdmaKit::rust_kernel_rdma_base::rdma_destroy_ah(self.inner);            
+            self.inner = core::ptr::null_mut();
+        }
+    }
 }
 
-impl Drop for IBAddressHandler {
-    fn drop(&mut self) {
-        assert!(self.inner != core::ptr::null_mut());
-        unsafe { KRdmaKit::rust_kernel_rdma_base::rdma_destroy_ah(self.inner) };
+impl Clone for IBAddressHandler { 
+    fn clone(&self) -> Self {
+        Self { 
+            inner : self.inner
+        }
     }
 }
 

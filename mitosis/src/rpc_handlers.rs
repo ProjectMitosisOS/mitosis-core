@@ -24,7 +24,7 @@ pub(crate) fn handle_echo(input: &BytesMut, output: &mut BytesMut) -> usize {
     64
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Copy, Clone)]
 pub(crate) struct DescriptorLookupReply {
     pub(crate) pa: u64,
     pub(crate) sz: usize,

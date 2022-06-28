@@ -379,8 +379,9 @@ def get_order(p):
 
 def execute_pass(cr, global_configs, i, printer, p):
     loop = 1 if "loop" not in p.keys() else int(p["loop"])
-    for _ in range(loop):
-        res = cr.execute_w_channel(p["cmd"] + " " + global_configs,
+    for i in range(loop):
+        cmd = "%s -loop=%d" % (p["cmd"], i) if loop > 1 else p["cmd"]
+        res = cr.execute_w_channel(cmd + " " + global_configs,
             p["host"],
             p["path"],
             order=get_order(p))

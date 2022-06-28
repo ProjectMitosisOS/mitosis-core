@@ -1,0 +1,28 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod ID=0'
+order = 0
+
+[[template.pass]]
+role = 'parent'
+path = 'exp/fork-functions'
+cmd = 'cd ${micro_func_name} && python function_local_fork.py '
+order = 1
+loop = 1
+
+#
+#[[template.pass]]
+#role = 'parent'
+#path = 'exp/fork-functions/finra'
+#cmd = "python trigger_local_fork.py -process=1"
+#order = 2
+#loop = 1
+
+
+[template.placeholder]
+micro_func_name = ["finra"]
+

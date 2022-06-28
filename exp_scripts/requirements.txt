@@ -1,4 +1,8 @@
-numpy==1.16.3
+toml
+paramiko
+numpy
+zerorpc
+pandas
 chameleon==3.10.1
 six==1.10.0
 pyaes==1.6.1

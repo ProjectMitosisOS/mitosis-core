@@ -30,7 +30,7 @@ pub mod remote_mapping;
 
 pub const MAX_RPC_THREADS_CNT: usize = 10;
 
-// Prefetch page count (fetch by async operation). The real fetched page count would be `1 + PREFETCH_STEP`
+// Prefetch page count (fetch by async operation). The real fetched page count would be `PREFETCH_STEP`
 pub const PREFETCH_STEP: usize = 1;
 
 pub fn get_calling_cpu_id() -> usize {
@@ -39,6 +39,8 @@ pub fn get_calling_cpu_id() -> usize {
 
 declare_global!(mac_id, usize);
 declare_global!(max_caller_num, usize);
+
+declare_global!(global_locks, alloc::vec::Vec<crate::linux_kernel_module::mutex::LinuxMutex<()>>);
 
 declare_global!(max_cluster_size, usize);
 
@@ -234,6 +236,8 @@ pub mod remote_paging;
 
 declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
+declare_global!(access_info_service, crate::dc_pool::AccessInfoPool);
+
 
 #[cfg(feature = "prefetch")]
 type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::DCPool<'static>>>;
@@ -257,6 +261,11 @@ pub unsafe fn get_dc_pool_async_service_ref() -> &'static crate::AsyncDCPool {
 #[inline]
 pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> {
     crate::dc_pool_service::get_mut()
+}
+
+#[inline]
+pub unsafe fn get_accessinfo_service_mut() -> &'static mut crate::dc_pool::AccessInfoPool {
+    crate::access_info_service::get_mut()
 }
 
 #[inline]
