@@ -75,6 +75,8 @@ impl ChildDescriptor {
         // 1. Unmap origin vma regions
         task.unmap_self();
         let access_info = AccessInfo::new(&self.machine_info).unwrap();
+        // let access_info = AccessInfo::new_from_cache(self.machine_info.mac_id, &self.machine_info).unwrap();
+
         // 2. Map new vma regions
         #[cfg(not(feature = "eager-resume"))]
         (&self.vma).into_iter().enumerate().for_each(|(i, m)| {
@@ -386,6 +388,11 @@ impl ChildDescriptor {
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
 
+        let pool_idx = crate::bindings::pmem_get_current_cpu() as usize;
+        // hold the lock 
+        unsafe { crate::global_locks::get_ref()[pool_idx].lock() };        
+
+
         // FIXME: currently this code is from the remote_mapping.rs
         // But we need to use this piece of code
         let res = {
@@ -395,7 +402,6 @@ impl ChildDescriptor {
             use os_network::block_on;
             use os_network::timeout::TimeoutWRef;
 
-            let pool_idx = crate::bindings::pmem_get_current_cpu() as usize;
             let (dc_qp, lkey) = crate::get_dc_pool_service_mut()
                 .get_dc_qp_key(pool_idx)
                 .expect("failed to get DCQP");
@@ -446,6 +452,8 @@ impl ChildDescriptor {
                 }
             }
         };
+
+        unsafe { crate::global_locks::get_ref()[pool_idx].unlock() };
 
         return match res {
             Ok(_) => Some(new_page_p),
@@ -564,6 +572,7 @@ impl os_network::serialize::Serialize for ChildDescriptor {
 
         #[cfg(feature = "prefetch")]
         let access_info = AccessInfo::new(&machine_info);
+        // let access_info = AccessInfo::new_from_cache(machine_info.mac_id, &machine_info);
         #[cfg(feature = "prefetch")]
         if access_info.is_none() {
             return None;

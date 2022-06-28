@@ -12,7 +12,7 @@ import uuid
 from time import time
 from PIL import Image, ImageFilter
 
-TMP = '/dev/shm/'
+TMP = './'
 
 def flip(image, file_name):
     path_list = []

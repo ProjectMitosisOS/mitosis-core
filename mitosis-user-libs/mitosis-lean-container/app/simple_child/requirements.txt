@@ -9,3 +9,5 @@ future==0.18.2
 torch==1.4.0
 torchvision==0.5.0
 python-igraph==0.8.0
+agileutil
+pandas

@@ -107,6 +107,7 @@ impl<'a> DCAsyncPrefetcher<'a> {
     /// Currently, we assume that the remote PA will not change.
     /// If this is not the case, we need to 2 bits to identify
     /// whether the remote page is in the prefetch state.
+    #[inline]
     pub fn execute_reqs<P>(&mut self, mut iter: RemotePageTableIter, strategy: P)
     where
         P: Prefetch<Item = PrefetchReq>,

@@ -76,7 +76,23 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
             dc_factories.push(DCFactory::new(c));
         }
         crate::dc_factories::init(dc_factories);
+        
+        crate::access_info_service::init(crate::dc_pool::AccessInfoPool::new(config.max_core_cnt));
     };
+
+    // global lock
+    {
+        let mut locks = Vec::new();
+        for _ in 0..config.max_core_cnt { 
+            locks.push(crate::linux_kernel_module::mutex::LinuxMutex::new(()));
+        }
+
+        for i in 0..locks.len() { 
+            locks[i].init();
+        }
+
+        unsafe { crate::global_locks::init(locks) };
+    }
 
     // RPC service
     unsafe {
@@ -152,6 +168,7 @@ pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
         crate::service_rpc::drop();
+        crate::access_info_service::drop();
 
         crate::log::debug!("drop dc targets");
         crate::dc_target_service::drop();
@@ -169,6 +186,8 @@ pub fn end_instance() {
         crate::mem_pool::drop();
 
         crate::global_pt_cache::drop();
+
+        crate::global_locks::drop();
     };
     end_rdma();
 

@@ -1,0 +1,47 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod ID=0'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches; make insmod ID=${@incr}'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = './connector -gid=${parent_gid} -mac_id=0 -nic_id=0'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'exp/fork-functions'
+cmd = 'cd ${micro_func_name} && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=0 -app_name="${micro_func_name}" '
+order = 2
+
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = "./simple_child_socket -mac_id=0"
+#cmd = "python fork-functions/finra/child_function_wrapper.py -master_host=${parent_host} -command='./simple_child -mac_id=0' "
+order = 2
+loop = 1
+
+#
+[[template.pass]]
+role = 'parent'
+path = 'exp/fork-functions/finra'
+cmd = "python trigger.py -child_hosts='${child_hosts}' -parent_host=${parent_host} -process=1"
+order = 3
+loop = 1
+
+
+[template.placeholder]
+micro_func_name = ["finra"]
+
