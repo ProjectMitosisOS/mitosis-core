@@ -14,7 +14,8 @@ struct ContainerSpec {
     int numa_end;
 };
 
-// FreezerState and ContainerState can be safely casted to each other
+// freezer state in the cgroupfs
+// note that FreezerState and ContainerState can be safely casted to each other
 enum FreezerState {
     FREEZER_ERROR = -1,
     FREEZER_FROZEN,
@@ -22,6 +23,8 @@ enum FreezerState {
     FREEZER_THAWED,
 };
 
+// container state for a lean container
+// note that FreezerState and ContainerState can be safely casted to each other
 enum ContainerState {
     CONTAINER_ERROR = FREEZER_ERROR,
     CONTAINER_PAUSED = FREEZER_FROZEN,
@@ -53,7 +56,11 @@ int setup_lean_container(char* name, char* rootfs_path, int _namespace);
 // returns 0 on success
 int pause_container(char* name);
 int unpause_container(char* name);
+
+// get the container state: CONTAINER_PAUSED/CONTAINER_PAUSING/CONTAINER_RUNNING
 int get_container_state(char* name);
+
+// wait one container to become the specified state
 int wait_until(char* name, enum FreezerState expected);
 
 // setup lean container, with an additional call to fork (a.k.a: double fork)
