@@ -18,6 +18,7 @@ PLOT=1 # If plot the target figure
 ### end of configurations ###
 
 
+
 STR_ALL_HOSTS='${PARENT_HOST}',${STR_CHILD_HOSTS}
 RUNNER_FLAG=-k=$(USE_PROXY_COMMAND)
 
@@ -58,6 +59,7 @@ template-run-micro-func-execution=templates-run/micro-func/template-run-micro-ex
 template-run-micro-func-execution-hanged=templates-run/micro-func/template-run-micro-execution-hanged.toml
 template-run-micro-func-execution-hanged-cache=templates-run/micro-func/template-run-micro-execution-hanged-cache.toml
 template-run-micro-func-with-trigger=templates-run/micro-func/template-run-micro-with-trigger.toml
+template-run-micro-func-with-trigger-local-fork=templates-run/micro-func/template-run-micro-with-trigger-local-fork.toml
 
 template-run-micro-func-prepare=templates-run/micro-func/template-run-micro-prepare.toml
 
@@ -113,6 +115,9 @@ micro-function-execution:
 
 micro-function-with-trigger:
 	$(call runner, $(template-run-micro-func-with-trigger), ${run_out}/$@)
+
+micro-function-with-trigger-local-fork:
+	$(call runner, $(template-run-micro-func-with-trigger-local-fork), ${run_out}/$@)
 
 
 micro-function-execution-hanged:
