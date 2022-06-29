@@ -211,8 +211,7 @@ clean:
     ret = remove_lean_container_template(name);
     assert(ret == 0);
 
-    ret = deinit_cgroup();
-    assert(ret == 0);
+    // we do not need to call `deinit_cgroup` as there are possibly other running benchmarks
 
     printf("pass lean container unit test!\n");
     return 0;
