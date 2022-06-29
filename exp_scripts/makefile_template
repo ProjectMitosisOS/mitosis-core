@@ -79,6 +79,7 @@ template-run-peak-function-exec=templates-run/execution-peak/peak-function-execu
 template-run-peak-c-exec=templates-run/execution-peak/peak-c-execution.toml
 template-run-peak-nil-rpc=templates-run/execution-peak/peak-nil-rpc.toml
 
+template-run-micro-warm-start-with-pause=templates-run/micro-func/template-run-micro-warm-start-with-pause.toml
 
 run_out=out
 build_out=run-build.toml
@@ -143,6 +144,9 @@ micro-c-startup-execution:
 
 micro-touch-ratio:
 	$(call runner, $(template-run-micro-touch-ratio), ${run_out}/$@)
+
+micro-warm-start-with-pause:
+	$(call runner, $(template-run-micro-warm-start-with-pause), ${run_out}/$@)
 
 ## Thpt evaluations
 
