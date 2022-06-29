@@ -2,16 +2,10 @@
 [template]
 
 [[template.pass]]
-role = 'parent'
-path = ''
-cmd = 'echo helloworld'
-
-
-[[template.pass]]
-role = 'parent'
-path = 'exp/fork-functions'
-cmd = 'echo ${micro_func_name}'
-
+role = 'builder'
+path = 'exp'
+cmd = 'sudo umount ${tmp_dir} ;sudo mkdir -p ${tmp_dir} ; echo ${micro_func_name}'
 
 [template.placeholder]
+tmp_dir="/tmp-mitosis"
 micro_func_name = ["json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
