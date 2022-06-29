@@ -3,8 +3,8 @@
 
 [[template.pass]]
 role = 'builder'
-path = 'exp'
-cmd = 'sudo umount ${tmp_dir} ;sudo mkdir -p ${tmp_dir} ; echo ${micro_func_name}'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo umount ${tmp_dir}; sudo mkdir -p ${tmp_dir}; sudo mount -t tmpfs tmpfs -o size=100G ${tmp_dir}; for i in {0..29}; do sudo python3 make_app_rootfs.py --name ${micro_func_name}_uds --app ./app/${micro_func_name}_uds --export ${tmp_dir}/app$i/rootfs; done;'
 
 [template.placeholder]
 tmp_dir="/tmp-mitosis"
