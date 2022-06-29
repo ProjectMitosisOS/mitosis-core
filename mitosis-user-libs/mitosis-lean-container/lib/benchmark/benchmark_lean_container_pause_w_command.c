@@ -49,7 +49,7 @@ void report(struct timespec* start, struct timespec* end) {
     long elapsed_time = get_passed_nanosecond(start, end);
     long elapsed_time_since_last_report = elapsed_time - last_timestamp;
     if (elapsed_time_since_last_report > interval) {
-        printf("start %ld lean containers in %f second(s), latency per container %fms\n", count-last_count, elapsed_time_since_last_report/NANOSECONDS_IN_SECOND, (elapsed_time_since_last_report/NANOSECONDS_IN_MILLISECOND)/(count-last_count));
+        printf("pause/unpause %ld lean containers in %f second(s), latency per container %fms\n", count-last_count, elapsed_time_since_last_report/NANOSECONDS_IN_SECOND, (elapsed_time_since_last_report/NANOSECONDS_IN_MILLISECOND)/(count-last_count));
         last_timestamp = elapsed_time;
         last_count = count;
     }
@@ -171,7 +171,8 @@ int main(int argc, char* argv[]) {
 
     printf("%s\n", addr.sun_path);
 
-    sleep(1);
+    // wait for the container process to listen on the unix domain socket
+    sleep(10);
 
     if (connect(client_socket, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         assert(0);
@@ -190,7 +191,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    printf("total: start %ld lean containers in %f second(s)\n", count, elapsed_time/NANOSECONDS_IN_SECOND);
+    printf("total: pause/unpause %ld lean containers in %f second(s)\n", count, elapsed_time/NANOSECONDS_IN_SECOND);
 
     ret = unpause_container(name);
     if (ret != 0) {
