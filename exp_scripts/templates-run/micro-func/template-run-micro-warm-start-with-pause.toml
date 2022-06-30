@@ -3,15 +3,162 @@
 
 [[template.pass]]
 role = 'parent'
-path = ''
-cmd = 'echo helloworld'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo umount ${tmp_dir}; sudo mkdir -p ${tmp_dir}; sudo mount -t tmpfs tmpfs -o size=100G ${tmp_dir}; for i in {0..23}; do sudo python3 make_app_rootfs.py --name ${micro_func_name}_uds --app ./app/${micro_func_name}_uds --export ${tmp_dir}/app$i/rootfs; sudo mount -t devtmpfs devtmpfs ${tmp_dir}/app$i/rootfs/dev; done;'
+order = 0
 
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}0 ${tmp_dir}/app0/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}1 ${tmp_dir}/app1/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}2 ${tmp_dir}/app2/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}3 ${tmp_dir}/app3/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}4 ${tmp_dir}/app4/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}5 ${tmp_dir}/app5/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}6 ${tmp_dir}/app6/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}7 ${tmp_dir}/app7/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}8 ${tmp_dir}/app8/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}9 ${tmp_dir}/app9/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}10 ${tmp_dir}/app10/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}11 ${tmp_dir}/app11/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}12 ${tmp_dir}/app12/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}13 ${tmp_dir}/app13/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}14 ${tmp_dir}/app14/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}15 ${tmp_dir}/app15/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}16 ${tmp_dir}/app16/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}17 ${tmp_dir}/app17/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}18 ${tmp_dir}/app18/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}19 ${tmp_dir}/app19/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}20 ${tmp_dir}/app20/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}21 ${tmp_dir}/app21/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}22 ${tmp_dir}/app22/rootfs/ /usr/local/bin/python /main.py'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'mitosis-user-libs/mitosis-lean-container'
+cmd = 'sudo ./lib/build/benchmark_lean_container_pause_w_command ${running_time} ${container_name_prefix}23 ${tmp_dir}/app23/rootfs/ /usr/local/bin/python /main.py'
+order = 1
 
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
-cmd = 'echo ${micro_func_name}'
-
+cmd = 'for i in {0..23}; do sudo umount ${tmp_dir}/app$i/rootfs/dev; done; sudo umount ${tmp_dir}'
+order = 2
 
 [template.placeholder]
+tmp_dir="/tmp-mitosis"
+container_name_prefix="my_container"
+running_time="60"
 micro_func_name = ["json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
