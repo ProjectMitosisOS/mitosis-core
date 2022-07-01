@@ -160,5 +160,5 @@ order = 2
 [template.placeholder]
 tmp_dir="/tmp-mitosis"
 container_name_prefix="my_container"
-running_time="60"
+running_time="30"
 micro_func_name = ["json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
