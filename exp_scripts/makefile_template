@@ -48,6 +48,7 @@ template-build-mitosis-cow-profile=templates-build/template-build-mitosis-cow-pr
 template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
 template-build-mitosis-eager-resume=templates-build/template-build-mitosis-eager-resume.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
+template-build-pause-runner=templates-build/template-build-pause-runner.toml
 
 
 # Evaluation runner templates
@@ -221,6 +222,9 @@ build-mitosis-eager-resume: build-cpp
 	$(call builder, $(template-build-mitosis-eager-resume))
 	sleep 1
 	$(call builder, $(template-build-lean-container))
+
+build-pause-runner:
+	$(call builder, $(template-build-pause-runner))
 
 clean: gen-clean
 	pkill python; sleep 0.1
