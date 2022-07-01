@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
     printf("%s\n", addr.sun_path);
 
     // wait for the container process to listen on the unix domain socket
-    sleep(10);
+    sleep(5);
 
     if (connect(client_socket, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         assert(0);
