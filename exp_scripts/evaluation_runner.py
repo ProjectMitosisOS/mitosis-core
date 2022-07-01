@@ -52,7 +52,7 @@ def trigger_bootstrap(dictory):
                 log_path = "{}/{}.txt".format(dictory, f)
                 cmd = "python bootstrap.py -f {} {} > {}".format(
                     os.path.join(root, f), str(arguments), log_path)
-                sys_command_outstatuserr(cmd, timeout=60)
+                sys_command_outstatuserr(cmd, timeout=600)
 
                 if len(filter) > 0: 
                     trace = ""
