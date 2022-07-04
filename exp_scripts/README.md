@@ -23,6 +23,21 @@ make micro-function-startup # startup lean-container
 make build-pause-runner && make micro-warm-start-with-pause # warm start (w/ pause/unpause) throughput microbenchmark of different apps
 ```
 
+### Some remarks
+
+1. In benchmark **warm start (w/ pause/unpause) throughput microbenchmark of different apps**, the peak throughput will be achieved with different parallel configurations.
+
+|             | achieves peak throughput w/ #number parallel containers |
+|-------------|---------------------------------------------------------|
+| helloworld  | 4                                                       |
+| compression | 30                                                      |
+| json        | 24                                                      |
+| pyaes       | 24                                                      |
+| chameleon   | 24                                                      |
+| image       | 24                                                      |
+| pagerank    | 24                                                      |
+| recognition | 24                                                      |
+
 ## Run micros at once (MITOSIS)
 
 ```shell
