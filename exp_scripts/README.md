@@ -22,6 +22,12 @@
 make build-pause-runner && make micro-warm-start-with-pause
 ```
 
+Related machines: val01
+
+Related tomls:
+* `templates-build/template-build-pause-runner.toml` for building benchmark runner program
+* `templates-run/micro-func/template-run-micro-warm-start-with-pause.toml` for running the benchmark
+
 Remarks:
 
 1. Different app will achieve peak throughput with different parallel configurations.
