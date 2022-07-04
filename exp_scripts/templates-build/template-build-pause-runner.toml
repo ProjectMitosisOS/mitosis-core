@@ -1,0 +1,10 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'builder'
+path = 'mitosis-user-libs/mitosis-lean-container/lib'
+cmd = 'mkdir -p build && cd build && cmake .. && make benchmark_lean_container_pause_w_command'
+
+[template.placeholder]
+name = ["build"]
