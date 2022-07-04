@@ -1,36 +1,18 @@
-##### Build everything
+## Experiments on MITOSIS
 
-```sh
-make build-mitosis  # Build MITOSIS
-make build-mitosis-cache  # Build MITOSIS-cache
-```
+### Building project
 
-## Run C microbenchmark
+- All of the building process including the `rootfs` configuration (on child hosts)
 
-```sh
-make micro-c-prepare # prepare microbench 
-make micro-c-execution # prepare microbench
-make micro-c-startup # startup lean-container
+| Command                               | Feature                     | Note                                                         |
+| ------------------------------------- | --------------------------- | ------------------------------------------------------------ |
+| `make build-cpp`                      | -                           | Build All of cpp executable files<br />Generate into directory `${PROJECT_PATH}/exp` |
+| `make build-mitosis-prefetch`         | cow prefetch                | Configuration for default mitosis.                           |
+| `make build-mitosis-prefetch-profile` | cow prefetch resume-profile | Show detailed memory/runtime latency profile in `dmesg`<br />Especially the memory consumtions. |
+| `make build-mitosis-cow`              | cow                         | Exclude prefetch strategy                                    |
+| `make build-mitosis-cow-prefetch`     | cow resume-profile          | COW mode w/ detailed profile infomation                      |
+| `make build-mitosis-cache`            | cow page-cache              | Caching strategy                                             |
+| `make build-mitosis-eager-resume`     | cow prefetch eager-resume   | Eager resume strategy (instead of on-demand fetch)           |
 
-```
 
-## Run micro-functions
-
-```sh
-make micro-function-prepare  # prepare microbench
-make micro-function-execution  # execution microbench
-make micro-function-startup # startup lean-container
-```
-
-## Run micros at once (MITOSIS)
-
-```shell
-make build-mitosis micro
-```
-
-## Run micros at once (MITOSIS-cache)
-
-```shell
-make build-mitosis-cache micro
-```
 
