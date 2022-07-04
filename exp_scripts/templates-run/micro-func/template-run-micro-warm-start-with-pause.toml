@@ -4,7 +4,7 @@
 [[template.pass]]
 role = 'parent'
 path = 'mitosis-user-libs/mitosis-lean-container'
-cmd = 'sudo umount ${tmp_dir}; sudo mkdir -p ${tmp_dir}; sudo mount -t tmpfs tmpfs -o size=100G ${tmp_dir}; for i in {0..23}; do sudo python3 make_app_rootfs.py --name ${micro_func_name}_pause_bench --app ./app/pause-bench/${micro_func_name} --export ${tmp_dir}/app$i/rootfs; sudo mount -t devtmpfs devtmpfs ${tmp_dir}/app$i/rootfs/dev; done;'
+cmd = 'PARALLEL_CONTAINERS_MAX=$(echo ${parallel_containers}-1 | bc); sudo umount ${tmp_dir}; sudo mkdir -p ${tmp_dir}; sudo mount -t tmpfs tmpfs -o size=100G ${tmp_dir}; for i in $(seq 0 $PARALLEL_CONTAINERS_MAX); do sudo python3 make_app_rootfs.py --name ${micro_func_name}_pause_bench --app ./app/pause-bench/${micro_func_name} --export ${tmp_dir}/app$i/rootfs; sudo mount -t devtmpfs devtmpfs ${tmp_dir}/app$i/rootfs/dev; done;'
 order = 0
 
 [[template.pass]]
@@ -154,11 +154,12 @@ order = 1
 [[template.pass]]
 role = 'parent'
 path = 'exp/fork-functions'
-cmd = 'for i in {0..23}; do sudo umount ${tmp_dir}/app$i/rootfs/dev; done; sudo umount ${tmp_dir}'
+cmd = 'PARALLEL_CONTAINERS_MAX=$(echo ${parallel_containers}-1 | bc); for i in $(seq 0 $PARALLEL_CONTAINERS_MAX); do sudo umount ${tmp_dir}/app$i/rootfs/dev; done; sudo umount ${tmp_dir}'
 order = 2
 
 [template.placeholder]
 tmp_dir="/tmp-mitosis"
 container_name_prefix="my_container"
 running_time="30"
+parallel_containers="24"
 micro_func_name = ["json", "chameleon", "compression", "helloworld", "image", "pagerank", "pyaes", "recognition"]
