@@ -18,11 +18,13 @@
 
 #### warm start (w/ pause/unpause) throughput of different apps
 
+General build and run commands: 
+
 ```sh
 make build-pause-runner && make micro-warm-start-with-pause
 ```
 
-Related machines: val01
+Note that the experiments only requires one machine. Thus, we use the `parent` to execute all of them.
 
 Related tomls:
 * `templates-build/template-build-pause-runner.toml` for building benchmark runner program
