@@ -48,6 +48,7 @@ template-build-mitosis-cow-profile=templates-build/template-build-mitosis-cow-pr
 template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
 template-build-mitosis-eager-resume=templates-build/template-build-mitosis-eager-resume.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
+template-build-pause-runner=templates-build/template-build-pause-runner.toml
 
 
 # Evaluation runner templates
@@ -79,6 +80,7 @@ template-run-peak-function-exec=templates-run/execution-peak/peak-function-execu
 template-run-peak-c-exec=templates-run/execution-peak/peak-c-execution.toml
 template-run-peak-nil-rpc=templates-run/execution-peak/peak-nil-rpc.toml
 
+template-run-micro-warm-start-with-pause=templates-run/micro-func/template-run-micro-warm-start-with-pause.toml
 
 run_out=out
 build_out=run-build.toml
@@ -143,6 +145,9 @@ micro-c-startup-execution:
 
 micro-touch-ratio:
 	$(call runner, $(template-run-micro-touch-ratio), ${run_out}/$@)
+
+micro-warm-start-with-pause:
+	$(call runner, $(template-run-micro-warm-start-with-pause), ${run_out}/$@)
 
 ## Thpt evaluations
 
@@ -218,6 +223,8 @@ build-mitosis-eager-resume: build-cpp
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
+build-pause-runner:
+	$(call builder, $(template-build-pause-runner))
 
 clean: gen-clean
 	pkill python; sleep 0.1

@@ -1,2 +1,3 @@
 add_executable(benchmark_lean_container benchmark/benchmark_lean_container.c core/lean_container.c)
 add_executable(benchmark_lean_container_w_command benchmark/benchmark_lean_container_w_command.c core/lean_container.c)
+add_executable(benchmark_lean_container_pause_w_command benchmark/benchmark_lean_container_pause_w_command.c core/lean_container.c)
