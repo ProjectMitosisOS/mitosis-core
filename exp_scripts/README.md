@@ -20,6 +20,7 @@ make micro-c-startup # startup lean-container
 make micro-function-prepare  # prepare microbench
 make micro-function-execution  # execution microbench
 make micro-function-startup # startup lean-container
+make build-pause-runner && make micro-warm-start-with-pause # warm start (w/ pause/unpause) throughput microbenchmark of different apps
 ```
 
 ## Run micros at once (MITOSIS)
@@ -33,4 +34,3 @@ make build-mitosis micro
 ```shell
 make build-mitosis-cache micro
 ```
-
