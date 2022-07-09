@@ -8,7 +8,6 @@ use rust_kernel_linux_util as log;
 use krdma_test::*;
 use os_network::bytes::*;
 use os_network::rpc::*;
-use os_network::future::Async;
 use os_network::block_on;
 
 fn test_callback(_input: &BytesMut, _output: &mut BytesMut) -> usize {
@@ -21,23 +20,21 @@ use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
 use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
 
-use os_network::timeout::{Delay, Timeout};
+use os_network::timeout::Timeout;
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
-use os_network::rpc::header::*;
 use os_network::Factory;
-use os_network::MetaFactory;
 
-const DEFAULT_QD_HINT: u64 = 73;
-const CLIENT_QD_HINT: u64 = 12;
-const TEST_RPC_ID: usize = 73;
-const RUNNING_TIME: i64 = 30_000_000; // Running time in microsecond
+use mitosis_macros::declare_module_param;
+
+declare_module_param!(default_qd_hint, u64);
+declare_module_param!(test_rpc_id, usize);
+declare_module_param!(running_secs, i64);
 
 // a test RPC with RDMA
 fn start_rpc_server() {
     log::info!("starting rpc server");
-    let timeout_usec = 1000_000;
 
     type UDRPCHook<'a, 'b> = hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
 
@@ -51,7 +48,7 @@ fn start_rpc_server() {
     // expose the server-side connection infoit
     let service_id: u64 = 0;
     let ctrl = RCtrl::create(service_id, &ctx).unwrap();
-    ctrl.reg_ud(DEFAULT_QD_HINT as usize, server_ud.get_qp());
+    ctrl.reg_ud(default_qd_hint::read() as usize, server_ud.get_qp());
 
     // register callback and wait for requests
     let lkey = unsafe { ctx.get_lkey() };
@@ -60,34 +57,36 @@ fn start_rpc_server() {
         &factory,
         server_ud,
         UDReceiverFactory::new()
-            .set_qd_hint(DEFAULT_QD_HINT as _)
+            .set_qd_hint(default_qd_hint::read() as _)
             .set_lkey(lkey)
             .create(temp_ud),
     );
 
     rpc_server
         .get_mut_service()
-        .register(TEST_RPC_ID, test_callback);
+        .register(test_rpc_id::read(), test_callback);
 
     log::info!("check RPCHook: {:?}", rpc_server);
 
     for _ in 0..12 {
         // 64 is the header
-        match rpc_server.post_msg_buf(UDMsg::new(4096, TEST_RPC_ID as u32)) {
+        match rpc_server.post_msg_buf(UDMsg::new(4096, test_rpc_id::read() as u32)) {
             Ok(_) => {}
             Err(e) => log::error!("post recv buf err: {:?}", e),
         }
     }
 
     let timer = KTimer::new();
-    let mut rpc_server = Timeout::new(rpc_server, 1_000_000); // Timeout for 1 second
+    let timeout_usec = 1000_000;
+    let running_usecs = running_secs::read() * 1_000_000;
+    let mut rpc_server = Timeout::new(rpc_server, timeout_usec); // Timeout for 1 second
     let mut rpc_count = 0;
     loop {
         rpc_count += 1;
         if rpc_count % 10000 == 0 {
             kthread::yield_now();
         }
-        rpc_server.reset_timer(1_000_000);
+        rpc_server.reset_timer(timeout_usec);
         let res = block_on(&mut rpc_server);
         if res.is_err() {
             if !res.as_ref().err().unwrap().is_elapsed() {
@@ -98,7 +97,7 @@ fn start_rpc_server() {
                 break;
             }
         }
-        if timer.get_passed_usec() > RUNNING_TIME {
+        if timer.get_passed_usec() > running_usecs {
             log::info!("end of rpc server...");
             break;
         }
