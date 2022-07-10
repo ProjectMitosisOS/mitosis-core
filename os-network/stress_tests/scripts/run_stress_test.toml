@@ -1,0 +1,41 @@
+user = "wtx"
+pwd = "xxxx"
+[[pass]]
+host = "val01"
+path = '~'
+cmd  = 'export RUNNING_TIME=80; sudo dmesg -c > /dev/null && sudo insmod rpc_server_tests.ko running_secs=$RUNNING_TIME && sleep 5 && sudo rmmod rpc_server_tests.ko'
+
+[[pass]]
+host = "val02"
+path = '~'
+cmd  = 'export RUNNING_TIME=60; export SESSION_ID_BASE=0; sleep 2; sudo dmesg -c > /dev/null && sudo insmod rpc_client_tests.ko running_secs=$RUNNING_TIME thread_count=24 session_id_base=$SESSION_ID_BASE gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" && sleep 5 && sudo rmmod rpc_client_tests.ko'
+
+# [[pass]]
+# host = "val03"
+# path = '~'
+# cmd  = 'export RUNNING_TIME=60; export SESSION_ID_BASE=1000; sleep 2; sudo dmesg -c > /dev/null && sudo insmod rpc_client_tests.ko running_secs=$RUNNING_TIME thread_count=24 session_id_base=$SESSION_ID_BASE gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" && sleep 5 && sudo rmmod rpc_client_tests.ko'
+# 
+# [[pass]]
+# host = "val04"
+# path = '~'
+# cmd  = 'export RUNNING_TIME=60; export SESSION_ID_BASE=2000; sleep 2; sudo dmesg -c > /dev/null && sudo insmod rpc_client_tests.ko running_secs=$RUNNING_TIME thread_count=24 session_id_base=$SESSION_ID_BASE gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" && sleep 5 && sudo rmmod rpc_client_tests.ko'
+# 
+# [[pass]]
+# host = "val05"
+# path = '~'
+# cmd  = 'export RUNNING_TIME=60; export SESSION_ID_BASE=3000; sleep 2; sudo dmesg -c > /dev/null && sudo insmod rpc_client_tests.ko running_secs=$RUNNING_TIME thread_count=24 session_id_base=$SESSION_ID_BASE gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" && sleep 5 && sudo rmmod rpc_client_tests.ko'
+# 
+# [[pass]]
+# host = "val07"
+# path = '~'
+# cmd  = 'export RUNNING_TIME=60; export SESSION_ID_BASE=4000; sleep 2; sudo dmesg -c > /dev/null && sudo insmod rpc_client_tests.ko running_secs=$RUNNING_TIME thread_count=24 session_id_base=$SESSION_ID_BASE gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" && sleep 5 && sudo rmmod rpc_client_tests.ko'
+# 
+# [[pass]]
+# host = "val08"
+# path = '~'
+# cmd  = 'export RUNNING_TIME=60; export SESSION_ID_BASE=5000; sleep 2; sudo dmesg -c > /dev/null && sudo insmod rpc_client_tests.ko running_secs=$RUNNING_TIME thread_count=24 session_id_base=$SESSION_ID_BASE gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" && sleep 5 && sudo rmmod rpc_client_tests.ko'
+# 
+# [[pass]]
+# host = "val09"
+# path = '~'
+# cmd  = 'export RUNNING_TIME=60; export SESSION_ID_BASE=6000; sleep 2; sudo dmesg -c > /dev/null && sudo insmod rpc_client_tests.ko running_secs=$RUNNING_TIME thread_count=24 session_id_base=$SESSION_ID_BASE gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" && sleep 5 && sudo rmmod rpc_client_tests.ko'
