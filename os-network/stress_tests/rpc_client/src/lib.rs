@@ -16,7 +16,6 @@ use os_network::block_on;
 
 use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
-use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
 use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
 
