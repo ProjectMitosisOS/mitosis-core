@@ -2,8 +2,11 @@
 
 #define DEFAULT_PERMISSION S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH
 
-ulong default_qd_hint = 73;
-module_param(default_qd_hint, ulong, DEFAULT_PERMISSION);
+ulong qd_hint = 73;
+module_param(qd_hint, ulong, DEFAULT_PERMISSION);
+
+ulong service_id = 0;
+module_param(service_id, ulong, DEFAULT_PERMISSION);
 
 ulong test_rpc_id = 73;
 module_param(test_rpc_id, ulong, DEFAULT_PERMISSION);
