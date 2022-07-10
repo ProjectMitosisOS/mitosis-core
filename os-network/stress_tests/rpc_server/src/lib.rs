@@ -68,7 +68,7 @@ fn start_rpc_server() {
 
     log::info!("check RPCHook: {:?}", rpc_server);
 
-    for _ in 0..12 {
+    for _ in 0..1024 {
         // 64 is the header
         match rpc_server.post_msg_buf(UDMsg::new(4096, test_rpc_id::read() as u32)) {
             Ok(_) => {}
