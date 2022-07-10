@@ -28,9 +28,10 @@ use os_network::Factory;
 
 use mitosis_macros::declare_module_param;
 
-declare_module_param!(default_qd_hint, u64);
+declare_module_param!(qd_hint, u64);
 declare_module_param!(test_rpc_id, usize);
 declare_module_param!(running_secs, i64);
+declare_module_param!(service_id, u64);
 
 // a test RPC with RDMA
 fn start_rpc_server() {
@@ -46,9 +47,8 @@ fn start_rpc_server() {
     let server_ud = factory.create(()).unwrap();
 
     // expose the server-side connection infoit
-    let service_id: u64 = 0;
-    let ctrl = RCtrl::create(service_id, &ctx).unwrap();
-    ctrl.reg_ud(default_qd_hint::read() as usize, server_ud.get_qp());
+    let ctrl = RCtrl::create(service_id::read(), &ctx).unwrap();
+    ctrl.reg_ud(qd_hint::read() as usize, server_ud.get_qp());
 
     // register callback and wait for requests
     let lkey = unsafe { ctx.get_lkey() };
@@ -57,7 +57,7 @@ fn start_rpc_server() {
         &factory,
         server_ud,
         UDReceiverFactory::new()
-            .set_qd_hint(default_qd_hint::read() as _)
+            .set_qd_hint(qd_hint::read() as _)
             .set_lkey(lkey)
             .create(temp_ud),
     );
