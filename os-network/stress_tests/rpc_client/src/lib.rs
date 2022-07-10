@@ -48,6 +48,7 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
     let client_service_id = client_service_id_base::read() + id;
     let my_session_id = session_id_base::read() + id as usize;
     let timeout_usec = 1000_000;
+    let mut is_error = false;
     log::info!("start stress test client {}", id);
     log::info!("gid: {}", server_gid_str);
 
@@ -124,12 +125,14 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
             unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
             log::info!("sanity check decoded reply {:?}", msg_header);
         }
-        Err(e) => log::error!("client receiver reply err {:?}", e),
+        Err(e) => {
+            log::error!("client receiver reply err {:?}", e);
+            is_error = true;
+        },
     }
 
     // start stress test
     let mut count = 0;
-    let mut is_error = false;
     client_receiver.reset_timer(timeout_usec);
     while !kthread::should_stop() {
         count += 1;
