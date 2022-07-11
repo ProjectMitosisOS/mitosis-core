@@ -94,7 +94,6 @@ fn start_rpc_server() {
                     "stress server receiver process err {:?}",
                     res.err().unwrap()
                 );
-                break;
             }
         }
         if timer.get_passed_usec() > running_usecs {
