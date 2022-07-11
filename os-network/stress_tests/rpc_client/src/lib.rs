@@ -132,7 +132,7 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
     }
 
     // start stress test
-    let mut count = 0;
+    let mut count: u64 = 0;
     client_receiver.reset_timer(timeout_usec);
     while !kthread::should_stop() {
         count += 1;
