@@ -27,6 +27,9 @@ module_param(session_id_base, ulong, DEFAULT_PERMISSION);
 long running_secs = 10;
 module_param(running_secs, long, DEFAULT_PERMISSION);
 
+long report_interval = 1;
+module_param(report_interval, long, DEFAULT_PERMISSION);
+
 char gid_arr[BUF_LENGTH] = "fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c";
 char* gid = gid_arr;
 module_param_string(gid, gid_arr, BUF_LENGTH, DEFAULT_PERMISSION);

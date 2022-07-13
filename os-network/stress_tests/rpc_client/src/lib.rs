@@ -3,6 +3,7 @@
 extern crate alloc;
 use alloc::format;
 use alloc::vec::Vec;
+use rust_kernel_linux_util::timer::KTimer;
 use rust_kernel_linux_util::string::ptr2string;
 use rust_kernel_linux_util::linux_kernel_module::c_types::c_void;
 use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
@@ -37,9 +38,11 @@ declare_module_param!(session_id_base, usize);
 declare_module_param!(thread_count, u64);
 declare_module_param!(test_rpc_id, u32);
 declare_module_param!(running_secs, i64);
+declare_module_param!(report_interval, i64);
 declare_module_param!(gid, *mut u8);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
+declare_global!(COUNTERS, alloc::vec::Vec<u64>);
 
 extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
     let id = id as u64;
@@ -160,6 +163,9 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
         match res {
             Ok(msg) => {
                 client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
+                unsafe {
+                    COUNTERS::get_mut()[id as usize] += 1;
+                };
             }
             Err(e) => {
                 log::error!("#{} stress client receiver reply err {:?}", id, e);
@@ -175,7 +181,13 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
 fn start_rpc_client() {
     log::info!("starting rpc client");
     
-    // spawn multiple threads
+    // prepare a vector of counters
+    unsafe {
+        COUNTERS::get_mut().clear();
+        COUNTERS::get_mut().resize(thread_count::read() as usize, 0);
+    }
+
+    // spawn multiple threads to perform stress tests
     let mut handlers = Vec::new();
     for i in 0..thread_count::read() {
         let name = format!("rpc client {}", i);
@@ -186,7 +198,32 @@ fn start_rpc_client() {
         handlers.push(handler);
     }
 
-    kthread::sleep(running_secs::read() as u32);
+    // report the total throughput every second
+    let mut last_records = Vec::new();
+    last_records.resize(thread_count::read() as usize, 0);
+    let mut timer = KTimer::new();
+    for _ in 0..(running_secs::read() / report_interval::read()) {
+        kthread::sleep(report_interval::read() as u32);
+        let passed = timer.get_passed_usec();
+        let mut delta = 0;
+        for i in 0..thread_count::read() {
+            let i = i as usize;
+            let new_record = unsafe {
+                COUNTERS::get_ref()[i]
+            };
+            let last_record = last_records[i];
+            delta += new_record - last_record;
+            last_records[i] = new_record;
+        }
+        let thpt = 1_000_000 * delta as i64 / passed;
+
+        timer.reset();
+        log::info!(
+            "passed: {}us, thpt: {}/s",
+            passed,
+            thpt
+        );
+    }
 
     // stop all the threads
     while let Some(handler) = handlers.pop() {
@@ -199,12 +236,14 @@ fn start_rpc_client() {
 fn init() {
     unsafe {
         KDRIVER::init(KDriver::create().unwrap());
+        COUNTERS::init(Vec::new());
     }
 }
 
 #[krdma_drop]
 fn drop() {
     unsafe {
+        COUNTERS::drop();
         KDRIVER::drop();
     }
 }
