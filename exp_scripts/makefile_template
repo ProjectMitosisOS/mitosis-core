@@ -49,6 +49,7 @@ template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
 template-build-mitosis-eager-resume=templates-build/template-build-mitosis-eager-resume.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
 template-build-pause-runner=templates-build/template-build-pause-runner.toml
+template-build-rpc-bench=templates-build/template-build-rpc-bench.toml
 
 
 # Evaluation runner templates
@@ -225,6 +226,9 @@ build-mitosis-eager-resume: build-cpp
 
 build-pause-runner:
 	$(call builder, $(template-build-pause-runner))
+
+build-rpc-bench:
+	$(call builder, $(template-build-rpc-bench))
 
 clean: gen-clean
 	pkill python; sleep 0.1
