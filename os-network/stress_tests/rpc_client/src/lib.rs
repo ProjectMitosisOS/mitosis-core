@@ -219,7 +219,7 @@ fn start_rpc_client() {
 
         timer.reset();
         log::info!(
-            "passed: {}us, thpt: {}/s",
+            "passed: {}us, thpt: {} requests/s",
             passed,
             thpt
         );
