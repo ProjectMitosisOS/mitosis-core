@@ -3,13 +3,13 @@
 
 [[template.pass]]
 role = 'parent'
-path = 'os-network/stress_tests'
+path = 'stress-test/rpc'
 cmd = 'sudo dmesg -C > /dev/null; dmesg -wH & sudo insmod rpc_server_tests.ko running_secs=${server_running_secs} test_rpc_id=${test_rpc_id} qd_hint=${server_qd_hint} service_id=${server_service_id} && sleep 10 && sudo rmmod rpc_server_tests.ko && pkill dmesg'
 order = 0
 
 [[template.pass]]
 role = 'child'
-path = 'os-network/stress_tests'
+path = 'stress-test/rpc'
 cmd = 'export session_id_base=$(echo $RANDOM*100|bc) && sudo dmesg -C > /dev/null && sleep 2; dmesg -wH & sudo insmod rpc_client_tests.ko server_qd_hint=${server_qd_hint} client_qd_hint=${client_qd_hint} server_service_id=${server_service_id} client_service_id_base=${client_service_id_base} test_rpc_id=${test_rpc_id} running_secs=${client_running_secs} report_interval=${report_interval} thread_count=${thread_count} session_id_base=$session_id_base gid=${parent_gid} && sleep 2 && sudo rmmod rpc_client_tests.ko && pkill dmesg'
 order = 0
 
