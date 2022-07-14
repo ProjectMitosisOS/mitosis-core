@@ -1,0 +1,20 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = 'os-network/stress_tests'
+cmd = 'sudo dmesg -C > /dev/null; dmesg -wH & sudo insmod rpc_server_tests.ko running_secs=${server_running_secs} && sleep 10 && sudo rmmod rpc_server_tests.ko && pkill dmesg'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = 'os-network/stress_tests'
+cmd = 'export session_id_base=$(echo $RANDOM*100|bc) && sudo dmesg -C > /dev/null && sleep 2; dmesg -wH & sudo insmod rpc_client_tests.ko running_secs=${client_running_secs} thread_count=${thread_count} session_id_base=$session_id_base gid=${parent_gid} && sleep 2 && sudo rmmod rpc_client_tests.ko && pkill dmesg'
+order = 0
+
+[template.placeholder]
+name = ["nil_rpc"]
+server_running_secs = 80
+client_running_secs = 60
+thread_count = 12

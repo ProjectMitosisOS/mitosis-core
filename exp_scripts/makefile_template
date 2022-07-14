@@ -80,6 +80,7 @@ template-run-empty-fork=templates-run/execution-peak/empty-fork.toml
 template-run-peak-function-exec=templates-run/execution-peak/peak-function-execution.toml
 template-run-peak-c-exec=templates-run/execution-peak/peak-c-execution.toml
 template-run-peak-nil-rpc=templates-run/execution-peak/peak-nil-rpc.toml
+template-run-peak-nil-rpc-kernel-module=templates-run/execution-peak/peak-nil-rpc-kernel-module.toml
 
 template-run-micro-warm-start-with-pause=templates-run/micro-func/template-run-micro-warm-start-with-pause.toml
 
@@ -175,6 +176,9 @@ peak-c-exec:
 
 peak-nil-rpc:
 	$(call runner, $(template-run-peak-nil-rpc), ${run_out}/$@)
+
+peak-nil-rpc-kernel-module:
+	$(call runner, $(template-run-peak-nil-rpc-kernel-module), ${run_out}/$@)
 
 ### End of tests
 
