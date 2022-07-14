@@ -12,7 +12,7 @@ General build and run commands:
 make build-rpc-bench && make peak-nil-rpc-kernel-module
 ```
 
-Note that the experiments requires one server (e.g.: val01) and multiple clients (e.g.: val02,val03, etc.). Fill it in the `makefile`.
+Note that the experiments require one server (e.g.: val01) and multiple clients (e.g.: val02,val03, etc.). Fill it in the `makefile`.
 
 The `PARENT_GID` is the gid of the server.
 
