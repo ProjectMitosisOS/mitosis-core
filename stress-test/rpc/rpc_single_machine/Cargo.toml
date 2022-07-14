@@ -1,7 +1,7 @@
 [workspace]
 
 [package]
-name = "rpc_tests"
+name = "rpc_single_machine_tests"
 version = "0.1.0"
 authors = ["xmm <wxdwfc@gmail.com>"]
 edition = "2018"
