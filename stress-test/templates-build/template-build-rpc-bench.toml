@@ -1,0 +1,10 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'builder'
+path = 'stress-test/rpc'
+cmd = 'source $HOME/.profile; ./build_tests.py rpc_server rpc_client'
+
+[template.placeholder]
+name = ["build"]
