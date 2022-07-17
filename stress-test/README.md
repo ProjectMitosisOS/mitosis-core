@@ -31,15 +31,15 @@ Related tomls:
 You can adjust the parameters in `templates-run/peak-nil-rpc-kernel-module.toml`.
 
 ```plain
-server_running_secs = 80
+server_running_secs = 80 # the server will run for 80 seconds
 client_running_secs = 60 # should be smaller than the server_running_secs to ensure graceful exits of clients
-thread_count = 12 # the kernel thread running on a single machine, 12 is suitable
+thread_count = 12 # the kernel thread running on a single machine, 12 is suitable to achieve peak throughput
 test_rpc_id = 778
 server_qd_hint = 73
 server_service_id = 0
 client_qd_hint = 75
 client_service_id_base = 1
-report_interval = 1 # report every 1 second
+report_interval = 1 # report throughput every 1 second
 ```
 
 Remark:
@@ -75,7 +75,7 @@ A sample output is shown below.
 The log prints the total throughput of one machine. For example, the average throughput per machine is **130922** requests/s and
 there are 10 clients currently running the benchmark. The whole throughput is **130922x10=1309220** requests/s.
 
-Reference throughput on val01 (server) and val02-val09,val12,val14 (clients).
+Reference throughput on val01 (server) and val02-val09,val12,val14 (clients), each with 12 threads
 
 | number of client machines | rpc throughput (requests/s) |
 |---------------------------|-----------------------------|
@@ -84,3 +84,9 @@ Reference throughput on val01 (server) and val02-val09,val12,val14 (clients).
 | 4                         | 1221549                     |
 | 8                         | 1219961                     |
 | 10                        | 1261974                     |
+
+Reference latency on val01 (server) and val02 (client) with 1 thread
+
+| single thread rpc throughput (requests/s) | latency (μs) |
+|-------------------------------------------|--------------|
+| 239952.4                                  | 4.16         |
