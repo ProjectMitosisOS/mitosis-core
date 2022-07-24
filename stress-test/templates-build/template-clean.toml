@@ -1,0 +1,15 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make clean_fs LEAN_APP_NAME=simple_child'
+
+[[template.pass]]
+role = 'builder'
+path = ''
+cmd = 'source $HOME/.cargo/env; rm -rf mitosis-kms/target ; make rmmod'
+
+[template.placeholder]
+name = ["build"]

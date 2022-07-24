@@ -46,6 +46,7 @@ template-build-cpp=templates-build/template-build-cpp.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
 template-build-mitosis=templates-build/template-build-mitosis.toml
 template-run-peak-lean-container=templates-run/peak-lean-container.toml
+template-clean=templates-build/template-clean.toml
 
 run_out=out
 build_out=run-build.toml
