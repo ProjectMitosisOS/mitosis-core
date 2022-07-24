@@ -42,6 +42,10 @@ template-build-rpc-checksum=templates-build/template-build-rpc-checksum.toml
 
 # Evaluation runner template
 template-run-peak-rpc-kernel-module=templates-run/peak-rpc-kernel-module.toml
+template-build-cpp=templates-build/template-build-cpp.toml
+template-build-lean-container=templates-build/template-build-lean-container.toml
+template-build-mitosis=templates-build/template-build-mitosis.toml
+template-run-peak-lean-container=templates-run/peak-lean-container.toml
 
 run_out=out
 build_out=run-build.toml
@@ -74,6 +78,7 @@ build-rpc-bench:
 
 build-rpc-checksum:
 	$(call builder, $(template-build-rpc-checksum))
+build-
 
 clean: gen-clean
 	pkill python; sleep 0.1

@@ -1,0 +1,10 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make clean_fs; make export LEAN_APP_NAME=simple_child'
+
+[template.placeholder]
+name = ["build"]

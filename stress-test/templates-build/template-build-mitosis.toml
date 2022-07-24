@@ -1,0 +1,11 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'builder'
+path = ''
+cmd = 'source $HOME/.profile; source $HOME/.cargo/env; make km;'
+
+[template.placeholder]
+name = ["build"]
+Kbuild = "Kbuild-mitosis-cow"
