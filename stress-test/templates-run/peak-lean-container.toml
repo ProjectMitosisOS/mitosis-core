@@ -1,0 +1,39 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'make insmod ID=0'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make insmod ID=${@incr} && make unmount_dev mount_dev LEAN_APP_NAME=simple_child'
+order = 0
+
+[[template.pass]]
+role = 'child'
+path = 'exp'
+cmd = './connector -gid=${parent_gid} -mac_id=0 -nic_id=0'
+order = 1
+
+[[template.pass]]
+role = 'parent'
+path = 'stress-test/build'
+cmd = './simple_parent -pin true'
+order = 2
+
+
+[[template.pass]]
+role = 'child'
+path = ''
+cmd = 'make bench_lean_mitosis mac_id=0 LEAN_BENCH_EXE_PATH=${exe_name} LEAN_APP_NAME=simple_child BENCH_SEC=${run_sec}'
+order = 3
+loop = 16
+
+[template.placeholder]
+working_set = ["build"]
+exe_name = "exp/bench_lean_container"
+run_sec = 60
