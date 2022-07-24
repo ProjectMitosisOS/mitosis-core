@@ -78,7 +78,14 @@ build-rpc-bench:
 
 build-rpc-checksum:
 	$(call builder, $(template-build-rpc-checksum))
-build-
+
+build-cpp:
+	$(call builder, $(template-build-cpp))
+
+build-lean-container-bench: build-cpp
+	$(call builder, $(template-build-mitosis))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
 
 clean: gen-clean
 	pkill python; sleep 0.1
