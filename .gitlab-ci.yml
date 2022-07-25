@@ -23,10 +23,10 @@ deps-job:
       - branches
       - merge_requests
     changes:
-      - mitosis/*
-      - mitosis-macros/*
-      - mitosis-util/*
-      - os-network/*
+      - mitosis/**/*
+      - mitosis-macros/**/*
+      - mitosis-util/**/*
+      - os-network/**/*
 
 unittest-mitosis-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
@@ -46,10 +46,10 @@ unittest-mitosis-job:   # This job runs in the test stage.
       - branches
       - merge_requests
     changes:
-      - mitosis/*
-      - mitosis-macros/*
-      - mitosis-util/*
-      - os-network/*
+      - mitosis/**/*
+      - mitosis-macros/**/*
+      - mitosis-util/**/*
+      - os-network/**/*
 
 unittest-os-network-job:   # This job also runs in the test stage.
   stage: test    # It can run at the same time as unit-test-job (in parallel).
@@ -69,10 +69,10 @@ unittest-os-network-job:   # This job also runs in the test stage.
       - branches
       - merge_requests
     changes:
-      - mitosis/*
-      - mitosis-macros/*
-      - mitosis-util/*
-      - os-network/*
+      - mitosis/**/*
+      - mitosis-macros/**/*
+      - mitosis-util/**/*
+      - os-network/**/*
 
 unittest-mitosis-macros-job:   # This job also runs in the test stage.
   stage: test    # It can run at the same time as unit-test-job (in parallel).
@@ -92,7 +92,7 @@ unittest-mitosis-macros-job:   # This job also runs in the test stage.
       - branches
       - merge_requests
     changes:
-      - mitosis/*
-      - mitosis-macros/*
-      - mitosis-util/*
-      - os-network/*
+      - mitosis/**/*
+      - mitosis-macros/**/*
+      - mitosis-util/**/*
+      - os-network/**/*
