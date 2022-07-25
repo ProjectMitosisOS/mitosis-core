@@ -22,29 +22,28 @@ pub trait NeedPrefetch {
 }
 
 /// Generate prefetch request given an iterator
-pub trait Prefetch {
+pub trait Prefetch<const N: usize> {
     type Item;
 
-    fn generate_request<I>(self, src: &mut I) -> PrefetchRequests<Self::Item>
+    fn generate_request<I>(self, src: &mut I) -> PrefetchRequests<Self::Item, N>
     where
         I: Iterator<Item = Self::Item>, 
         Self::Item : Copy + Debug + Default;
 }
 
 #[derive(Debug)]
-pub struct PrefetchRequests<T: Copy + Debug + Default> {
-    inner: [T; K_MAX_PREFETCH_NUM],
+pub struct PrefetchRequests<T: Copy + Debug + Default, const N: usize = K_MAX_PREFETCH_NUM> {
+    inner: [T; N],
     sz: usize,
 }
 
-impl<T> PrefetchRequests<T>
+impl<T, const N: usize> PrefetchRequests<T, N>
 where
     T: Copy + Debug + Default,
 {
     pub fn new() -> Self {
-        static_assertions::const_assert!(K_MAX_PREFETCH_NUM <= 12);
         Self {
-            inner: Default::default(),
+            inner: [Default::default();N],
             sz: 0,
         }
     }
@@ -62,9 +61,13 @@ where
     /// - True: add successful
     /// - False: not enough capacity
     pub fn add(&mut self, data: T) -> bool {
-        self.inner[self.sz] = data;
-        self.sz += 1;
-        self.sz <= K_MAX_PREFETCH_NUM
+        if self.sz < N { 
+            self.inner[self.sz] = data;
+            self.sz += 1;
+            true
+        } else { 
+            false
+        }
     }
 
     /// Returns an iterator over the entries of requests
@@ -74,7 +77,7 @@ where
     }
 }
 
-impl<T> Index<usize> for PrefetchRequests<T>
+impl<T, const N: usize> Index<usize> for PrefetchRequests<T, N>
 where
     T: Copy + Debug + Default,
 {
@@ -86,7 +89,7 @@ where
     }
 }
 
-impl<T> IndexMut<usize> for PrefetchRequests<T>
+impl<T, const N: usize> IndexMut<usize> for PrefetchRequests<T, N>
 where
     T: Copy + Debug + Default,
 {
@@ -96,9 +99,9 @@ where
     }
 }
 
-impl<T> Default for PrefetchRequests<T>
+impl<T, const N: usize> Default for PrefetchRequests<T, N>
 where
-    T: Copy + Debug + Default,
+    T: Copy + Debug + Default
 {
     fn default() -> Self {
         Self::new()

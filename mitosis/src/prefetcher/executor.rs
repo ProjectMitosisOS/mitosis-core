@@ -108,9 +108,9 @@ impl<'a> DCAsyncPrefetcher<'a> {
     /// If this is not the case, we need to 2 bits to identify
     /// whether the remote page is in the prefetch state.
     #[inline]
-    pub fn execute_reqs<P>(&mut self, mut iter: RemotePageTableIter, strategy: P)
+    pub fn execute_reqs<P, const NUM : usize>(&mut self, mut iter: RemotePageTableIter, strategy: P)
     where
-        P: Prefetch<Item = PrefetchReq>,
+        P: Prefetch<NUM, Item = PrefetchReq>,
     {
         let reqs = strategy.generate_request(&mut iter);
         for i in 0..reqs.len() {

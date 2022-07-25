@@ -3,15 +3,15 @@ use core::fmt::Debug;
 /// A simple prefetcher that will fetch a const N requests
 #[derive(Debug, Default)]
 pub struct StepPrefetcher<T: Copy + Debug + Default, const N: usize = 2> {
-    inner: super::PrefetchRequests<T>,
+    inner: super::PrefetchRequests<T, N>,
 }
 
-impl<T: Copy + Debug + Default + super::NeedPrefetch, const N: usize> super::Prefetch
+impl<T: Copy + Debug + Default + super::NeedPrefetch, const N: usize> super::Prefetch<N>
     for StepPrefetcher<T, N>
 {
     type Item = T;
 
-    fn generate_request<I>(mut self, src: &mut I) -> super::PrefetchRequests<T>
+    fn generate_request<I>(mut self, src: &mut I) -> super::PrefetchRequests<T, N>
     where
         I: Iterator<Item = T>,
     {
@@ -40,15 +40,15 @@ impl<T: Copy + Debug + Default, const N: usize> StepPrefetcher<T, N> {
 /// A simple prefetcher that will fetch a const N requests, ignoreing non-valid operation
 #[derive(Debug, Default)]
 pub struct ConstPrefetcher<T: Copy + Debug + Default, const N: usize = 2> {
-    inner: super::PrefetchRequests<T>,
+    inner: super::PrefetchRequests<T, N>,
 }
 
-impl<T: Copy + Debug + Default + super::NeedPrefetch, const N: usize> super::Prefetch
+impl<T: Copy + Debug + Default + super::NeedPrefetch, const N: usize> super::Prefetch<N>
     for ConstPrefetcher<T, N>
 {
     type Item = T;
 
-    fn generate_request<I>(mut self, src: &mut I) -> super::PrefetchRequests<T>
+    fn generate_request<I>(mut self, src: &mut I) -> super::PrefetchRequests<T, N>
     where
         I: Iterator<Item = T>,
     {
