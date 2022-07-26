@@ -10,28 +10,71 @@ use os_network::bytes::*;
 use os_network::rpc::*;
 use os_network::block_on;
 
-fn test_callback(_input: &BytesMut, _output: &mut BytesMut) -> usize {
-    0
-}
-
 use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
 use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
+use KRdmaKit::random::FastRandom;
 
 use os_network::timeout::Timeout;
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
 use os_network::Factory;
+use os_network::serialize::Serialize;
 
-use mitosis_macros::declare_module_param;
+use mitosis_macros::{declare_module_param, declare_global};
 
 declare_module_param!(qd_hint, u64);
 declare_module_param!(test_rpc_id, usize);
 declare_module_param!(running_secs, i64);
 declare_module_param!(service_id, u64);
+
+pub struct TestPayload<const N: usize> {
+    pub checksum: u64,
+    pub arr: [u8; N],
+}
+
+impl<const N: usize> Serialize for TestPayload<N> {}
+
+impl<const N: usize> TestPayload<N> {
+
+    fn create(random_seed: u64) -> Self {
+        let mut arr: [u8; N] = [0 as u8; N];
+        let mut random = FastRandom::new(random_seed);
+        let mut checksum = 0;
+        for i in 0..N {
+            let r = random.get_next() as u8;
+            checksum = (r as u64) * 12345 + 67890;
+            arr[i] = r;
+        }
+        Self {
+            checksum: checksum,
+            arr: arr,
+        }
+    }
+
+    fn checksum_ok(&self) -> bool {
+        let mut checksum = 0;
+        for i in 0..N {
+            checksum = (self.arr[i] as u64) * 12345 + 67890;
+        }
+        checksum == self.checksum
+    }
+}
+
+const PAYLOAD_SIZE: usize = 2048;
+type SizedPayload = TestPayload<PAYLOAD_SIZE>;
+
+declare_global!(payload, crate::SizedPayload);
+
+fn test_callback(_input: &BytesMut, output: &mut BytesMut) -> usize {
+    unsafe {
+        payload::get_ref().serialize(output);
+        payload::get_ref().serialization_buf_len()
+    }
+}
 
 // a test RPC with RDMA
 fn start_rpc_server() {
@@ -104,4 +147,13 @@ fn start_rpc_server() {
 }
 
 #[krdma_test(start_rpc_server)]
-fn init() {}
+fn init() {
+    unsafe {
+        payload::init(SizedPayload::create(0));
+        if payload::get_ref().checksum_ok() {
+            log::info!("checksum is ok");
+        } else {
+            log::error!("checksum is corrupted");
+        }
+    };
+}
