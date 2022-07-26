@@ -19,6 +19,7 @@ use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
 use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
+use KRdmaKit::random::FastRandom;
 
 use os_network::timeout::Timeout;
 use os_network::rpc::header::MsgHeader;
@@ -27,6 +28,7 @@ use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
 use os_network::Factory;
 use os_network::MetaFactory;
+use os_network::serialize::Serialize;
 
 use mitosis_macros::{declare_module_param, declare_global};
 
@@ -43,6 +45,45 @@ declare_module_param!(gid, *mut u8);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(COUNTERS, alloc::vec::Vec<u64>);
+
+pub struct TestPayload<const N: usize> {
+    pub checksum: u64,
+    pub arr: [u8; N],
+}
+
+impl<const N: usize> Serialize for TestPayload<N> {}
+
+impl<const N: usize> TestPayload<N> {
+
+    fn create(random_seed: u64) -> Self {
+        let mut arr: [u8; N] = [0 as u8; N];
+        let mut random = FastRandom::new(random_seed);
+        let mut checksum = 0;
+        for i in 0..N {
+            let r = random.get_next() as u8;
+            checksum = (r as u64) * 12345 + 67890;
+            arr[i] = r;
+        }
+        Self {
+            checksum: checksum,
+            arr: arr,
+        }
+    }
+
+    fn checksum_ok(&self) -> bool {
+        let mut checksum = 0;
+        for i in 0..N {
+            checksum = (self.arr[i] as u64) * 12345 + 67890;
+        }
+        if checksum != self.checksum {
+            log::error!("self.checksum: {}, expected: {}", self.checksum, checksum);
+        }
+        checksum == self.checksum
+    }
+}
+
+const PAYLOAD_SIZE: usize = 2048;
+type SizedPayload = TestPayload<PAYLOAD_SIZE>;
 
 extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
     let id = id as u64;
@@ -162,6 +203,22 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
         let res = block_on(&mut client_receiver);
         match res {
             Ok(msg) => {
+                let payload_bytes = unsafe {
+                    msg.get_bytes().truncate_header(80).unwrap() // FIXME: why we should truncate 80 bytes here?
+                };
+                match SizedPayload::deserialize(&payload_bytes) {
+                    Some(payload) => {
+                        if !payload.checksum_ok() {
+                            log::error!("receive corrupted message");
+                            log::error!("corrupted arr: {:?}", payload.arr);
+                            is_error = true;
+                        }
+                    },
+                    None => {
+                        log::error!("unable to deserialize payload");
+                        is_error = true;
+                    }
+                };
                 client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
                 unsafe {
                     COUNTERS::get_mut()[id as usize] += 1;
