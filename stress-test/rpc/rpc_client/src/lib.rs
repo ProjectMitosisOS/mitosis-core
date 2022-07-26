@@ -124,6 +124,8 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
         client_receiver.post_recv_buf(UDMsg::new(4096, test_rpc_id::read())).unwrap();
     }
 
+    kthread::sleep(2); // TODO: this may temporarily fix the session creation problem
+
     // rpc connection request
     let mut request = UDMsg::new(1024, test_rpc_id::read());
     let req_sz = os_network::rpc::ConnectStubFactory::new(my_session_id)
