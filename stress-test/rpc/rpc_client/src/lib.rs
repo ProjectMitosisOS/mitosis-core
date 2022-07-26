@@ -208,6 +208,7 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
                 let payload_bytes = unsafe {
                     msg.get_bytes().truncate_header(80).unwrap() // FIXME: why we should truncate 80 bytes here?
                 };
+                client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
                 match SizedPayload::deserialize(&payload_bytes) {
                     Some(payload) => {
                         if !payload.checksum_ok() {
@@ -221,7 +222,6 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
                         is_error = true;
                     }
                 };
-                client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
                 unsafe {
                     COUNTERS::get_mut()[id as usize] += 1;
                 };
