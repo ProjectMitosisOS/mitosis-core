@@ -72,12 +72,13 @@ impl<const N: usize> TestPayload<N> {
 const PAYLOAD_SIZE: usize = 2048;
 type SizedPayload = TestPayload<PAYLOAD_SIZE>;
 
-declare_global!(payload, crate::SizedPayload);
+declare_global!(global_random, KRdmaKit::random::FastRandom);
 
 fn test_callback(_input: &BytesMut, output: &mut BytesMut) -> usize {
     unsafe {
-        payload::get_ref().serialize(output);
-        payload::get_ref().serialization_buf_len()
+        let payload = SizedPayload::create(global_random::get_mut().get_next());
+        payload.serialize(output);
+        payload.serialization_buf_len()
     }
 }
 
@@ -154,11 +155,6 @@ fn start_rpc_server() {
 #[krdma_test(start_rpc_server)]
 fn init() {
     unsafe {
-        payload::init(SizedPayload::create(0));
-        if payload::get_ref().checksum_ok() {
-            log::info!("checksum is ok");
-        } else {
-            log::error!("checksum is corrupted");
-        }
-    };
+        global_random::init(FastRandom::new(1));
+    }
 }
