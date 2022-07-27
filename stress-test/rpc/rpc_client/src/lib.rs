@@ -74,7 +74,7 @@ impl<const N: usize> TestPayload<N> {
         use core::hash::BuildHasher;
         use hashbrown::hash_map::DefaultHashBuilder;
         use core::hash::{Hash, Hasher};
-        let mut s = DefaultHashBuilder::new().build_hasher();
+        let mut s = DefaultHashBuilder::with_seed(0).build_hasher();
         self.arr.hash(&mut s);
         s.finish()
     }
