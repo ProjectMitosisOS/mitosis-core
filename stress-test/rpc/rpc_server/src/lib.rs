@@ -43,24 +43,29 @@ impl<const N: usize> TestPayload<N> {
     fn create(random_seed: u64) -> Self {
         let mut arr: [u8; N] = [0 as u8; N];
         let mut random = FastRandom::new(random_seed);
-        let mut checksum = 0;
         for i in 0..N {
             let r = random.get_next() as u8;
-            checksum = (r as u64) * 12345 + 67890;
             arr[i] = r;
         }
-        Self {
-            checksum: checksum,
+        let mut res = Self {
+            checksum: 0,
             arr: arr,
-        }
+        };
+        res.checksum = res.calculate_checksum();
+        res
+    }
+
+    fn calculate_checksum(&self) -> u64 {
+        use core::hash::BuildHasher;
+        use hashbrown::hash_map::DefaultHashBuilder;
+        use core::hash::{Hash, Hasher};
+        let mut s = DefaultHashBuilder::new().build_hasher();
+        self.arr.hash(&mut s);
+        s.finish()
     }
 
     fn checksum_ok(&self) -> bool {
-        let mut checksum = 0;
-        for i in 0..N {
-            checksum = (self.arr[i] as u64) * 12345 + 67890;
-        }
-        checksum == self.checksum
+        self.calculate_checksum() == self.checksum
     }
 }
 
