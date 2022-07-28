@@ -4,7 +4,7 @@
 [[template.pass]]
 role = 'builder'
 path = 'stress-test/rpc'
-cmd = 'source $HOME/.profile; cp Kbuild-empty-rpc Kbuild; ./build_tests.py rpc_server rpc_client'
+cmd = 'source $HOME/.profile; cp Kbuild-checksum-payload Kbuild; ./build_tests.py rpc_server rpc_client'
 
 [template.placeholder]
 name = ["build"]
