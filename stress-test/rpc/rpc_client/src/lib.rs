@@ -19,7 +19,6 @@ use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
 use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
-use KRdmaKit::random::FastRandom;
 
 use os_network::timeout::Timeout;
 use os_network::rpc::header::MsgHeader;
@@ -46,46 +45,11 @@ declare_module_param!(gid, *mut u8);
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(COUNTERS, alloc::vec::Vec<u64>);
 
-pub struct TestPayload<const N: usize> {
-    pub checksum: u64,
-    pub arr: [u8; N],
-}
-
-impl<const N: usize> Serialize for TestPayload<N> {}
-
-impl<const N: usize> TestPayload<N> {
-
-    fn create(random_seed: u64) -> Self {
-        let mut arr: [u8; N] = [0 as u8; N];
-        let mut random = FastRandom::new(random_seed);
-        for i in 0..N {
-            let r = random.get_next() as u8;
-            arr[i] = r;
-        }
-        let mut res = Self {
-            checksum: 0,
-            arr: arr,
-        };
-        res.checksum = res.calculate_checksum();
-        res
-    }
-
-    fn calculate_checksum(&self) -> u64 {
-        use core::hash::BuildHasher;
-        use hashbrown::hash_map::DefaultHashBuilder;
-        use core::hash::{Hash, Hasher};
-        let mut s = DefaultHashBuilder::with_seed(0).build_hasher();
-        self.arr.hash(&mut s);
-        s.finish()
-    }
-
-    fn checksum_ok(&self) -> bool {
-        self.calculate_checksum() == self.checksum
-    }
-}
-
 const PAYLOAD_SIZE: usize = 2048;
-type SizedPayload = TestPayload<PAYLOAD_SIZE>;
+type SizedPayload = rpc_common::payload::Payload<PAYLOAD_SIZE>;
+struct WrappedPayload(SizedPayload);
+
+impl Serialize for WrappedPayload {}
 
 extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
     let id = id as u64;
@@ -211,11 +175,11 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
                     msg.get_bytes().truncate_header(80).unwrap() // FIXME: why we should truncate 80 bytes here?
                 };
                 client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
-                match SizedPayload::deserialize(&payload_bytes) {
+                match WrappedPayload::deserialize(&payload_bytes) {
                     Some(payload) => {
-                        if !payload.checksum_ok() {
+                        if !payload.0.checksum_ok() {
                             log::error!("receive corrupted message");
-                            log::error!("corrupted arr: {:?}", payload.arr);
+                            log::error!("corrupted arr: {:?}", payload.0.arr);
                             is_error = true;
                         }
                     },
