@@ -38,7 +38,7 @@ template_args="{\
 
 # Template path list
 template-build-rpc-bench=templates-build/template-build-rpc-bench.toml
-
+template-build-rpc-checksum=templates-build/template-build-rpc-checksum.toml
 
 # Evaluation runner template
 template-run-peak-nil-rpc-kernel-module=templates-run/peak-nil-rpc-kernel-module.toml
@@ -71,6 +71,9 @@ peak-nil-rpc-kernel-module:
 
 build-rpc-bench:
 	$(call builder, $(template-build-rpc-bench))
+
+build-rpc-checksum:
+	$(call builder, $(template-build-rpc-checksum))
 
 clean: gen-clean
 	pkill python; sleep 0.1
