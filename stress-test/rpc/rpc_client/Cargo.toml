@@ -21,6 +21,7 @@ rust-kernel-linux-util = {path = "../../../deps/rust-kernel-rdma/rust-kernel-lin
 krdma-test = {path="../../../deps/rust-kernel-rdma/krdma-test",optional = true}
 mitosis-macros = {path = "../../../mitosis-macros"}
 hashbrown = {features=["raw"], path="../../../deps/hashbrown"}
+rpc_common = {path = "../rpc_common"}
 
 [dev-dependencies]
 kernel-module-testlib = { path = "../../../deps/rust-kernel-rdma/testlib" }
