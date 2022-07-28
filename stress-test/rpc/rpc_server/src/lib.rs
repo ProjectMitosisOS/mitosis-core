@@ -39,12 +39,16 @@ impl Serialize for WrappedPayload {}
 
 declare_global!(global_random, KRdmaKit::random::FastRandom);
 
+#[allow(unused_variables)]
 fn test_callback(_input: &BytesMut, output: &mut BytesMut) -> usize {
+    #[cfg(feature = "checksum-payload")]
     unsafe {
         let payload = WrappedPayload(SizedPayload::create(global_random::get_mut().get_next()));
         payload.serialize(output);
         payload.serialization_buf_len()
     }
+    #[cfg(not(feature = "checksum-payload"))]
+    0
 }
 
 // a test RPC with RDMA

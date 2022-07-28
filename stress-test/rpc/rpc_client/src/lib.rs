@@ -90,8 +90,6 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
         client_receiver.post_recv_buf(UDMsg::new(4096, test_rpc_id::read())).unwrap();
     }
 
-    kthread::sleep(2); // TODO: this may temporarily fix the session creation problem
-
     // rpc connection request
     let mut request = UDMsg::new(1024, test_rpc_id::read());
     let req_sz = os_network::rpc::ConnectStubFactory::new(my_session_id)
@@ -171,23 +169,26 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
         let res = block_on(&mut client_receiver);
         match res {
             Ok(msg) => {
-                let payload_bytes = unsafe {
-                    msg.get_bytes().truncate_header(80).unwrap() // FIXME: why we should truncate 80 bytes here?
-                };
-                client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
-                match WrappedPayload::deserialize(&payload_bytes) {
-                    Some(payload) => {
-                        if !payload.0.checksum_ok() {
-                            log::error!("receive corrupted message");
-                            log::error!("corrupted arr: {:?}", payload.0.arr);
+                #[cfg(feature = "checksum-payload")]
+                {
+                    let payload_bytes = unsafe {
+                        msg.get_bytes().truncate_header(80).unwrap() // FIXME: why we should truncate 80 bytes here?
+                    };
+                    match WrappedPayload::deserialize(&payload_bytes) {
+                        Some(payload) => {
+                            if !payload.0.checksum_ok() {
+                                log::error!("receive corrupted message");
+                                log::error!("corrupted arr: {:?}", payload.0.arr);
+                                is_error = true;
+                            }
+                        },
+                        None => {
+                            log::error!("unable to deserialize payload");
                             is_error = true;
                         }
-                    },
-                    None => {
-                        log::error!("unable to deserialize payload");
-                        is_error = true;
-                    }
-                };
+                    };
+                }
+                client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
                 unsafe {
                     COUNTERS::get_mut()[id as usize] += 1;
                 };

@@ -13,6 +13,7 @@ test = false
 
 [features]
 default = ["os-network", "KRdmaKit","rust-kernel-linux-util","krdma-test"]
+checksum-payload = []
 
 [dependencies]
 KRdmaKit = {path = "../../../deps/rust-kernel-rdma/KRdmaKit", optional = true, features = ["dct"]}
