@@ -2,6 +2,8 @@
 
 ### Mitosis RPC
 
+#### Empty RPC
+
 This test stresses on the RPC framework.
 Multiple RPC clients repeatedly calls an empty RPC function to stress the RPC server.
 This stress test can also be used as a benchmark over RPC framework.
@@ -9,7 +11,7 @@ This stress test can also be used as a benchmark over RPC framework.
 General build and run commands:
 
 ```sh
-make build-rpc-bench && make peak-nil-rpc-kernel-module
+make build-rpc-bench && make peak-rpc-kernel-module
 ```
 
 Note that the experiments require one server (e.g.: val01) and multiple clients (e.g.: val02,val03, etc.). Fill it in the `makefile`.
@@ -26,9 +28,9 @@ STR_CHILD_HOSTS='val02','val03','val04','val05','val06','val07','val08','val09',
 Related tomls:
 
 * `templates-build/template-build-rpc-bench.toml` for building the kernel module
-* `templates-run/peak-nil-rpc-kernel-module.toml` for running the benchmark
+* `templates-run/peak-rpc-kernel-module.toml` for running the benchmark
 
-You can adjust the parameters in `templates-run/peak-nil-rpc-kernel-module.toml`.
+You can adjust the parameters in `templates-run/peak-rpc-kernel-module.toml`.
 
 ```plain
 server_running_secs = 80 # the server will run for 80 seconds
@@ -90,3 +92,44 @@ Reference latency on val01 (server) and val02 (client) with 1 thread
 | single thread rpc throughput (requests/s) | latency (μs) |
 |-------------------------------------------|--------------|
 | 239952.4                                  | 4.16         |
+
+#### RPC with checksum
+
+This test stresses on the RPC framework. The payload (default 2048 bytes plus a 8-byte checksum) is checksumed to ensure the integrity of the payload data. The stress test server will generate a random payload with checksum each time and the client will calculate the checksum to ensure the integrity.
+
+General build and run commands:
+
+```sh
+make build-rpc-checksum && make peak-rpc-kernel-module
+```
+
+Note that the experiments require one server (e.g.: val01) and multiple clients (e.g.: val02,val03, etc.). Fill it in the `makefile`.
+
+The `PARENT_GID` is the gid of the server.
+
+```
+PARENT_GID=fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c
+PARENT_HOST=val01
+CHILD_HOSTS=val02,val03,val04,val05,val06,val07,val08,val09,val12,val14
+STR_CHILD_HOSTS='val02','val03','val04','val05','val06','val07','val08','val09','val12','val14'
+```
+
+Related tomls:
+
+* `templates-build/template-build-rpc-checksum.toml` for building the kernel module with checksum support
+* `templates-run/peak-rpc-kernel-module.toml` for running the benchmark
+
+Remark:
+
+1. Adjust the `DEFAULT_PAYLOAD_SIZE` in `stress-test/rpc/rpc_common/src/payload.rs` change the payload size.
+2. It passes the stress test if the output does not contain `ERROR`.
+
+A sample output is shown below.
+
+```plain
+...
+(u'@val07     ', u'[  +1.004007] src/lib.rs@245: [INFO ] - passed: 1033670us, thpt: 12086 requests/s')
+(u'@val02     ', u'[  +1.023991] src/lib.rs@245: [INFO ] - passed: 1024000us, thpt: 12346 requests/s')
+(u'@val08     ', u'[  +0.998663] src/lib.rs@245: [INFO ] - passed: 1024045us, thpt: 10817 requests/s')
+...
+```
