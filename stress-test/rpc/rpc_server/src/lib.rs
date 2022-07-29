@@ -31,9 +31,7 @@ declare_module_param!(test_rpc_id, usize);
 declare_module_param!(running_secs, i64);
 declare_module_param!(service_id, u64);
 
-const PAYLOAD_SIZE: usize = 2048;
-type SizedPayload = rpc_common::payload::Payload<PAYLOAD_SIZE>;
-struct WrappedPayload(SizedPayload);
+struct WrappedPayload(rpc_common::payload::DefaultSizedPayload);
 
 impl Serialize for WrappedPayload {}
 
@@ -43,7 +41,7 @@ declare_global!(global_random, KRdmaKit::random::FastRandom);
 fn test_callback(_input: &BytesMut, output: &mut BytesMut) -> usize {
     #[cfg(feature = "checksum-payload")]
     unsafe {
-        let payload = WrappedPayload(SizedPayload::create(global_random::get_mut().get_next()));
+        let payload = WrappedPayload(rpc_common::payload::Payload::create(global_random::get_mut().get_next()));
         payload.serialize(output);
         payload.serialization_buf_len()
     }

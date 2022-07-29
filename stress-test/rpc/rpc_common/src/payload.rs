@@ -1,5 +1,8 @@
 use crate::random::FastRandom;
 
+pub const DEFAULT_PAYLOAD_SIZE: usize = 2048;
+pub type DefaultSizedPayload = Payload<DEFAULT_PAYLOAD_SIZE>;
+
 pub struct Payload<const N: usize> {
     pub checksum: u64,
     pub arr: [u8; N],
