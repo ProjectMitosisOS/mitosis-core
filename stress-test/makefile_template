@@ -41,7 +41,7 @@ template-build-rpc-bench=templates-build/template-build-rpc-bench.toml
 template-build-rpc-checksum=templates-build/template-build-rpc-checksum.toml
 
 # Evaluation runner template
-template-run-peak-nil-rpc-kernel-module=templates-run/peak-nil-rpc-kernel-module.toml
+template-run-peak-rpc-kernel-module=templates-run/peak-rpc-kernel-module.toml
 
 run_out=out
 build_out=run-build.toml
@@ -64,8 +64,8 @@ define runner
 	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
 endef
 
-peak-nil-rpc-kernel-module:
-	$(call runner, $(template-run-peak-nil-rpc-kernel-module), ${run_out}/$@)
+peak-rpc-kernel-module:
+	$(call runner, $(template-run-peak-rpc-kernel-module), ${run_out}/$@)
 
 ### End of tests
 
