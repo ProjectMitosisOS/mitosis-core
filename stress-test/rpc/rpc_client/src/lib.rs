@@ -170,7 +170,7 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
                 #[cfg(feature = "checksum-payload")]
                 {
                     let payload_bytes = unsafe {
-                        msg.get_bytes().truncate_header(80).unwrap() // FIXME: why we should truncate 80 bytes here?
+                        msg.get_bytes().truncate_header(80).unwrap() // truncate 80 bytes to get the real payload
                     };
                     match WrappedPayload::deserialize(&payload_bytes) {
                         Some(payload) => {
