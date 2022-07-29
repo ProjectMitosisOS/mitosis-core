@@ -45,9 +45,7 @@ declare_module_param!(gid, *mut u8);
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(COUNTERS, alloc::vec::Vec<u64>);
 
-const PAYLOAD_SIZE: usize = 2048;
-type SizedPayload = rpc_common::payload::Payload<PAYLOAD_SIZE>;
-struct WrappedPayload(SizedPayload);
+struct WrappedPayload(rpc_common::payload::DefaultSizedPayload);
 
 impl Serialize for WrappedPayload {}
 
