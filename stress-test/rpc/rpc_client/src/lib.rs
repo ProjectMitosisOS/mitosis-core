@@ -27,6 +27,7 @@ use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
 use os_network::Factory;
 use os_network::MetaFactory;
+use os_network::serialize::Serialize;
 
 use mitosis_macros::{declare_module_param, declare_global};
 
@@ -43,6 +44,10 @@ declare_module_param!(gid, *mut u8);
 
 declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
 declare_global!(COUNTERS, alloc::vec::Vec<u64>);
+
+struct WrappedPayload(rpc_common::payload::DefaultSizedPayload);
+
+impl Serialize for WrappedPayload {}
 
 extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
     let id = id as u64;
@@ -162,6 +167,25 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
         let res = block_on(&mut client_receiver);
         match res {
             Ok(msg) => {
+                #[cfg(feature = "checksum-payload")]
+                {
+                    let payload_bytes = unsafe {
+                        msg.get_bytes().truncate_header(80).unwrap() // truncate 80 bytes to get the real payload
+                    };
+                    match WrappedPayload::deserialize(&payload_bytes) {
+                        Some(payload) => {
+                            if !payload.0.checksum_ok() {
+                                log::error!("receive corrupted message");
+                                log::error!("corrupted arr: {:?}", payload.0.arr);
+                                is_error = true;
+                            }
+                        },
+                        None => {
+                            log::error!("unable to deserialize payload");
+                            is_error = true;
+                        }
+                    };
+                }
                 client_receiver.get_inner_mut().post_recv_buf(msg).unwrap();
                 unsafe {
                     COUNTERS::get_mut()[id as usize] += 1;
