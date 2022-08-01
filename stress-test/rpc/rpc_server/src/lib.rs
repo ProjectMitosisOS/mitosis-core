@@ -10,28 +10,44 @@ use os_network::bytes::*;
 use os_network::rpc::*;
 use os_network::block_on;
 
-fn test_callback(_input: &BytesMut, _output: &mut BytesMut) -> usize {
-    0
-}
-
 use KRdmaKit::ctrl::RCtrl;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
 use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
 use KRdmaKit::rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
+use KRdmaKit::random::FastRandom;
 
 use os_network::timeout::Timeout;
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
 use os_network::Factory;
+use os_network::serialize::Serialize;
 
-use mitosis_macros::declare_module_param;
+use mitosis_macros::{declare_module_param, declare_global};
 
 declare_module_param!(qd_hint, u64);
 declare_module_param!(test_rpc_id, usize);
 declare_module_param!(running_secs, i64);
 declare_module_param!(service_id, u64);
+
+struct WrappedPayload(rpc_common::payload::DefaultSizedPayload);
+
+impl Serialize for WrappedPayload {}
+
+declare_global!(global_random, KRdmaKit::random::FastRandom);
+
+#[allow(unused_variables)]
+fn test_callback(_input: &BytesMut, output: &mut BytesMut) -> usize {
+    #[cfg(feature = "checksum-payload")]
+    unsafe {
+        let payload = WrappedPayload(rpc_common::payload::Payload::create(global_random::get_mut().get_next()));
+        payload.serialize(output);
+        payload.serialization_buf_len()
+    }
+    #[cfg(not(feature = "checksum-payload"))]
+    0
+}
 
 // a test RPC with RDMA
 fn start_rpc_server() {
@@ -104,4 +120,8 @@ fn start_rpc_server() {
 }
 
 #[krdma_test(start_rpc_server)]
-fn init() {}
+fn init() {
+    unsafe {
+        global_random::init(FastRandom::new(1));
+    }
+}
