@@ -90,8 +90,10 @@ where
             .post(&buf, msg_sz, signal)
             .map_err(|_| Error::fatal());
 
-        // FIXME: 32 is a magic number I used here
-        if session.get_pending_reqs() > 8 {
+        // FIXME: 4 is a magic number I used here
+        // the outstanding request threshold should not be greater
+        // to prevent ib_post_send failure
+        if session.get_pending_reqs() > 4 {
             crate::block_on(session).map_err(|_| Error::fatal())?;
             assert!(session.get_pending_reqs() == 0);
         } 
