@@ -69,6 +69,9 @@ define runner
 	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
 endef
 
+peak-lean-container:
+	$(call runner, $(template-run-peak-lean-container), ${run_out}/$@)
+
 peak-rpc-kernel-module:
 	$(call runner, $(template-run-peak-rpc-kernel-module), ${run_out}/$@)
 
