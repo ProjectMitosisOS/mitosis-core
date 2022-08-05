@@ -1,0 +1,15 @@
+[global]
+[template]
+
+[[template.pass]]
+role = 'builder'
+path = 'exp'
+cmd = 'cmake . ; make -j'
+
+[[template.pass]]
+role = 'builder'
+path = 'stress-test'
+cmd = 'mkdir -p build; cd build; cmake ..; make -j'
+
+[template.placeholder]
+name = ["build"]
