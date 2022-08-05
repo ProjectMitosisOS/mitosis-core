@@ -9,7 +9,7 @@ use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-pub const TIMEOUT_USEC: i64 = 5000; // 5ms
+pub const TIMEOUT_USEC: i64 = 1000_000; // 1s
 
 /// Derive copy is rather dangerous
 /// This structure is aimed for global usage
