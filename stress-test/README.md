@@ -133,3 +133,79 @@ A sample output is shown below.
 (u'@val08     ', u'[  +0.998663] src/lib.rs@245: [INFO ] - passed: 1024045us, thpt: 10817 requests/s')
 ...
 ```
+
+### Mitosis Remote Fork
+
+#### Simple C++ program stress test
+
+This test stresses the mitosis remote fork with a simple C++ program as the parent process.
+
+```
+cd stress-test
+make build-lean-container-bench # prepare the stress test
+make peak-lean-container # run the stress test
+make clean # clean the environment
+```
+
+Related tomls:
+
+* `templates-build/template-build-cpp.toml` for building the related C++ program
+* `templates-build/template-build-mitosis.toml` for building the mitosis with default configuration (only COW)
+* `templates-run/peak-rpc-kernel-module.toml` for running the stress test
+* `templates-build/template-clean.toml` for cleaning the environment
+
+Remark:
+
+1. The stress test should run with error with 1 server machine and 10 client machines.
+2. The output throughput should be steady without sudden drop (drop to <0.1 containers/sec).
+3. The `dmesg` on each machine should not contain error. (should be checked manually).
+
+A sample **correct** output is shown below.
+
+```
+(u'@val07     ', u'[660K5BZDgBs] Throughput: 120.045924 containers/sec, latency 8.330145 ms')
+(u'@val07     ', u'[660K5BZDgBs] Throughput: 121.862228 containers/sec, latency 8.205988 ms')
+(u'@val07     ', u'[660K5BZDgBs] Throughput: 120.813350 containers/sec, latency 8.277231 ms')
+(u'@val07     ', u'[660K5BZDgBs] Throughput: 120.046682 containers/sec, latency 8.330093 ms')
+```
+
+A typical **error** output is shown below,
+and the `dmesg` will print error like `[ERROR] failed to create ah` or `RPC handler meets an error Error(Fatal)`.
+
+```
+(u'@val07     ', u'[660K5BZDgBs] Throughput: 0.090090 containers/sec, latency xxxxxx ms')
+(u'@val07     ', u'[660K5BZDgBs] Throughput: 0.090090 containers/sec, latency xxxxxx ms')
+```
+
+#### Python application stress test
+
+This test stresses the mitosis remote fork with different python applications.
+
+This test is under the directory `exp_scripts`.
+
+```
+cd exp_scripts
+make build-mitosis-cow # build the mitosis
+make peak-func-lean-container # run the stress test
+make clean # clean the environment
+```
+
+Related tomls (under `exp_scripts`):
+
+* `templates-run/many-to-one-func/template-lean-container.toml` for running the stress test
+* other tomls for building and cleaning the test are emitted
+
+
+Remark:
+
+1. Comment out some function names in `micro_func_name` in `templates-run/many-to-one-func/template-lean-container.toml` if you do not want to run them. The full version of stress test will last for at least 15 minutes.
+2. Same remarks with the C++ program stress test.
+
+A sample output is shown below.
+
+```
+(u'@val14     ', u'[T6U0WuFz614] Throughput: 2.276335 containers/sec, latency 439.302601 ms')
+(u'@val14     ', u'[z367u4QL3gh] Throughput: 2.583709 containers/sec, latency 387.040498 ms')
+(u'@val14     ', u'[0VXd9kuG12t] Throughput: 2.243970 containers/sec, latency 445.638739 ms')
+(u'@val14     ', u'[5DbE54y7v49] Throughput: 1.919630 containers/sec, latency 520.933842 ms')
+```
