@@ -42,6 +42,11 @@ template-build-rpc-checksum=templates-build/template-build-rpc-checksum.toml
 
 # Evaluation runner template
 template-run-peak-rpc-kernel-module=templates-run/peak-rpc-kernel-module.toml
+template-build-cpp=templates-build/template-build-cpp.toml
+template-build-lean-container=templates-build/template-build-lean-container.toml
+template-build-mitosis=templates-build/template-build-mitosis.toml
+template-run-peak-lean-container=templates-run/peak-lean-container.toml
+template-clean=templates-build/template-clean.toml
 
 run_out=out
 build_out=run-build.toml
@@ -64,6 +69,9 @@ define runner
 	python evaluation_runner.py --input $(2) --arguments="${RUNNER_FLAG}" --filter="${FILTER}"
 endef
 
+peak-lean-container:
+	$(call runner, $(template-run-peak-lean-container), ${run_out}/$@)
+
 peak-rpc-kernel-module:
 	$(call runner, $(template-run-peak-rpc-kernel-module), ${run_out}/$@)
 
@@ -74,6 +82,14 @@ build-rpc-bench:
 
 build-rpc-checksum:
 	$(call builder, $(template-build-rpc-checksum))
+
+build-cpp:
+	$(call builder, $(template-build-cpp))
+
+build-lean-container-bench: build-cpp
+	$(call builder, $(template-build-mitosis))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
 
 clean: gen-clean
 	pkill python; sleep 0.1
