@@ -7,3 +7,6 @@
 [submodule "deps/hashbrown"]
 	path = deps/hashbrown
 	url = https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/mitosis-project/hashbrown.git
+[submodule "deps/krcore"]
+	path = deps/krcore
+	url = https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/krcore.git
