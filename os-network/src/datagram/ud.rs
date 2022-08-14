@@ -6,7 +6,7 @@ use crate::future::{Async, Future, Poll};
 
 use core::marker::PhantomData;
 
-use KRdmaKit::{context::Context, QueuePair};
+use KRdmaKit::{context::Context, QueuePair, DatapathError};
 
 // XD: should tuned. maybe use it as a global configure?
 pub const MAX_MTU: usize = 4096;
@@ -71,7 +71,7 @@ impl Future for UDDatagram {
 impl crate::conn::Conn for UDDatagram
 {
     type ReqPayload = (); // TODO: Change it to EndPoint+mr+range+signaled
-
+    type IOResult = DatapathError;
     /// Post the send requests to the underlying qp
     /// 
     /// Return

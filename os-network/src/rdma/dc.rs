@@ -1,3 +1,4 @@
+use KRdmaKit::DatapathError;
 use alloc::sync::Arc;
 
 use KRdmaKit::{context::Context, QueuePair};
@@ -38,7 +39,7 @@ use core::sync::atomic::Ordering::SeqCst;
 impl crate::Conn for DCConn {
     type ReqPayload = (); // TODO: Change it to Endpoint+mr+range+signaled+read/write+rkey+raddr
     type CompPayload = ();
-    type IOResult = super::Err;
+    type IOResult = DatapathError;
 
     #[inline]
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
