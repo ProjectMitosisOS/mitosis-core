@@ -1,26 +1,25 @@
 use crate::datagram::ud::*;
 use crate::future::*;
 
-use KRdmaKit::cm::EndPoint;
-use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::DatagramEndpoint;
 
-pub struct UDSession<'a> {
-    meta: EndPoint,
-    inner: UDDatagram<'a>,
+pub struct UDSession {
+    meta: DatagramEndpoint,
+    inner: UDDatagram,
     key: u32,
 }
 
-impl UDSession<'_> {
+impl UDSession {
     #[inline]
-    pub fn get_ss_meta(&self) -> &EndPoint {
+    pub fn get_ss_meta(&self) -> &DatagramEndpoint {
         &self.meta
     }
 
 }
 
-impl<'a> crate::future::Future for UDSession<'a> {
-    type Output = <UDDatagram<'a> as Future>::Output;
-    type Error = <UDDatagram<'a> as Future>::Error;
+impl crate::future::Future for UDSession {
+    type Output = <UDDatagram as Future>::Output;
+    type Error = <UDDatagram as Future>::Error;
 
     #[inline]
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
@@ -31,7 +30,7 @@ impl<'a> crate::future::Future for UDSession<'a> {
 use crate::conn::Conn;
 use core::pin::Pin;
 
-impl super::super::RPCConn for UDSession<'_> {
+impl super::super::RPCConn for UDSession {
     /// #Argument
     /// * UDMsg: the message to send
     /// * bool : whether to signal the request
@@ -45,18 +44,7 @@ impl super::super::RPCConn for UDSession<'_> {
         sz: usize,
         signaled: bool,
     ) -> Result<(), Self::IOResult> {
-        let mut send_req = req
-            .to_ud_wr_w_resize(&self.meta, sz)
-            .set_send_flags(match signaled {
-                true => ib_send_flags::IB_SEND_SIGNALED,
-                false => 0,
-            })
-            .set_lkey(self.key);
-
-        let mut send_req = unsafe { Pin::new_unchecked(&mut send_req) };
-        crate::rdma::payload::Payload::<ib_ud_wr>::finalize(send_req.as_mut());
-
-        self.inner.post(&send_req.as_ref())
+        unimplemented!()
     }
 
     #[inline]
@@ -65,24 +53,24 @@ impl super::super::RPCConn for UDSession<'_> {
     }
 }
 
-impl<'a> super::super::RPCFactory for UDDatagram<'a> {
-    type ConnMeta = (EndPoint, u32);
-    type ConnType = UDSession<'a>;
+impl super::super::RPCFactory for UDDatagram {
+    type ConnMeta = DatagramEndpoint;
+    type ConnType = UDSession;
 
     type ConnResult = crate::rdma::Err;
 
     fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult> {
-        let (endpoint, key) = meta;
-        Ok(UDSession::<'a> {
+        let endpoint = meta;
+        Ok(UDSession {
             meta: endpoint,
-            key: key,
+            key: self.ud.ctx().lkey(),
             inner: self.clone(),
         })
     }
 }
 
 impl<UDFactory: crate::conn::MetaFactory> super::super::GenHyperMeta<UDFactory>
-    for crate::datagram::ud_receiver::UDReceiver<'_>
+    for crate::datagram::ud_receiver::UDReceiver
 {
     type Args = (alloc::string::String, u64); // gid, service ID
 

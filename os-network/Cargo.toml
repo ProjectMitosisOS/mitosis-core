@@ -8,8 +8,9 @@ edition = "2018"
 dct = ["KRdmaKit/dct"]
 
 [dependencies]
-KRdmaKit = { path = "../deps/rust-kernel-rdma/KRdmaKit" }
-rust-kernel-linux-util = {path = "../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
+KRdmaKit = { package = "KRdmaKit", path = "../deps/krcore/KRdmaKit", features = ["kernel"] }
+rust-kernel-linux-util = {path = "../deps/krcore/rust-kernel-rdma/rust-kernel-linux-util", features=["static_log_check","max_level_trace"]}
+rust-kernel-rdma-base = {path = "../deps/krcore/rust-kernel-rdma/rust-kernel-rdma-base"}
 hashbrown = "0.9"
 
 [dependencies.lazy_static]

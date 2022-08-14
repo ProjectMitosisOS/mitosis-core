@@ -6,236 +6,246 @@ use core::fmt::Write;
 use core::pin::Pin;
 
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 
-use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::mem::{Memory, RMemPhy};
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
-use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::services::ReliableConnectionServer;
+use KRdmaKit::comm_manager::CMServer;
+use KRdmaKit::MemoryRegion;
+
+use rust_kernel_rdma_base::linux_kernel_module;
+use rust_kernel_rdma_base::*;
 use KRdmaKit::KDriver;
 
 use rust_kernel_linux_util as log;
 
 use os_network::block_on;
+use os_network::rdma::payload::rc::RCReqPayload;
 use os_network::bytes::BytesMut;
 use os_network::conn::Factory;
-use os_network::rdma::payload;
 use os_network::timeout::Timeout;
+use os_network::rdma::payload::{RDMAOp, RDMAWR, LocalMR, Signaled};
 use os_network::{rdma, Conn};
 
 use krdma_test::*;
 
-type RCReqPayload = payload::Payload<ib_rdma_wr>;
-
-static mut KDRIVER: Option<Box<KDriver>> = None;
-
-unsafe fn global_kdriver() -> &'static mut Box<KDriver> {
-    match KDRIVER {
-        Some(ref mut x) => &mut *x,
-        None => panic!(),
-    }
+/// The error type of data plane operations
+#[derive(thiserror_no_std::Error, Debug)]
+pub enum TestError {
+    #[error("Test error {0}")]
+    Error(&'static str),
 }
 
 /// A test on `RCFactory`
-/// Pre-requisition: `ctx_init`
-fn test_rc_factory() {
-    let driver = unsafe { global_kdriver() };
-    let client_ctx = driver
-        .devices()
-        .into_iter()
-        .next()
-        .expect("no rdma device available")
-        .open()
-        .expect("failed to open context");
-
-    let client_factory = rdma::rc::RCFactory::new(&client_ctx);
-
+fn test_rc_factory() -> Result<(), TestError> {
+    let driver = unsafe { KDriver::create().unwrap() };
+    // server side
     let server_ctx = driver
         .devices()
-        .into_iter()
-        .next()
-        .expect("no rdma device available")
-        .open()
-        .unwrap();
+        .get(0)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
 
-    let server_service_id: u64 = 0;
-    let _ctrl = RCtrl::create(server_service_id, &server_ctx);
+    let server_port: u8 = 1;
+    log::info!(
+        "Server context's device name {}",
+        server_ctx.get_dev_ref().name()
+    );
+    let server_service_id = 73;
+    let rc_server = ReliableConnectionServer::create(&server_ctx, server_port);
+    let server_cm = CMServer::new(server_service_id, &rc_server, server_ctx.get_dev_ref())
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
+    let addr = unsafe { server_cm.inner().raw_ptr() }.as_ptr() as u64;
+    log::info!("Server cm addr 0x{:X}", addr);
 
-    // the main test body
+    // client side
+    let client_port: u8 = 1;
+    let client_ctx = driver
+        .devices()
+        .get(1)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open client ctx error.");
+            TestError::Error("Client context error.")
+        })?;
+    log::info!(
+        "Client context's device name {}",
+        client_ctx.get_dev_ref().name()
+    );
+
     let conn_meta = rdma::ConnMeta {
-        gid: server_ctx.get_gid_as_string(),
+        gid: server_ctx.get_dev_ref().query_gid(server_port, 0).unwrap(),
+        port: client_port,
         service_id: server_service_id,
-        qd_hint: 0,
     };
 
-    let mut rc = client_factory.create(conn_meta).unwrap();
-    let status = rc.get_status();
-    if status.is_some() {
-        log::info!("test connect w/o meta passes! {:?}", status.unwrap());
+    let client_factory = rdma::rc::RCFactory::new(client_ctx.clone());
+    let client_qp = client_factory.create(conn_meta).map_err(|_| {
+        log::error!("Error creating rc qp.");
+        TestError::Error("Create rc qp error.")
+    })?;
+    let status = client_qp.get_status().map_err(|_| {
+        log::error!("Error getting qp status.");
+        TestError::Error("Get qp status error.")
+    })?;
+    
+    if status != KRdmaKit::queue_pairs::QueuePairStatus::ReadyToSend {
+        log::error!("Error qp status: {:?}", status);
+        Err(TestError::Error("Error qp status."))
     } else {
-        log::error!("unable to get the connection meta");
+        Ok(())
     }
 }
 
-/// A test on `RCFactoryWPath`
-/// Pre-requisition: `ctx_init`
-fn test_rc_factory_with_meta() {
-    let driver = unsafe { global_kdriver() };
-    let client_ctx = driver
-        .devices()
-        .into_iter()
-        .next()
-        .expect("no rdma device available")
-        .open()
-        .expect("failed to open context");
-
-    let client_factory = rdma::rc::RCFactoryWPath::new(&client_ctx);
-
+fn test_rc_post_poll() -> Result<(), TestError> {
+    let driver = unsafe { KDriver::create().unwrap() };
+    // server side
     let server_ctx = driver
         .devices()
-        .into_iter()
-        .next()
-        .expect("no rdma device available")
-        .open()
-        .unwrap();
+        .get(0)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
 
-    let server_service_id: u64 = 0;
-    let _ctrl = RCtrl::create(server_service_id, &server_ctx);
+    let server_port: u8 = 1;
+    log::info!(
+        "Server context's device name {}",
+        server_ctx.get_dev_ref().name()
+    );
+    let server_service_id = 73;
+    let rc_server = ReliableConnectionServer::create(&server_ctx, server_port);
+    let server_cm = CMServer::new(server_service_id, &rc_server, server_ctx.get_dev_ref())
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
+    let addr = unsafe { server_cm.inner().raw_ptr() }.as_ptr() as u64;
+    log::info!("Server cm addr 0x{:X}", addr);
 
-    // the main test body
-    let conn_meta = rdma::ConnMeta {
-        gid: server_ctx.get_gid_as_string(),
-        service_id: server_service_id,
-        qd_hint: 0,
-    };
-    let conn_meta = client_factory.convert_meta(conn_meta).unwrap();
-
-    let mut rc = client_factory.create(conn_meta).unwrap();
-    let status = rc.get_status();
-    if status.is_some() {
-        log::info!("test connect w/o meta passes! {:?}", status.unwrap());
-    } else {
-        log::error!("unable to get the connection meta");
-    }
-}
-
-/// A test on post and poll operations on `RCConn`
-/// Pre-requisition: `ctx_init`
-fn test_rc_post_poll() {
-    let timeout_usec = 5000000;
-    let driver = unsafe { global_kdriver() };
+    // client side
+    let client_port: u8 = 1;
     let client_ctx = driver
         .devices()
-        .into_iter()
-        .next()
-        .expect("no rdma device available")
-        .open()
-        .expect("failed to open context");
-
-    let client_factory = rdma::rc::RCFactory::new(&client_ctx);
-
-    let server_ctx = driver
-        .devices()
-        .into_iter()
-        .next()
-        .expect("no rdma device available")
-        .open()
-        .unwrap();
-
-    let server_service_id: u64 = 0;
-    let _ctrl = RCtrl::create(server_service_id, &server_ctx);
+        .get(1)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open client ctx error.");
+            TestError::Error("Client context error.")
+        })?;
+    log::info!(
+        "Client context's device name {}",
+        client_ctx.get_dev_ref().name()
+    );
 
     let conn_meta = rdma::ConnMeta {
-        gid: server_ctx.get_gid_as_string(),
+        gid: server_ctx.get_dev_ref().query_gid(server_port, 0).unwrap(),
+        port: client_port,
         service_id: server_service_id,
-        qd_hint: 0,
     };
 
-    let mut rc = client_factory.create(conn_meta).unwrap();
+    let client_factory = rdma::rc::RCFactory::new(client_ctx.clone());
+    let mut rc = client_factory.create(conn_meta).map_err(|_| {
+        log::error!("Error creating rc qp.");
+        TestError::Error("Create rc qp error.")
+    })?;
+    
+    // memory region
+    let server_mr = Arc::new(MemoryRegion::new(server_ctx.clone(), 256).map_err(|_| {
+        log::error!("Failed to create server MR.");
+        TestError::Error("Create mr error.")
+    })?);
+    let client_mr = Arc::new(MemoryRegion::new(client_ctx.clone(), 256).map_err(|_| {
+        log::error!("Failed to create client MR.");
+        TestError::Error("Create mr error.")
+    })?);
 
-    // prepare 2 slices of memory for the post/poll
-    let capacity: usize = 32;
-    let mut local = RMemPhy::new(capacity);
-    let mut local_bytes =
-        unsafe { BytesMut::from_raw(local.get_ptr() as _, local.get_sz() as usize) };
-    let mut remote = RMemPhy::new(capacity);
-    let mut remote_bytes =
-        unsafe { BytesMut::from_raw(remote.get_ptr() as _, remote.get_sz() as usize) };
+    let server_slot_0 = unsafe { (server_mr.get_virt_addr() as *mut u64).as_mut().unwrap() };
+    let client_slot_0 = unsafe { (client_mr.get_virt_addr() as *mut u64).as_mut().unwrap() };
+    let server_slot_1 = unsafe {
+        ((server_mr.get_virt_addr() + 8) as *mut u64)
+            .as_mut()
+            .unwrap()
+    };
+    let client_slot_1 = unsafe {
+        ((client_mr.get_virt_addr() + 8) as *mut u64)
+            .as_mut()
+            .unwrap()
+    };
+    *client_slot_0 = 0;
+    *client_slot_1 = 12345678;
+    *server_slot_0 = 87654321;
+    *server_slot_1 = 0;
+    log::info!("[Before] client: v0 {} v1 {}", client_slot_0, client_slot_1);
+    log::info!("[Before] server: v0 {} v1 {}", server_slot_0, server_slot_1);
 
-    write!(&mut remote_bytes, "hello world from remote").unwrap();
+    let raddr = unsafe { server_mr.get_rdma_addr() };
+    let rkey = server_mr.rkey().0;
 
-    // read the remote memory to local
-    let mut read_req = RCReqPayload::default()
-        .set_laddr(local.get_pa(0))
-        .set_raddr(remote.get_pa(0))
-        .set_sz(capacity)
-        .set_lkey(unsafe { client_factory.get_context().get_lkey() })
-        .set_rkey(unsafe { server_ctx.get_rkey() }) // here we are testing on a single machine
-        .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-        .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ);
+    let mut read_payload = RCReqPayload::new(
+        client_mr.clone(),
+        0..8,
+        false,
+        RDMAOp::READ,
+        rkey,
+        raddr,
+    );
+    rc.post(&read_payload).map_err(|_| {
+        log::error!("Failed to post read operation");
+        TestError::Error("RC read error.")
+    })?;
 
-    // pin the request to set the sge_ptr properly.
-    let mut read_req = unsafe { Pin::new_unchecked(&mut read_req) };
-    os_network::rdma::payload::Payload::<ib_rdma_wr>::finalize(read_req.as_mut());
+    let write_payload = read_payload
+        .set_op(RDMAOp::WRITE)
+        .set_raddr(raddr+8)
+        .set_local_mr_range(8..16)
+        .set_signaled();
+    rc.post(&write_payload).map_err(|_| {
+        log::error!("Failed to post write operation");
+        TestError::Error("RC write error.")
+    })?;
 
-    let res = rc.post(&read_req.as_ref());
-    if res.is_err() {
-        log::error!("unable to post read op");
-        return;
-    }
-
+    let timeout_usec = 5000_000;
     let mut timeout = Timeout::new(rc, timeout_usec);
-    let result = block_on(&mut timeout);
-    if result.is_err() {
-        log::error!("polling rc qp with error");
-        return;
-    }
+    block_on(&mut timeout).map_err(|_| {
+        log::error!("Failed to poll rc qp");
+        TestError::Error("RC poll error.")
+    })?;
 
-    let mut rc = timeout.into_inner();
-    if local_bytes == remote_bytes {
-        log::info!("equal after rdma read operation!")
+    log::info!("[After ] client: v0 {} v1 {}", client_slot_0, client_slot_1);
+    log::info!("[After ] server: v0 {} v1 {}", server_slot_0, server_slot_1);
+
+    if *client_slot_0 == *server_slot_0 && *client_slot_1 == *server_slot_1 {
+        Ok(())
     } else {
-        log::error!("not equal after rdma read operation!")
-    }
-
-    write!(&mut local_bytes, "hello world from local").unwrap();
-
-    // write local memory to remote
-    let mut write_req = RCReqPayload::default()
-        .set_laddr(local.get_pa(0))
-        .set_raddr(remote.get_pa(0))
-        .set_sz(capacity)
-        .set_lkey(unsafe { client_factory.get_context().get_lkey() })
-        .set_rkey(unsafe { server_ctx.get_rkey() }) // here we are testing on a single machine
-        .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-        .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE);
-
-    // pin the request to set the sge_ptr properly.
-    let mut write_req = unsafe { Pin::new_unchecked(&mut write_req) };
-    os_network::rdma::payload::Payload::<ib_rdma_wr>::finalize(write_req.as_mut());
-
-    let res = rc.post(&write_req.as_ref());
-    if res.is_err() {
-        log::error!("unable to post read op");
-        return;
-    }
-
-    let mut timeout = Timeout::new(rc, timeout_usec);
-    let result = block_on(&mut timeout);
-    if result.is_err() {
-        log::error!("polling rc qp with error");
-        return;
-    }
-
-    if local_bytes == remote_bytes {
-        log::info!("equal after rdma write operation!")
-    } else {
-        log::error!("not equal after rdma write operation!")
+        Err(TestError::Error("read write failed"))
     }
 }
 
-#[krdma_test(test_rc_factory, test_rc_factory_with_meta, test_rc_post_poll)]
-fn ctx_init() {
-    unsafe {
-        KDRIVER = KDriver::create();
-    }
+fn test_wrapper() -> Result<(), TestError> {
+    test_rc_factory()?;
+    test_rc_post_poll()?;
+    Ok(())
+}
+
+#[krdma_main]
+fn main() {
+    match test_wrapper() {
+        Ok(_) => {
+            log::info!("pass all tests")
+        }
+        Err(e) => {
+            log::error!("test error {:?}", e)
+        }
+    };
 }

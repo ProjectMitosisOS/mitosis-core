@@ -103,7 +103,6 @@ where
 
 #[allow(unused_imports)]
 use super::header::*;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
 impl<'a, 'b, F, R, MF> Future for RPCHook<'a, 'b, F, R, MF>
 where
@@ -113,7 +112,7 @@ where
         Output = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
         MsgBuf = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
         IOResult = <R as Future>::Error,
-    >,
+    > + GetContext,
     <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload: ToBytes,
     MF: MetaFactory<Meta = F::ConnMeta>,
 {
@@ -169,7 +168,7 @@ where
                                 .create(connect_meta)
                                 .map_err(|_| Error::session_creation_error())?;
 
-                            let session_buf = R::MsgBuf::create(R::MTU, 0);
+                            let session_buf = R::MsgBuf::create(R::MTU, 0, self.transport.get_context());
 
                             // add to my connected session
                             self.connected_sessions

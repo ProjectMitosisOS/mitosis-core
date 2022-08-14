@@ -1,41 +1,42 @@
 use crate::bytes::*;
-use KRdmaKit::mem::{Memory, RMemPhy};
+use alloc::sync::Arc;
+use KRdmaKit::memory_region::MemoryRegion;
+use KRdmaKit::queue_pairs::DatagramEndpoint;
+use KRdmaKit::context::Context;
 
 /// UD must use physical address.
 pub struct UDMsg {
-    inner: RMemPhy,
+    inner: MemoryRegion,
     bytes: BytesMut,
     pa: u64,
     imm: u32,
 }
 
-use KRdmaKit::rust_kernel_rdma_base::*;
-
-impl UDMsg {
-    /// Transform this UDMsg to raw C data structure - ib_ud_wr
-    /// 
-    /// #Argument
-    /// * `addr` - the endpoint of the target receiver
-    pub fn to_ud_wr(
-        &self,
-        addr: &KRdmaKit::cm::EndPoint,
-    ) -> crate::rdma::payload::Payload<ib_ud_wr> {
-        self.to_ud_wr_w_resize(addr, self.bytes.len())
-    }
-
-    pub fn to_ud_wr_w_resize(
-        &self,
-        addr: &KRdmaKit::cm::EndPoint,
-        sz: usize,
-    ) -> crate::rdma::payload::Payload<ib_ud_wr> {
-        let res: crate::rdma::payload::Payload<ib_ud_wr> = Default::default();
-        res.set_ah(addr)
-            .set_laddr(self.pa)
-            .set_sz(core::cmp::min(self.bytes.len(), sz))
-            .set_opcode(ib_wr_opcode::IB_WR_SEND_WITH_IMM)
-            .set_imm_data(self.imm)
-    }
-}
+// impl UDMsg {
+//     /// Transform this UDMsg to raw C data structure - ib_ud_wr
+//     /// 
+//     /// #Argument
+//     /// * `addr` - the endpoint of the target receiver
+//     pub fn to_ud_wr(
+//         &self,
+//         addr: &KRdmaKit::queue_pairs::DatagramEndpoint,
+//     ) -> crate::rdma::payload::Payload<ib_ud_wr> {
+//         self.to_ud_wr_w_resize(addr, self.bytes.len())
+//     }
+// 
+//     pub fn to_ud_wr_w_resize(
+//         &self,
+//         addr: &KRdmaKit::queue_pairs::DatagramEndpoint,
+//         sz: usize,
+//     ) -> crate::rdma::payload::Payload<ib_ud_wr> {
+//         let res: crate::rdma::payload::Payload<ib_ud_wr> = Default::default();
+//         res.set_ah(addr)
+//             .set_laddr(self.pa)
+//             .set_sz(core::cmp::min(self.bytes.len(), sz))
+//             .set_opcode(ib_wr_opcode::IB_WR_SEND_WITH_IMM)
+//             .set_imm_data(self.imm)
+//     }
+// }
 
 impl ToBytes for UDMsg {
     fn get_bytes(&self) -> &BytesMut {
@@ -48,28 +49,13 @@ impl ToBytes for UDMsg {
 }
 
 impl UDMsg {
-    /// Create a UDMsg from a kernel physical memory
-    /// 
-    /// #Argument
-    /// * `phy` - allocated physical memory
-    /// * `imm` - immediate number in the UD message
-    pub fn new_from_phy(mut phy: RMemPhy, imm: u32) -> Self {
-        let pa = phy.get_pa(0);
-        Self {
-            pa: pa,
-            bytes: unsafe { BytesMut::from_raw(phy.get_ptr() as _, phy.get_sz() as usize) },
-            inner: phy,
-            imm: imm,
-        }
-    }
-
     /// Allocate memory and create a UDMsg
     /// 
     /// #Argument
     /// * `size` - the memory to be allocated
     /// * `imm` - immediate number in the UD message
-    pub fn new(size: usize, imm : u32) -> Self {
-        Self::new_from_phy(RMemPhy::new(size), imm)
+    pub fn new(size: usize, imm : u32, context: Arc<Context>) -> Self {
+        unimplemented!()
     }
 
     #[inline]
@@ -86,16 +72,14 @@ impl UDMsg {
         self
     }
 
-    pub fn to_inner(self) -> RMemPhy {
+    pub fn to_inner(self) -> MemoryRegion {
         self.inner
     }
 }
 
 impl crate::remote_memory::ToPhys for UDMsg {
     unsafe fn to_phys(&self) -> (u64, usize) {
-        // ugly hack: get_pa requires a mutable reference 
-        let inner = &mut *(&self.inner as *const _ as *mut RMemPhy);
-        (inner.get_pa(0), inner.get_sz() as usize)
+        (self.inner.get_rdma_addr(), self.inner.capacity())
     }
 }
 
@@ -114,7 +98,7 @@ impl Write for UDMsg {
 }
 
 impl crate::rpc::AllocMsgBuf for UDMsg {
-    fn create(size: usize, imm: u32) -> Self {
-        Self::new(size, imm)
+    fn create(size: usize, imm: u32, context: Arc<Context>) -> Self {
+        Self::new(size, imm, context)
     }
 }

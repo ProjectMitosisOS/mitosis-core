@@ -1,62 +1,55 @@
+use KRdmaKit::context::Context;
 #[allow(non_snake_case)]
 use alloc::string::String;
-
-use KRdmaKit::device::RContext;
-use KRdmaKit::rust_kernel_rdma_base::{ib_ah, ib_gid, sa_path_rec};
+use alloc::sync::Arc;
 
 pub const MAX_GID_LEN: usize = 40; // The maximum string length of IPv6
 
-#[derive(Debug, Clone, Copy)]
-pub struct IBAddressHandlerMeta {
-    pub lid: u16,
-    pub port_num: u16,
-    pub gid: ib_gid,
-}
-
-#[derive(Debug,Copy)]
-pub struct IBAddressHandler {
-    pub inner: *mut ib_ah,
-}
-
-impl IBAddressHandler { 
-    pub unsafe fn get_inner(&self) -> *mut ib_ah { 
-        self.inner
-    }
-
-    pub unsafe fn free(&mut self) {
-        if self.inner != core::ptr::null_mut() { 
-            KRdmaKit::rust_kernel_rdma_base::rdma_destroy_ah(self.inner);            
-            self.inner = core::ptr::null_mut();
-        }
-    }
-}
-
-impl Clone for IBAddressHandler { 
-    fn clone(&self) -> Self {
-        Self { 
-            inner : self.inner
-        }
-    }
-}
-
-impl IBAddressHandlerMeta {
-    pub fn new(ctx: &RContext) -> Self {
-        Self {
-            lid: ctx.get_lid(),
-            port_num: ctx.get_port() as _,
-            gid: ctx.get_gid(),
-        }
-    }
-
-    pub fn create_ah(ctx: &RContext, meta: Self) -> core::option::Option<IBAddressHandler> {
-        let res =
-            KRdmaKit::qp::create_ib_ah_ptr(ctx.get_pd(), meta.port_num as _, meta.lid, meta.gid);
-        if res != core::ptr::null_mut() {
-            return Some(IBAddressHandler { inner: res });
-        }
-        return None;
-    }
-}
+// #[derive(Debug, Clone, Copy)]
+// pub struct IBAddressHandlerMeta {
+//     pub lid: u16,
+//     pub port_num: u16,
+//     pub gid: ib_gid,
+// }
+// 
+// #[derive(Debug,Copy)]
+// pub struct IBAddressHandler {
+//     pub inner: *mut ib_ah,
+// }
+// 
+// impl IBAddressHandler { 
+//     pub unsafe fn get_inner(&self) -> *mut ib_ah { 
+//         self.inner
+//     }
+// 
+//     pub unsafe fn free(&mut self) {
+//         if self.inner != core::ptr::null_mut() { 
+//             unimplemented!()
+//         }
+//     }
+// }
+// 
+// impl Clone for IBAddressHandler { 
+//     fn clone(&self) -> Self {
+//         Self { 
+//             inner : self.inner
+//         }
+//     }
+// }
+// 
+// impl IBAddressHandlerMeta {
+//     pub fn new(ctx: &RContext) -> Self {
+//         Self {
+//             lid: ctx.get_lid(),
+//             port_num: ctx.get_port() as _,
+//             gid: ctx.get_gid(),
+//         }
+//     }
+// 
+//     pub fn create_ah(ctx: &RContext, meta: Self) -> core::option::Option<IBAddressHandler> {
+//         unimplemented!()
+//     }
+// }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RawGID {
@@ -101,27 +94,9 @@ impl alloc::string::ToString for RawGID {
 }
 
 pub struct ConnMeta {
-    pub gid: String,
+    pub gid: KRdmaKit::rdma_shim::bindings::ib_gid,
     pub service_id: u64,
-    pub qd_hint: u64,
-}
-
-#[derive(Clone, Copy)]
-pub struct ConnMetaWPath {
-    pub path: sa_path_rec,
-    pub service_id: u64,
-    pub qd_hint: u64,
-}
-
-impl ConnMetaWPath {
-    pub fn new(ctx: &RContext, meta: ConnMeta) -> core::option::Option<Self> {
-        ctx.explore_path(meta.gid.clone(), meta.service_id)
-            .map(|path| Self {
-                path: path,
-                service_id: meta.service_id,
-                qd_hint: meta.qd_hint,
-            })
-    }
+    pub port: u8,
 }
 
 #[derive(Debug)]
@@ -204,11 +179,8 @@ impl From<u32> for WCStatus {
     }
 }
 
-#[derive(Debug)]
-pub enum QPStatus {
-    RTR,
-    RTS,
-    Other,
+pub trait GetContext {
+    fn get_context(&self) -> Arc<Context>;
 }
 
 pub mod dc;
