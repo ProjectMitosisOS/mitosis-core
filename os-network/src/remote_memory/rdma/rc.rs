@@ -6,10 +6,8 @@ use core::pin::Pin;
 use crate::conn::Conn;
 use crate::rdma::rc::RCConn;
 
-use KRdmaKit::rust_kernel_rdma_base::{ib_rdma_wr, ib_send_flags, ib_wr_opcode};
-
-pub struct RCRemoteDevice<'a, LocalMemory> {
-    rc: Arc<RCConn<'a>>,
+pub struct RCRemoteDevice<LocalMemory> {
+    rc: Arc<RCConn>,
     phantom: PhantomData<LocalMemory>,
 }
 
@@ -24,8 +22,8 @@ impl RCKeys {
     }
 }
 
-impl<'a, LocalMemory> RCRemoteDevice<'a, LocalMemory> {
-    pub fn new(rc: Arc<RCConn<'a>>) -> Self {
+impl<LocalMemory> RCRemoteDevice<LocalMemory> {
+    pub fn new(rc: Arc<RCConn>) -> Self {
         Self {
             rc: rc,
             phantom: PhantomData,
@@ -33,9 +31,7 @@ impl<'a, LocalMemory> RCRemoteDevice<'a, LocalMemory> {
     }
 }
 
-type RCReqPayload = crate::rdma::payload::Payload<ib_rdma_wr>;
-
-impl<LocalMemory> crate::remote_memory::Device for RCRemoteDevice<'_, LocalMemory>
+impl<LocalMemory> crate::remote_memory::Device for RCRemoteDevice<LocalMemory>
 where
     LocalMemory: crate::remote_memory::ToPhys,
 {
@@ -53,22 +49,7 @@ where
         key: &Self::Key,
         to: &mut Self::LocalMemory,
     ) -> Result<(), Self::IOResult> {
-        let mut payload = RCReqPayload::default()
-            .set_laddr(to.to_phys().0)
-            .set_raddr(*addr)
-            .set_sz(to.to_phys().1)
-            .set_lkey(key.lkey)
-            .set_rkey(key.rkey)
-            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ);
-
-        let mut payload = Pin::new_unchecked(&mut payload);
-        let rc = Arc::get_mut_unchecked(&mut self.rc);
-        crate::rdma::payload::Payload::<ib_rdma_wr>::finalize(payload.as_mut());
-
-        rc.post(&payload.as_ref())?;
-        crate::block_on(rc)?;
-        Ok(())
+        unimplemented!()
     }
 
     unsafe fn write(
@@ -78,21 +59,6 @@ where
         key: &Self::Key,
         payload: &Self::LocalMemory,
     ) -> Result<(), Self::IOResult> {
-        let mut payload = RCReqPayload::default()
-            .set_laddr(payload.to_phys().0)
-            .set_raddr(*addr)
-            .set_sz(payload.to_phys().1)
-            .set_lkey(key.lkey)
-            .set_rkey(key.rkey)
-            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-            .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE);
-
-        let mut payload = Pin::new_unchecked(&mut payload);
-        let rc = Arc::get_mut_unchecked(&mut self.rc);
-        crate::rdma::payload::Payload::<ib_rdma_wr>::finalize(payload.as_mut());
-
-        rc.post(&payload.as_ref())?;
-        crate::block_on(rc)?;
-        Ok(())
+        unimplemented!()
     }
 }

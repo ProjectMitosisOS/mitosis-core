@@ -1,3 +1,5 @@
+use crate::rdma::payload::{Signaled, RDMAWR, LocalMR};
+
 use super::Future;
 
 pub trait Conn<T: Future = Self>: Future {
@@ -11,13 +13,11 @@ pub trait Conn<T: Future = Self>: Future {
 
 pub trait Factory {
     type ConnMeta;
-    type ConnType<'a>: Conn
-    where
-        Self: 'a;
+    type ConnType;
     type ConnResult;
 
     // create and connect the connection
-    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult>;
+    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult>;
 }
 
 pub trait MetaFactory: Factory {

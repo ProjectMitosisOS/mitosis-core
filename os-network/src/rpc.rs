@@ -1,12 +1,15 @@
 use core::panic;
 
+use alloc::sync::Arc;
+
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
 use crate::{
     bytes::{BytesMut, ToBytes},
-    Receiver,
+    Receiver, rdma::GetContext,
 };
+use KRdmaKit::context::Context;
 use hashbrown::HashMap;
 
 pub enum Err {
@@ -38,7 +41,7 @@ where
 
 impl<R, SS> Caller<R, SS>
 where
-    R: Receiver,
+    R: Receiver + GetContext,
     SS: RPCConn,
     SS::ReqPayload: ToBytes,
 {
@@ -103,7 +106,7 @@ where
     where
         SS::ReqPayload: ToBytes,
     {
-        let mut msg_buf = SS::ReqPayload::create(R::MTU, 0);
+        let mut msg_buf = SS::ReqPayload::create(R::MTU, 0, self.inner_receiver.get_context());
         let req_sz = ConnectStubFactory::new(my_session_id)
             .generate(&meta, msg_buf.get_bytes_mut())
             .unwrap();
@@ -241,7 +244,7 @@ pub trait RPCFactory {
 }
 
 pub trait AllocMsgBuf {
-    fn create(size: usize, imm: u32) -> Self;
+    fn create(size: usize, imm: u32, context: Arc<Context>) -> Self;
 }
 
 /// The connection should provide a GenHyperMeta trait,
