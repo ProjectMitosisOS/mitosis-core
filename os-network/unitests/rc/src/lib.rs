@@ -192,7 +192,9 @@ fn test_rc_post_poll() -> Result<(), TestError> {
     let raddr = unsafe { server_mr.get_rdma_addr() };
     let rkey = server_mr.rkey().0;
 
-    let mut read_payload = RCReqPayload::new(
+    // post a unsignaled read request
+    // read 8 bytes from raddr to the local memory region indexed by 0..8
+    let payload = RCReqPayload::new(
         client_mr.clone(),
         0..8,
         false,
@@ -200,21 +202,24 @@ fn test_rc_post_poll() -> Result<(), TestError> {
         rkey,
         raddr,
     );
-    rc.post(&read_payload).map_err(|_| {
+    rc.post(&payload).map_err(|_| {
         log::error!("Failed to post read operation");
         TestError::Error("RC read error.")
     })?;
 
-    let write_payload = read_payload
+    // post a signaled write request
+    // write 8 bytes to the raddr+8 from the local memory region indexed by 8..16
+    let payload = payload
         .set_op(RDMAOp::WRITE)
         .set_raddr(raddr+8)
         .set_local_mr_range(8..16)
         .set_signaled();
-    rc.post(&write_payload).map_err(|_| {
+    rc.post(&payload).map_err(|_| {
         log::error!("Failed to post write operation");
         TestError::Error("RC write error.")
     })?;
 
+    // poll the completion queue
     let timeout_usec = 5000_000;
     let mut timeout = Timeout::new(rc, timeout_usec);
     block_on(&mut timeout).map_err(|_| {
@@ -225,6 +230,7 @@ fn test_rc_post_poll() -> Result<(), TestError> {
     log::info!("[After ] client: v0 {} v1 {}", client_slot_0, client_slot_1);
     log::info!("[After ] server: v0 {} v1 {}", server_slot_0, server_slot_1);
 
+    // check the results
     if *client_slot_0 == *server_slot_0 && *client_slot_1 == *server_slot_1 {
         Ok(())
     } else {
