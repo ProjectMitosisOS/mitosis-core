@@ -12,6 +12,10 @@ pub trait Receiver<T: Future = Self>: Future
     fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult>;
 }
 
+pub struct UDCreationMeta {
+    pub port: u8,
+}
+
 pub mod msg;
 pub mod ud;
 pub mod ud_receiver;
