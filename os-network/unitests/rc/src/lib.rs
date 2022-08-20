@@ -2,10 +2,6 @@
 
 extern crate alloc;
 
-use core::fmt::Write;
-use core::pin::Pin;
-
-use alloc::boxed::Box;
 use alloc::sync::Arc;
 
 use KRdmaKit::services::ReliableConnectionServer;
@@ -20,7 +16,6 @@ use rust_kernel_linux_util as log;
 
 use os_network::block_on;
 use os_network::rdma::payload::rc::RCReqPayload;
-use os_network::bytes::BytesMut;
 use os_network::conn::Factory;
 use os_network::timeout::Timeout;
 use os_network::rdma::payload::{RDMAOp, RDMAWR, LocalMR, Signaled};
