@@ -1,6 +1,7 @@
+use KRdmaKit::DatapathError;
 use alloc::collections::VecDeque;
 
-use crate::rdma::Err;
+use crate::{rdma::Err, bytes::ToBytes};
 
 use super::msg::UDMsg;
 use super::ud::UDDatagram;
@@ -9,7 +10,6 @@ use super::ud::UDDatagram;
 #[allow(dead_code)]
 pub struct UDReceiver {
     qd_hint: usize,
-    lkey: u32,
     inner: UDDatagram,
     msg_queues: VecDeque<UDMsg>,
 }
@@ -20,7 +20,6 @@ pub struct UDReceiver {
 /// ```
 /// let receiver = UDReceiverFactory::new()
 ///                .set_qd_hint(12)
-///                .set_lkey(12)
 ///                .create(ud);
 /// ```
 /// 
@@ -30,7 +29,6 @@ pub struct UDReceiver {
 #[derive(Default)]
 pub struct UDReceiverFactory {
     qd_hint: usize,
-    lkey: u32,
 }
 
 impl UDReceiverFactory {
@@ -43,21 +41,15 @@ impl UDReceiverFactory {
         self
     }
 
-    pub fn set_lkey(mut self, lkey: u32) -> Self {
-        self.lkey = lkey;
-        self
-    }
-
     pub fn create(self, ud: UDDatagram) -> UDReceiver {
-        UDReceiver::new(ud, self.qd_hint, self.lkey)
+        UDReceiver::new(ud, self.qd_hint)
     }
 }
 
 impl UDReceiver {
-    pub fn new(ud: UDDatagram, qd_hint: usize, key: u32) -> Self {
+    pub fn new(ud: UDDatagram, qd_hint: usize) -> Self {
         Self {
             qd_hint: qd_hint,
-            lkey: key,
             inner: ud,
             msg_queues: VecDeque::new(),
         }
@@ -78,6 +70,7 @@ impl UDReceiver {
 
 impl super::Receiver for UDReceiver {
     type MsgBuf = <Self as Future>::Output;
+    type IOResult = DatapathError;
 
     // FIXME: should be configurable
     const HEADER: usize = 40; // GRH header
@@ -88,9 +81,11 @@ impl super::Receiver for UDReceiver {
     /// 
     /// #Arguments
     /// * `buf` - the memory buffer used for receiving future requests
-    /// * `key` - the local key of this memory
     fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult> {
-        unimplemented!()
+        self.inner.get_qp()
+            .post_recv(buf.get_inner().as_ref(), 0..buf.len() as u64, buf.get_pa())?;
+        self.msg_queues.push_back(buf);
+        Ok(())
     }
 }
 
@@ -98,7 +93,7 @@ use crate::future::{Async, Future, Poll};
 
 impl Future for UDReceiver {
     type Output = UDMsg;
-    type Error = Err;
+    type Error = DatapathError;
 
     /// Poll the underlying completion queue for the UD receive operation
     /// 
@@ -106,7 +101,17 @@ impl Future for UDReceiver {
     /// * If succeed, return the UDMsg poped from internal queue
     /// * If fail, return NotReady, work-completion-related error or other general error
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
-        unimplemented!()
+        let mut completion = [Default::default(); 1];
+        let ret = self.inner.get_qp()
+            .poll_recv_cq(&mut completion)?;
+        if ret.len() > 0 {
+            let msg = self.msg_queues
+                .pop_front()
+                .expect("message queue should contain elements");
+            Ok(Async::Ready(msg))
+        } else {
+            Ok(Async::NotReady)
+        }
     }
 }
 

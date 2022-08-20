@@ -6,37 +6,11 @@ use KRdmaKit::context::Context;
 
 /// UD must use physical address.
 pub struct UDMsg {
-    inner: MemoryRegion,
+    inner: Arc<MemoryRegion>,
     bytes: BytesMut,
     pa: u64,
     imm: u32,
 }
-
-// impl UDMsg {
-//     /// Transform this UDMsg to raw C data structure - ib_ud_wr
-//     /// 
-//     /// #Argument
-//     /// * `addr` - the endpoint of the target receiver
-//     pub fn to_ud_wr(
-//         &self,
-//         addr: &KRdmaKit::queue_pairs::DatagramEndpoint,
-//     ) -> crate::rdma::payload::Payload<ib_ud_wr> {
-//         self.to_ud_wr_w_resize(addr, self.bytes.len())
-//     }
-// 
-//     pub fn to_ud_wr_w_resize(
-//         &self,
-//         addr: &KRdmaKit::queue_pairs::DatagramEndpoint,
-//         sz: usize,
-//     ) -> crate::rdma::payload::Payload<ib_ud_wr> {
-//         let res: crate::rdma::payload::Payload<ib_ud_wr> = Default::default();
-//         res.set_ah(addr)
-//             .set_laddr(self.pa)
-//             .set_sz(core::cmp::min(self.bytes.len(), sz))
-//             .set_opcode(ib_wr_opcode::IB_WR_SEND_WITH_IMM)
-//             .set_imm_data(self.imm)
-//     }
-// }
 
 impl ToBytes for UDMsg {
     fn get_bytes(&self) -> &BytesMut {
@@ -54,8 +28,34 @@ impl UDMsg {
     /// #Argument
     /// * `size` - the memory to be allocated
     /// * `imm` - immediate number in the UD message
+    /// * `context` - Context related to the memory region
     pub fn new(size: usize, imm : u32, context: Arc<Context>) -> Self {
-        unimplemented!()
+        let mr = MemoryRegion::new(context, size)
+            .expect("Memory allocation should succeed.");
+        let bytes = unsafe { BytesMut::from_raw(mr.get_virt_addr() as *mut u8, size) };
+        let pa = unsafe { mr.get_rdma_addr() as u64 };
+        Self {
+            inner: Arc::new(mr),
+            bytes,
+            pa,
+            imm,
+        }
+    }
+
+    /// Create a UDMsg from a memory region
+    /// 
+    /// #Argument
+    /// * `MemoryRegion` - the smart pointer of the memory region
+    /// * `imm` - immediate number in UD message
+    pub fn new_from(mr: Arc<MemoryRegion>, imm: u32) -> Self {
+        let bytes = unsafe { BytesMut::from_raw(mr.get_virt_addr() as *mut u8, mr.capacity()) };
+        let pa = unsafe { mr.get_rdma_addr() as u64 };
+        Self {
+            inner: mr,
+            bytes,
+            pa,
+            imm,
+        }
     }
 
     #[inline]
@@ -72,8 +72,8 @@ impl UDMsg {
         self
     }
 
-    pub fn to_inner(self) -> MemoryRegion {
-        self.inner
+    pub fn get_inner(&self) -> Arc<MemoryRegion> {
+        self.inner.clone()
     }
 }
 
