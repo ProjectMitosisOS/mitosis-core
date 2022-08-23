@@ -52,8 +52,6 @@ impl UDDatagram {
     }
 }
 
-use crate::rdma::Err;
-
 impl Future for UDDatagram {
     type Output = KRdmaKit::rdma_shim::bindings::ib_wc;
     type Error = DatapathError;

@@ -1,7 +1,7 @@
 use KRdmaKit::DatapathError;
 use alloc::collections::VecDeque;
 
-use crate::{rdma::Err, bytes::ToBytes};
+use crate::bytes::ToBytes;
 
 use super::msg::UDMsg;
 use super::ud::UDDatagram;

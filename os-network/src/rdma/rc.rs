@@ -9,7 +9,6 @@ use rust_kernel_linux_util as log;
 use KRdmaKit::{QueuePairBuilder, CMError, DatapathError};
 use KRdmaKit::{context::Context, QueuePair, QueuePairStatus, ControlpathError};
 
-use super::ConnErr;
 use super::payload::{LocalMR, RDMAWR, RDMAOp, Signaled};
 use super::payload::rc::RCReqPayload;
 

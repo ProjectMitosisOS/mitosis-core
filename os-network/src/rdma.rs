@@ -57,19 +57,6 @@ pub struct DCCreationMeta {
     pub port: u8,
 }
 
-#[derive(Debug)]
-pub enum ConnErr {
-    PathNotFound = 0,
-
-    CreateQPErr,
-
-    Timeout,
-
-    QPNotReady,
-
-    ConnErr,
-}
-
 #[derive(Debug, PartialEq)]
 pub enum Err {
     /// Timeout error
