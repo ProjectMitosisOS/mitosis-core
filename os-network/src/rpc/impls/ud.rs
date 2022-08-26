@@ -1,10 +1,12 @@
 use crate::datagram::ud::*;
 use crate::future::*;
+use crate::rdma::payload::ud::UDReqPayload;
 
 use KRdmaKit::DatagramEndpoint;
+use alloc::sync::Arc;
 
 pub struct UDSession {
-    meta: DatagramEndpoint,
+    meta: Arc<DatagramEndpoint>,
     inner: UDDatagram,
     key: u32,
 }
@@ -44,7 +46,11 @@ impl super::super::RPCConn for UDSession {
         sz: usize,
         signaled: bool,
     ) -> Result<(), Self::IOResult> {
-        unimplemented!()
+        let mr = req.get_inner();
+        let range = 0..sz as u64;
+        let endpoint = self.meta.clone();
+        let payload = UDReqPayload::new(mr, range, signaled, endpoint);
+        self.inner.post(&payload)
     }
 
     #[inline]
@@ -62,7 +68,7 @@ impl super::super::RPCFactory for UDDatagram {
     fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult> {
         let endpoint = meta;
         Ok(UDSession {
-            meta: endpoint,
+            meta: Arc::new(endpoint),
             key: self.ud.ctx().lkey(),
             inner: self.clone(),
         })
