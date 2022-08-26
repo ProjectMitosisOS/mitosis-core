@@ -77,12 +77,6 @@ impl UDMsg {
     }
 }
 
-impl crate::remote_memory::ToPhys for UDMsg {
-    unsafe fn to_phys(&self) -> (u64, usize) {
-        (self.inner.get_rdma_addr(), self.inner.capacity())
-    }
-}
-
 use core::fmt::{Arguments, Result, Write};
 
 impl Write for UDMsg {

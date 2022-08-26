@@ -4,6 +4,13 @@ pub use dc::*;
 pub use rc::*;
 
 pub struct MemoryKeys {
-    lkey: u32,
     rkey: u32,
+}
+
+impl MemoryKeys {
+    pub fn new(rkey: u32) -> Self {
+        Self {
+            rkey: rkey,
+        }
+    }
 }
