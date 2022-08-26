@@ -1,64 +1,118 @@
+use KRdmaKit::{DatapathError, MemoryRegion};
 use alloc::sync::Arc;
 
 use core::marker::PhantomData;
 use core::pin::Pin;
 
+use crate::future::Async;
+use crate::rdma::Err;
+use crate::rdma::payload::RDMAOp;
+use crate::rdma::payload::rc::RCReqPayload;
+use crate::{Future, block_on};
 use crate::conn::Conn;
 use crate::rdma::rc::RCConn;
 
-pub struct RCRemoteDevice<LocalMemory> {
+pub struct RCRemoteDevice {
     rc: Arc<RCConn>,
-    phantom: PhantomData<LocalMemory>,
 }
 
 pub type RCKeys = super::MemoryKeys;
 
-impl RCKeys {
-    pub fn new(lkey: u32, rkey: u32) -> Self {
-        Self {
-            lkey: lkey,
-            rkey: rkey,
-        }
-    }
-}
-
-impl<LocalMemory> RCRemoteDevice<LocalMemory> {
+impl RCRemoteDevice {
     pub fn new(rc: Arc<RCConn>) -> Self {
         Self {
             rc: rc,
-            phantom: PhantomData,
         }
     }
 }
 
-impl<LocalMemory> crate::remote_memory::Device for RCRemoteDevice<LocalMemory>
-where
-    LocalMemory: crate::remote_memory::ToPhys,
-{
+/// Read/Write memory from remote device with physical memory with RC qp
+impl crate::remote_memory::Device for RCRemoteDevice {
     // remote memory read/write will succeed or return rdma specific error
-    type Address = u64;
+    type RemoteMemory = u64;
     type Location = ();
     type Key = RCKeys;
-    type IOResult = crate::rdma::Err;
-    type LocalMemory = LocalMemory;
+    type IOResult = DatapathError;
+    type LocalMemory = u64;
+    type Size = usize;
 
     unsafe fn read(
         &mut self,
-        _loc: &Self::Location,
-        addr: &Self::Address,
+        loc: &Self::Location,
+        addr: &Self::RemoteMemory,
         key: &Self::Key,
         to: &mut Self::LocalMemory,
+        size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
-        unimplemented!()
+        let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
+        let mr = unsafe {
+            Arc::new(
+                MemoryRegion::new_from_raw(
+                    self.rc.get_qp().ctx().clone(),
+                    vaddr as _,
+                    *size).unwrap()
+            )
+        };
+        let range = 0..*size as u64;
+        let signaled = true;
+        let op = RDMAOp::READ;
+        let rkey = key.rkey;
+        let raddr = *addr;
+        let payload = RCReqPayload::new(mr, range, signaled, op, rkey, raddr);
+        unsafe {
+            Arc::get_mut_unchecked(&mut self.rc)
+        }.post(&payload)
     }
 
     unsafe fn write(
         &mut self,
-        _loc: &Self::Location,
-        addr: &Self::Address,
+        loc: &Self::Location,
+        addr: &Self::RemoteMemory,
         key: &Self::Key,
-        payload: &Self::LocalMemory,
+        to: &mut Self::LocalMemory,
+        size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
-        unimplemented!()
+        let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
+        let mr = unsafe {
+            Arc::new(
+                MemoryRegion::new_from_raw(self.rc.get_qp().ctx().clone(),
+                vaddr as _,
+                *size).unwrap()
+            )
+        };
+        let range = 0..*size as u64;
+        let signaled = true;
+        let op = RDMAOp::WRITE;
+        let rkey = key.rkey;
+        let raddr = *addr;
+        let payload = RCReqPayload::new(mr, range, signaled, op, rkey, raddr);
+        unsafe {
+            Arc::get_mut_unchecked(&mut self.rc)
+        }.post(&payload)
+    }
+}
+
+impl Future for RCRemoteDevice {
+    type Output = KRdmaKit::rdma_shim::bindings::ib_wc;
+
+    type Error = crate::rdma::Err;
+
+    fn poll<'a>(&'a mut self) -> crate::future::Poll<Self::Output, Self::Error> {
+        let res = unsafe {
+            Arc::get_mut_unchecked(&mut self.rc)
+        }.poll();
+        match res {
+            Ok(Async::Ready(res)) => {
+                if res.status == rust_kernel_rdma_base::ib_wc_status::IB_WC_SUCCESS {
+                    Ok(Async::Ready(res))
+                } else {
+                    Err(crate::rdma::Err::WCErr(unsafe {
+                        core::mem::transmute(res.status)
+                    }))
+                }
+            },
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(e) => Err(crate::rdma::Err::DatapathError(e)),
+        }
     }
 }

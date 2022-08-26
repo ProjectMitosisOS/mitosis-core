@@ -1,4 +1,5 @@
 use KRdmaKit::context::Context;
+use KRdmaKit::DatapathError;
 #[allow(non_snake_case)]
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -57,19 +58,12 @@ pub struct DCCreationMeta {
     pub port: u8,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Err {
-    /// Timeout error
-    Timeout,
-
-    /// Retry, used to indicate retrying the erroneous function call, typically `ib_poll_cq`
-    Retry,
-
-    Empty,
-    /// Other general error
-    ///     
-    Other,
-    /// ib_wc error
+    /// data path error
+    ///
+    DatapathError(DatapathError),
+    /// rdma work completion error
     ///
     WCErr(WCStatus),
 }
