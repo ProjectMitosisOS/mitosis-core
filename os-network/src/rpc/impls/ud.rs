@@ -8,7 +8,6 @@ use alloc::sync::Arc;
 pub struct UDSession {
     meta: Arc<DatagramEndpoint>,
     inner: UDDatagram,
-    key: u32,
 }
 
 impl UDSession {
@@ -30,7 +29,6 @@ impl crate::future::Future for UDSession {
 }
 
 use crate::conn::Conn;
-use core::pin::Pin;
 
 impl super::super::RPCConn for UDSession {
     /// #Argument
@@ -69,7 +67,6 @@ impl super::super::RPCFactory for UDDatagram {
         let endpoint = meta;
         Ok(UDSession {
             meta: Arc::new(endpoint),
-            key: self.ud.ctx().lkey(),
             inner: self.clone(),
         })
     }

@@ -2,8 +2,6 @@ use core::ops::Range;
 use alloc::sync::Arc;
 use KRdmaKit::{MemoryRegion, DatagramEndpoint};
 
-use crate::remote_memory::rdma::MemoryKeys;
-
 pub struct DCReqPayload {
     mr: Arc<MemoryRegion>,
     range: Range<u64>,

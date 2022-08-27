@@ -1,14 +1,10 @@
 use KRdmaKit::{DatapathError, MemoryRegion};
 use alloc::sync::Arc;
 
-use core::marker::PhantomData;
-use core::pin::Pin;
-
 use crate::future::Async;
-use crate::rdma::Err;
 use crate::rdma::payload::RDMAOp;
 use crate::rdma::payload::rc::RCReqPayload;
-use crate::{Future, block_on};
+use crate::Future;
 use crate::conn::Conn;
 use crate::rdma::rc::RCConn;
 
@@ -38,57 +34,49 @@ impl crate::remote_memory::Device for RCRemoteDevice {
 
     unsafe fn read(
         &mut self,
-        loc: &Self::Location,
+        _loc: &Self::Location,
         addr: &Self::RemoteMemory,
         key: &Self::Key,
         to: &mut Self::LocalMemory,
         size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
         let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
-        let mr = unsafe {
-            Arc::new(
+        let mr = Arc::new(
                 MemoryRegion::new_from_raw(
                     self.rc.get_qp().ctx().clone(),
                     vaddr as _,
                     *size).unwrap()
-            )
-        };
+            );
         let range = 0..*size as u64;
         let signaled = true;
         let op = RDMAOp::READ;
         let rkey = key.rkey;
         let raddr = *addr;
         let payload = RCReqPayload::new(mr, range, signaled, op, rkey, raddr);
-        unsafe {
-            Arc::get_mut_unchecked(&mut self.rc)
-        }.post(&payload)
+        Arc::get_mut_unchecked(&mut self.rc).post(&payload)
     }
 
     unsafe fn write(
         &mut self,
-        loc: &Self::Location,
+        _loc: &Self::Location,
         addr: &Self::RemoteMemory,
         key: &Self::Key,
         to: &mut Self::LocalMemory,
         size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
         let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
-        let mr = unsafe {
-            Arc::new(
+        let mr = Arc::new(
                 MemoryRegion::new_from_raw(self.rc.get_qp().ctx().clone(),
                 vaddr as _,
                 *size).unwrap()
-            )
-        };
+            );
         let range = 0..*size as u64;
         let signaled = true;
         let op = RDMAOp::WRITE;
         let rkey = key.rkey;
         let raddr = *addr;
         let payload = RCReqPayload::new(mr, range, signaled, op, rkey, raddr);
-        unsafe {
-            Arc::get_mut_unchecked(&mut self.rc)
-        }.post(&payload)
+        Arc::get_mut_unchecked(&mut self.rc).post(&payload)
     }
 }
 

@@ -9,7 +9,6 @@ use crate::{
     bytes::{BytesMut, ToBytes},
     Receiver,
 };
-use KRdmaKit::context::Context;
 use hashbrown::HashMap;
 
 pub enum Err {
@@ -254,7 +253,7 @@ pub trait AllocMsgBuf {
 
 pub trait GetContext {
     type Context;
-    
+
     fn get_context(&self) -> Self::Context;
 }
 

@@ -1,10 +1,7 @@
 
-use alloc::string::ToString;
 use alloc::sync::Arc;
 
-use crate::{future::{Async, Future, Poll}, msg::UDMsg, rdma::payload::{ud::UDReqPayload, EndPoint, LocalMR, Signaled}};
-
-use core::marker::PhantomData;
+use crate::{future::{Async, Future, Poll}, rdma::payload::{ud::UDReqPayload, EndPoint, LocalMR, Signaled}};
 
 use KRdmaKit::{context::Context, QueuePair, DatapathError, ControlpathError, QueuePairBuilder, comm_manager::Explorer, CMError, queue_pairs::endpoint::DatagramEndpointQuerier};
 
@@ -175,7 +172,7 @@ impl Debug for UDHyperMeta
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(
             f, "UDHyperMeta {{ gid : {:?}, service_id : {}, qd : {} }}",
-            unsafe { self.gid }, self.service_id, self.qd_hint
+            self.gid, self.service_id, self.qd_hint
         )
     }
 }
