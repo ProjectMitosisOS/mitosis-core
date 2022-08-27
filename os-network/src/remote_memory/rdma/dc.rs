@@ -1,14 +1,10 @@
 use KRdmaKit::{DatapathError, MemoryRegion};
 use alloc::sync::Arc;
 
-use core::marker::PhantomData;
-use core::pin::Pin;
-
 use KRdmaKit::queue_pairs::endpoint::DatagramEndpoint;
 
 use crate::Future;
 use crate::future::Async;
-use crate::conn::Conn;
 use crate::rdma::dc::DCConn;
 
 pub struct DCRemoteDevice {
@@ -46,12 +42,10 @@ impl crate::remote_memory::Device for DCRemoteDevice {
     ) -> Result<(), Self::IOResult> {
         let qp = self.dc.get_qp();
         let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
-        let mr = unsafe {
-            MemoryRegion::new_from_raw(
+        let mr = MemoryRegion::new_from_raw(
                 qp.ctx().clone(),
                 vaddr as _,
-                *size).unwrap()
-        };
+                *size).unwrap();
         let range = 0..*size as u64;
         let signaled = true;
         let raddr = addr;
@@ -69,12 +63,10 @@ impl crate::remote_memory::Device for DCRemoteDevice {
     ) -> Result<(), Self::IOResult> {
         let qp = self.dc.get_qp();
         let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
-        let mr = unsafe {
-            MemoryRegion::new_from_raw(
+        let mr = MemoryRegion::new_from_raw(
                 qp.ctx().clone(),
                 vaddr as _,
-                *size).unwrap()
-        };
+                *size).unwrap();
         let range = 0..*size as u64;
         let signaled = true;
         let raddr = addr;

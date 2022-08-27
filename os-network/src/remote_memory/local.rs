@@ -30,11 +30,11 @@ impl<KeyType, LocationType,IO> super::Device for LocalDevice<KeyType, LocationTy
     /// the addr must be a valid virtual address that can be read by the kernel
     unsafe fn read(
         &mut self,
-        loc: &Self::Location,
+        _loc: &Self::Location,
         addr: &Self::RemoteMemory,
-        key: &Self::Key,
+        _key: &Self::Key,
         to: &mut Self::LocalMemory,
-        size: &Self::Size,
+        _size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
         // TODO: shall we check the validity of the in-passing address?
         to.copy(&BytesMut::from_raw(*addr as _, to.len()), 0);
@@ -44,11 +44,11 @@ impl<KeyType, LocationType,IO> super::Device for LocalDevice<KeyType, LocationTy
     /// the addr must be a valid virtual address that can be written by the kernel
     unsafe fn write(
         &mut self,
-        loc: &Self::Location,
+        _loc: &Self::Location,
         addr: &Self::RemoteMemory,
-        key: &Self::Key,
+        _key: &Self::Key,
         payload: &mut Self::LocalMemory,
-        size: &Self::Size,
+        _size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
         BytesMut::from_raw(*addr as _, payload.len()).copy(payload, 0);
         Ok(())

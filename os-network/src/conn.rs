@@ -1,5 +1,3 @@
-use crate::rdma::payload::{Signaled, RDMAWR, LocalMR};
-
 use super::Future;
 
 pub trait Conn<T: Future = Self>: Future {

@@ -12,14 +12,14 @@ crate-type = ["staticlib"]
 test = false
 
 [features]
-default = ["os-network", "KRdmaKit","rust-kernel-linux-util","krdma-test"]
+default = ["os-network", "KRdmaKit","rust-kernel-linux-util","krdma-test","rust-kernel-rdma-base"]
 
 [dependencies]
 KRdmaKit = { package = "KRdmaKit", path = "../../../deps/krcore/KRdmaKit", optional = true, features = ["kernel"] }
 os-network = {path = "../../../os-network", optional = true, features = ["dct"]}
 rust-kernel-linux-util = {path = "../../../deps/krcore/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
 krdma-test = {path="../../../deps/krcore/rust-kernel-rdma/krdma-test",optional = true}
-rust-kernel-rdma-base = {path = "../../../deps/krcore/rust-kernel-rdma/rust-kernel-rdma-base"}
+rust-kernel-rdma-base = {path = "../../../deps/krcore/rust-kernel-rdma/rust-kernel-rdma-base",optional = true}
 thiserror-no-std = "2.0.2"
 
 [dev-dependencies]

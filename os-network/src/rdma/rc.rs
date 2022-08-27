@@ -1,11 +1,6 @@
 use KRdmaKit::comm_manager::Explorer;
 use alloc::sync::Arc;
 
-use core::marker::PhantomData;
-use core::option::Option;
-
-use rust_kernel_linux_util as log;
-
 use KRdmaKit::{QueuePairBuilder, CMError, DatapathError};
 use KRdmaKit::{context::Context, QueuePair, QueuePairStatus, ControlpathError};
 

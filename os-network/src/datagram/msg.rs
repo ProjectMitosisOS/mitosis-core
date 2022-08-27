@@ -1,7 +1,6 @@
 use crate::bytes::*;
 use alloc::sync::Arc;
 use KRdmaKit::memory_region::MemoryRegion;
-use KRdmaKit::queue_pairs::DatagramEndpoint;
 use KRdmaKit::context::Context;
 
 /// UD must use physical address.
