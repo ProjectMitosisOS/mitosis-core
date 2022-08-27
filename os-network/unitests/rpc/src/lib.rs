@@ -216,9 +216,9 @@ fn test_ud_rpc() -> Result<(), TestError> {
     // run the server event loop to receive message
     let mut rpc_server = Timeout::new(rpc_server, timeout_usec);
     block_on(&mut rpc_server)
-        .map_err(|_| {
-            log::error!("RPC server error.");
-            TestError::Error("RPC server error.")
+        .map_err(|e| {
+            log::error!("Server receiver process err {:?}", e);
+            TestError::Error("Server receiver error.")
         })?;
 
     // check the reply at client side
@@ -266,6 +266,7 @@ fn test_ud_rpc() -> Result<(), TestError> {
     unsafe { msg_header_bytes.memcpy_deserialize(&mut msg_header) };
     log::info!("sanity check decoded reply {:?}", msg_header);
 
+    // finally check the rpc server status
     let rpc_server = rpc_server.into_inner();
     log::debug!("final check hook status {:?}", rpc_server);
     Ok(())
@@ -275,6 +276,153 @@ use os_network::rpc::impls::ud::UDSession;
 
 fn test_ud_rpc_elegant() -> Result<(), TestError> {
     log::info!("Test RPC backed by RDMA's UD with elegant wrapper.");
+    let timeout_usec = 5000_000;
+    type UDRPCHook<'a> = hook::RPCHook<'a, UDDatagram, UDReceiver, UDFactory>;
+    type UDCaller = Caller<UDReceiver, UDSession>;
+
+    let driver = unsafe { KDriver::create().unwrap() };
+
+    // create Context and UD qp
+    let ctx = driver
+        .devices()
+        .get(0)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
+    let factory = Arc::new(UDFactory::new(&ctx));
+    let server_port = DEFAULT_PORT;
+    let client_port = DEFAULT_PORT;
+    let server_ud = factory.create(UDCreationMeta {port: server_port}).unwrap();
+    let client_ud = factory.create(UDCreationMeta {port: client_port}).unwrap();
+
+    // server side
+    // create CMServer and register qp
+    let service_id = DEFAULT_SERVICE_ID;
+    let ud_server = UnreliableDatagramAddressService::create();
+    let _server_cm = CMServer::new(service_id, &ud_server, ctx.get_dev_ref())
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
+    ud_server.reg_qp(DEFAULT_QD_HINT as usize, &server_ud.get_qp());
+    ud_server.reg_qp(CLIENT_QD_HINT as usize, &client_ud.get_qp());
+
+    // client side
+    // get endpoint meta from remote
+    let gid = ctx.get_dev_ref().query_gid(server_port, 0).unwrap();
+    let meta = UDHyperMeta {
+        gid,
+        service_id,
+        qd_hint: DEFAULT_QD_HINT as usize,
+        local_port: client_port,
+    };
+    let endpoint = factory.create_meta(meta).map_err(|_| {
+        log::error!("Create endpoint error.");
+        TestError::Error("Endpoint error.")
+    })?;
+
+    // create client-side session and receiver
+    let client_session = client_ud.create(endpoint).unwrap();
+    let mut client_receiver = UDReceiverFactory::new()
+        .set_qd_hint(CLIENT_QD_HINT as _)
+        .create(client_ud);
+
+    // the main test body
+    let temp_ud = server_ud.clone();
+    let mut rpc_server = UDRPCHook::new(
+        factory,
+        server_ud,
+        UDReceiverFactory::new()
+            .set_qd_hint(DEFAULT_QD_HINT as _)
+            .create(temp_ud),
+    );
+
+    rpc_server
+        .get_mut_service()
+        .register(TEST_RPC_ID, test_callback);
+
+    log::info!("check RPCHook: {:?}", rpc_server);
+
+    for _ in 0..12 {
+        // 64 is the header
+        match rpc_server.post_msg_buf(UDMsg::new(DEFAULT_RECV_BUF_SIZE, 0, ctx.clone())) {
+            Ok(_) => {}
+            Err(e) => log::error!("post recv buf err: {:?}", e),
+        }
+        client_receiver.post_recv_buf(UDMsg::new(DEFAULT_RECV_BUF_SIZE, 0, ctx.clone())).unwrap(); // should succeed
+    }
+    
+    // client
+    let my_session_id = DEFAULT_SESSION_ID;
+    let mut caller = UDCaller::new(client_receiver);
+    caller
+        .connect(
+            my_session_id,
+            my_session_id, 
+            client_session,
+            UDHyperMeta {
+                gid,
+                service_id: service_id,
+                qd_hint: CLIENT_QD_HINT as usize,
+                local_port: client_port,
+            },
+        ).map_err(|_| {
+            log::error!("Client caller connect error.");
+            TestError::Error("Caller connect error.")
+        })?;
+
+    // server first run the event loop to receive the connect message
+    let mut rpc_server = Timeout::new(rpc_server, timeout_usec);
+    block_on(&mut rpc_server)
+        .map_err(|e| {
+            log::error!("Server receiver process err {:?}", e);
+            TestError::Error("Server receiver error.")
+        })?;
+
+    // then, the client can check the connection result
+    let mut caller_timeout = Timeout::new(caller, timeout_usec);
+    let res = block_on(&mut caller_timeout)
+        .map_err(|e| {
+            log::error!("Client receiver process err {:?}", e);
+            TestError::Error("Client receiver error.")
+        })?;
+    log::debug!("sanity check client connection result: {:?}", res.1);
+
+    // client makes another simple call
+    let mut caller = caller_timeout.into_inner();
+    caller
+        .sync_call(
+            my_session_id,
+            my_session_id,
+            TEST_RPC_ID,
+            666 as u64 // 666 is a dummy RPC argument
+        ).map_err(|_| {
+            log::error!("Client caller call rpc error.");
+            TestError::Error("Caller caller error.")
+        })?;
+
+    // receive at the server
+    rpc_server.reset_timer(timeout_usec);
+    block_on(&mut rpc_server)
+        .map_err(|e| {
+            log::error!("Server receiver process err {:?}", e);
+            TestError::Error("Server receiver error.")
+        })?;
+
+    // then, the client can check the rpc result
+    let mut caller_timeout = Timeout::new(caller, timeout_usec);
+    let res = block_on(&mut caller_timeout)
+        .map_err(|e| {
+            log::error!("Client receiver process err {:?}", e);
+            TestError::Error("Client receiver error.")
+        })?;
+    log::debug!("sanity check client rpc result: {:?}", res.1);
+
+    let rpc_server = rpc_server.into_inner();
+    log::debug!("final check hook status {:?}", rpc_server);
     Ok(())    
 }
 
