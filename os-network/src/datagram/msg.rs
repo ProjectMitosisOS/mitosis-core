@@ -92,7 +92,8 @@ impl Write for UDMsg {
 }
 
 impl crate::rpc::AllocMsgBuf for UDMsg {
-    fn create(size: usize, imm: u32, context: Arc<Context>) -> Self {
+    type Context = Arc<Context>;
+    fn create(size: usize, imm: u32, context: Self::Context) -> Self {
         Self::new(size, imm, context)
     }
 }

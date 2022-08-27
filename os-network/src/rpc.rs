@@ -7,7 +7,7 @@ use crate::linux_kernel_module;
 
 use crate::{
     bytes::{BytesMut, ToBytes},
-    Receiver, rdma::GetContext,
+    Receiver,
 };
 use KRdmaKit::context::Context;
 use hashbrown::HashMap;
@@ -41,8 +41,11 @@ where
 
 impl<R, SS> Caller<R, SS>
 where
-    R: Receiver + GetContext,
+    R: Receiver,
     SS: RPCConn,
+    R: GetContext<
+        Context = <<SS as RPCConn>::ReqPayload as AllocMsgBuf>::Context,
+    >,
     SS::ReqPayload: ToBytes,
 {
     pub fn get_pending_reqs(&self, session_id: usize) -> core::option::Option<usize> {
@@ -244,7 +247,15 @@ pub trait RPCFactory {
 }
 
 pub trait AllocMsgBuf {
-    fn create(size: usize, imm: u32, context: Arc<Context>) -> Self;
+    type Context;
+
+    fn create(size: usize, imm: u32, context: Self::Context) -> Self;
+}
+
+pub trait GetContext {
+    type Context;
+    
+    fn get_context(&self) -> Self::Context;
 }
 
 /// The connection should provide a GenHyperMeta trait,

@@ -1,7 +1,7 @@
-use KRdmaKit::DatapathError;
-use alloc::collections::VecDeque;
+use KRdmaKit::{DatapathError, context::Context};
+use alloc::{collections::VecDeque, sync::Arc};
 
-use crate::bytes::ToBytes;
+use crate::{bytes::ToBytes, rpc::GetContext};
 
 use super::msg::UDMsg;
 use super::ud::UDDatagram;
@@ -123,6 +123,14 @@ impl crate::rpc::GetTransport for UDReceiver {
         &mut self.inner
     }   
 
+}
+
+impl GetContext for UDReceiver {
+    type Context = Arc<Context>;
+    
+    fn get_context(&self) -> Self::Context {
+        self.inner.get_qp().ctx().clone()
+    }
 }
 
 pub use super::Receiver;
