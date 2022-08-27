@@ -118,10 +118,6 @@ impl From<u32> for WCStatus {
     }
 }
 
-pub trait GetContext {
-    fn get_context(&self) -> Arc<Context>;
-}
-
 pub mod dc;
 pub mod payload;
 pub mod rc;
