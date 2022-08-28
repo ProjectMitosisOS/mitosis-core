@@ -141,7 +141,7 @@ impl Future for RCConn {
     /// # Return value:
     /// - `NotReady`: There is nothing in the completion queue.
     /// - A `ib_wc` object: The work completion extracted from the completion queue.
-    /// The caller should manually check the status field of the `ib_wc` object.
+    /// The caller should check the status field of the `ib_wc` object.
     ///
     /// # Errors:
     /// - `DatapathError`: There is something wrong in polling the completion queue.
