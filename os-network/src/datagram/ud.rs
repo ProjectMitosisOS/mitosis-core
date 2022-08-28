@@ -32,6 +32,7 @@ impl UDFactory {
 /// Note:
 /// - we assume that the datagram is only used by one **thread**
 /// UDDatagram wraps a UD qp and serves as client-sided message sender
+///
 pub struct UDDatagram {
     pub(crate) ud: Arc<QueuePair>,
     pending: usize,
@@ -61,8 +62,8 @@ impl Future for UDDatagram {
     /// Poll the underlying completion queue for the UD send operation
     ///
     /// Return
-    /// - If succeed, return the ib_wc
-    /// - If fail, return NotReady, work-completion-related error or other general error
+    /// - If succeed, return the `ib_wc`. The caller should check the status field of the `ib_wc` object.
+    /// - If fail, return NotReady or other `DatapathError`
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         let mut completion = [Default::default()];
         let ret = self.get_qp().poll_send_cq(&mut completion)?;
@@ -83,7 +84,7 @@ impl crate::conn::Conn for UDDatagram {
     ///
     /// Return
     /// - If succeed, return Ok(())
-    /// - If fail, return a general error
+    /// - If fail, return a `DatapathError`
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
         self.get_qp().post_datagram(
             req.get_endpoint().as_ref(),
@@ -106,7 +107,7 @@ impl crate::conn::Factory for UDFactory {
     ///
     /// Return
     /// - If succeed, return a Ok result with UDDatagram
-    /// - If fail, return a general error
+    /// - If fail, return a `ControlpathError`
     fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult> {
         let mut builder = QueuePairBuilder::new(&self.get_context());
         builder

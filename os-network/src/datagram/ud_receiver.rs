@@ -101,7 +101,7 @@ impl Future for UDReceiver {
     ///
     /// Return
     /// * If succeed, return the UDMsg poped from internal queue
-    /// * If fail, return NotReady, work-completion-related error or other general error
+    /// * If fail, return NotReady or other `DatapathError`
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         let mut completion = [Default::default(); 1];
         let ret = self.inner.get_qp().poll_recv_cq(&mut completion)?;
