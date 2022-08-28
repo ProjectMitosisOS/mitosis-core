@@ -1,6 +1,8 @@
-use core::ops::Range;
 use alloc::sync::Arc;
-use KRdmaKit::{MemoryRegion, DatagramEndpoint};
+
+use core::ops::Range;
+
+use KRdmaKit::{DatagramEndpoint, MemoryRegion};
 
 #[derive(Copy, Clone)]
 pub enum RDMAOp {
@@ -19,7 +21,6 @@ pub trait LocalMR {
     fn set_local_mr_range(self, range: Range<u64>) -> Self;
     fn get_local_mr(&self) -> Arc<MemoryRegion>;
     fn get_local_mr_range(&self) -> Range<u64>;
-
 }
 
 pub trait RDMAWR {

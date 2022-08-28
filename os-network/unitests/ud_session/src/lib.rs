@@ -18,7 +18,7 @@ use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
 use os_network::rpc::*;
 use os_network::timeout::Timeout;
-use os_network::{block_on, UDCreationMeta};
+use os_network::block_on;
 
 use krdma_test::*;
 

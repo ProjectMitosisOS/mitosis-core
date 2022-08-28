@@ -20,7 +20,6 @@ use os_network::conn::{Conn, Factory};
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::bytes::ToBytes;
-use os_network::UDCreationMeta;
 use os_network::timeout::Timeout;
 use os_network::rdma::payload::ud::UDReqPayload;
 use os_network::ud_receiver::UDReceiverFactory;

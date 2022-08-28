@@ -1,5 +1,5 @@
-use KRdmaKit::{DatagramEndpoint, MemoryRegion};
 use alloc::sync::Arc;
+use KRdmaKit::{DatagramEndpoint, MemoryRegion};
 
 use core::ops::Range;
 
@@ -11,14 +11,24 @@ pub struct UDReqPayload {
 }
 
 impl UDReqPayload {
-    pub fn new(mr: Arc<MemoryRegion>, range: Range<u64>, signaled: bool, endpoint: Arc<DatagramEndpoint>) -> Self {
-        Self { mr, range, signaled, endpoint }
+    pub fn new(
+        mr: Arc<MemoryRegion>,
+        range: Range<u64>,
+        signaled: bool,
+        endpoint: Arc<DatagramEndpoint>,
+    ) -> Self {
+        Self {
+            mr,
+            range,
+            signaled,
+            endpoint,
+        }
     }
 }
 
 impl super::Signaled for UDReqPayload {
     fn is_signaled(&self) -> bool {
-        return self.signaled
+        return self.signaled;
     }
 
     fn set_signaled(mut self) -> Self {

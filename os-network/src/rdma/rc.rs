@@ -43,6 +43,18 @@ impl crate::conn::Factory for RCFactory {
     type ConnType = RCConn;
     type ConnResult = RCFactoryError;
 
+    /// Create a DC qp
+    ///
+    /// # Paramters:
+    /// - The metadata includes:
+    ///     * The gid of the target machine.
+    ///     * The service id of the target machine.
+    ///     * The port to use in creation of the qp.
+    ///
+    /// # Errors:
+    /// - `CMError`: This error means that there is something wrong when exploring the RDMA subnet admin path record.
+    /// - `ControlpathError`: This error means that there is something wrong in communicating with target node.
+    ///
     fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult> {
         let mut builder = QueuePairBuilder::new(&self.rctx);
         builder
@@ -83,6 +95,17 @@ impl crate::Conn for RCConn {
     type ReqPayload = RCReqPayload;
     type IOResult = DatapathError;
 
+    /// Post the request to the underlying rc qp to perform one-sided read/write operation
+    ///
+    /// # Parameters:
+    /// - The request includes:
+    ///     * The read/write flag.
+    ///     * The local memory region.
+    ///     * The signal flag.
+    ///     * The remote address.
+    ///     * The remote memory key.
+    /// # Errors:
+    /// - `DatapathError`: There is something wrong in the data path.
     #[inline]
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
         compiler_fence(SeqCst);
@@ -113,6 +136,16 @@ impl Future for RCConn {
     type Output = KRdmaKit::rdma_shim::bindings::ib_wc;
     type Error = DatapathError;
 
+    /// Poll 1 completion from the underlying completion queue in the RC qp
+    ///
+    /// # Return value:
+    /// - `NotReady`: There is nothing in the completion queue.
+    /// - A `ib_wc` object: The work completion extracted from the completion queue.
+    /// The caller should manually check the status field of the `ib_wc` object.
+    ///
+    /// # Errors:
+    /// - `DatapathError`: There is something wrong in polling the completion queue.
+    ///
     #[inline]
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         compiler_fence(SeqCst);

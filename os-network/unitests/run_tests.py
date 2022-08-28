@@ -34,20 +34,20 @@ def main(argv):
             "TEST_PATH={}".format(path),
         )
         # TODO: qemu
-        # run(
-        #     "cargo", "test", "--no-default-features", "--", "--test-threads=1",
-        #     cwd=os.path.join(BASE_DIR, path),
-        #     environ=dict(
-        #         os.environ,
-        #         KERNEL_MODULE=os.path.join(BASE_DIR, "testmodule.ko"),
-#       #          RUSTFLAGS="-Dwarnings",
-        #         RUSTFLAGS="", ## XD: fixme, currently remove this 
-        #         CARGO_TARGET_DIR=os.path.relpath(
-        #             os.path.join(BASE_DIR, "target-test"),
-        #             os.path.join(BASE_DIR, path)
-        #         ),
-        #     )
-        # )
+        run(
+            "cargo", "test", "--no-default-features", "--", "--test-threads=1",
+            cwd=os.path.join(BASE_DIR, path),
+            environ=dict(
+                os.environ,
+                KERNEL_MODULE=os.path.join(BASE_DIR, "testmodule.ko"),
+#                RUSTFLAGS="-Dwarnings",
+                RUSTFLAGS="", ## XD: fixme, currently remove this 
+                CARGO_TARGET_DIR=os.path.relpath(
+                    os.path.join(BASE_DIR, "target-test"),
+                    os.path.join(BASE_DIR, path)
+                ),
+            )
+        )
         print("\n ========= to next test ========= \n")
 
 

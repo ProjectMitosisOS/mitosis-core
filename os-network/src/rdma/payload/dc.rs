@@ -1,6 +1,6 @@
-use core::ops::Range;
 use alloc::sync::Arc;
-use KRdmaKit::{MemoryRegion, DatagramEndpoint};
+use core::ops::Range;
+use KRdmaKit::{DatagramEndpoint, MemoryRegion};
 
 pub struct DCReqPayload {
     mr: Arc<MemoryRegion>,
@@ -9,12 +9,28 @@ pub struct DCReqPayload {
     op: super::RDMAOp,
     rkey: u32,
     raddr: u64,
-    endpoint: Arc<DatagramEndpoint>
+    endpoint: Arc<DatagramEndpoint>,
 }
 
 impl DCReqPayload {
-    pub fn new(mr: Arc<MemoryRegion>, range: Range<u64>, signaled: bool, op: super::RDMAOp, rkey: u32, raddr: u64, endpoint: Arc<DatagramEndpoint>) -> Self {
-        Self { mr, range, signaled, op, rkey, raddr, endpoint }
+    pub fn new(
+        mr: Arc<MemoryRegion>,
+        range: Range<u64>,
+        signaled: bool,
+        op: super::RDMAOp,
+        rkey: u32,
+        raddr: u64,
+        endpoint: Arc<DatagramEndpoint>,
+    ) -> Self {
+        Self {
+            mr,
+            range,
+            signaled,
+            op,
+            rkey,
+            raddr,
+            endpoint,
+        }
     }
 }
 

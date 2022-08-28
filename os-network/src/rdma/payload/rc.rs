@@ -1,5 +1,5 @@
-use core::ops::Range;
 use alloc::sync::Arc;
+use core::ops::Range;
 use KRdmaKit::MemoryRegion;
 
 pub struct RCReqPayload {
@@ -12,8 +12,22 @@ pub struct RCReqPayload {
 }
 
 impl RCReqPayload {
-    pub fn new(mr: Arc<MemoryRegion>, range: Range<u64>, signaled: bool, op: super::RDMAOp, rkey: u32, raddr: u64) -> Self {
-        Self { mr, range, signaled, op, rkey, raddr }
+    pub fn new(
+        mr: Arc<MemoryRegion>,
+        range: Range<u64>,
+        signaled: bool,
+        op: super::RDMAOp,
+        rkey: u32,
+        raddr: u64,
+    ) -> Self {
+        Self {
+            mr,
+            range,
+            signaled,
+            op,
+            rkey,
+            raddr,
+        }
     }
 }
 

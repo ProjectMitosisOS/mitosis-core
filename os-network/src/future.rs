@@ -1,4 +1,5 @@
 /// A simple async marker, inspired by tokio
+/// 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Async<T> {
     /// Represents that a value is immediately ready.
@@ -16,8 +17,8 @@ impl<T> From<T> for Async<T> {
 
 pub type Poll<T, E> = Result<Async<T>, E>;
 
-/// a simplified in-kernel future
-/// inspired by tokio 
+/// A simplified in-kernel future, inspired by tokio
+///
 pub trait Future {
     type Output;
     type Error;
