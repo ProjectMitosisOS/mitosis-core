@@ -1,5 +1,5 @@
-use KRdmaKit::{DatapathError, context::Context};
 use alloc::{collections::VecDeque, sync::Arc};
+use KRdmaKit::{context::Context, DatapathError};
 
 use crate::rpc::GetContext;
 
@@ -22,9 +22,8 @@ pub struct UDReceiver {
 ///                .set_qd_hint(12)
 ///                .create(ud);
 /// ```
-/// 
+///
 /// Arguments
-/// * lkey : the local memory protection key used throughout the receiver lifetime
 /// * qd_hint: the unique id of the targeted UD
 #[derive(Default)]
 pub struct UDReceiverFactory {
@@ -78,12 +77,15 @@ impl super::Receiver for UDReceiver {
     const MTU: usize = 4096;
 
     /// Post the receive buffer to receive future incoming requests
-    /// 
+    ///
     /// #Arguments
     /// * `buf` - the memory buffer used for receiving future requests
     fn post_recv_buf(&mut self, buf: Self::MsgBuf) -> Result<(), Self::IOResult> {
-        self.inner.get_qp()
-            .post_recv(buf.get_inner().as_ref(), 0..buf.len() as u64, buf.get_pa())?;
+        self.inner.get_qp().post_recv(
+            buf.get_inner().as_ref(),
+            0..buf.len() as u64,
+            buf.get_pa(),
+        )?;
         self.msg_queues.push_back(buf);
         Ok(())
     }
@@ -96,16 +98,16 @@ impl Future for UDReceiver {
     type Error = DatapathError;
 
     /// Poll the underlying completion queue for the UD receive operation
-    /// 
+    ///
     /// Return
     /// * If succeed, return the UDMsg poped from internal queue
     /// * If fail, return NotReady, work-completion-related error or other general error
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         let mut completion = [Default::default(); 1];
-        let ret = self.inner.get_qp()
-            .poll_recv_cq(&mut completion)?;
+        let ret = self.inner.get_qp().poll_recv_cq(&mut completion)?;
         if ret.len() > 0 {
-            let msg = self.msg_queues
+            let msg = self
+                .msg_queues
                 .pop_front()
                 .expect("message queue should contain elements");
             Ok(Async::Ready(msg))
@@ -115,14 +117,12 @@ impl Future for UDReceiver {
     }
 }
 
-
-impl crate::rpc::GetTransport for UDReceiver { 
+impl crate::rpc::GetTransport for UDReceiver {
     type Transport = UDDatagram;
 
-    fn get_transport_mut(&mut self) -> &mut Self::Transport { 
+    fn get_transport_mut(&mut self) -> &mut Self::Transport {
         &mut self.inner
-    }   
-
+    }
 }
 
 impl GetContext for UDReceiver {

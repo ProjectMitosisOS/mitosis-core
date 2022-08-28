@@ -6,7 +6,6 @@ use KRdmaKit::comm_manager::CMServer;
 use KRdmaKit::services::UnreliableDatagramAddressService;
 use alloc::sync::Arc;
 use alloc::vec;
-use os_network::UDCreationMeta;
 use core::fmt::Write;
 
 use rust_kernel_rdma_base::linux_kernel_module;

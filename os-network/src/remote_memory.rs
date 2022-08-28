@@ -1,21 +1,22 @@
-/// A abstraction for read/write remote/local memory
+/// A abstraction trait to read/write remote/local memory
+///
 pub trait Device {
-    // data for authentication the validity of the operation
+    /// data for authentication the validity of the operation
     type Key;
 
-    // network address, e.g., IP
+    /// network address, e.g., IP
     type Location;
 
-    // remote memory address
+    /// remote memory address
     type RemoteMemory;
 
-    // local memory address
+    /// local memory address
     type LocalMemory;
 
-    // memory size
+    /// memory size
     type Size;
 
-    // error type
+    /// error type
     type IOResult;
 
     unsafe fn read(

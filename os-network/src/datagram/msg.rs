@@ -1,13 +1,12 @@
 use crate::bytes::*;
 use alloc::sync::Arc;
-use KRdmaKit::memory_region::MemoryRegion;
 use KRdmaKit::context::Context;
+use KRdmaKit::memory_region::MemoryRegion;
 
-/// UD must use physical address.
+/// An abstraction for a memory region used in datagram communication
 pub struct UDMsg {
     inner: Arc<MemoryRegion>,
     bytes: BytesMut,
-    pa: u64,
     imm: u32,
 }
 
@@ -23,43 +22,38 @@ impl ToBytes for UDMsg {
 
 impl UDMsg {
     /// Allocate memory and create a UDMsg
-    /// 
+    ///
     /// #Argument
     /// * `size` - the memory to be allocated
     /// * `imm` - immediate number in the UD message
     /// * `context` - Context related to the memory region
-    pub fn new(size: usize, imm : u32, context: Arc<Context>) -> Self {
-        let mr = MemoryRegion::new(context, size)
-            .expect("Memory allocation should succeed.");
+    pub fn new(size: usize, imm: u32, context: Arc<Context>) -> Self {
+        let mr = MemoryRegion::new(context, size).expect("Memory allocation should succeed.");
         let bytes = unsafe { BytesMut::from_raw(mr.get_virt_addr() as *mut u8, size) };
-        let pa = unsafe { mr.get_rdma_addr() as u64 };
         Self {
             inner: Arc::new(mr),
             bytes,
-            pa,
             imm,
         }
     }
 
     /// Create a UDMsg from a memory region
-    /// 
+    ///
     /// #Argument
     /// * `MemoryRegion` - the smart pointer of the memory region
     /// * `imm` - immediate number in UD message
     pub fn new_from(mr: Arc<MemoryRegion>, imm: u32) -> Self {
         let bytes = unsafe { BytesMut::from_raw(mr.get_virt_addr() as *mut u8, mr.capacity()) };
-        let pa = unsafe { mr.get_rdma_addr() as u64 };
         Self {
             inner: mr,
             bytes,
-            pa,
             imm,
         }
     }
 
     #[inline]
     pub fn get_pa(&self) -> u64 {
-        self.pa
+        unsafe { self.inner.get_rdma_addr() }
     }
 
     pub fn len(&self) -> usize {

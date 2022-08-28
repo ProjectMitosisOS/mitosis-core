@@ -18,6 +18,17 @@ impl<KeyType, LocationType, IOResult> LocalDevice<KeyType, LocationType, IOResul
     }
 }
 
+/// Read/Write memory in local device
+///
+/// # Parameters:
+/// read:
+/// - `addr`: The virtual address of the target memory region to read from
+/// - `to`: The target memory region described by `BytesMut` to write to
+/// 
+/// write:
+/// - `addr`: The virtual address of the target memory region to write to
+/// - `payload`: The target memory region described by `BytesMut` to read from
+///
 impl<KeyType, LocationType,IO> super::Device for LocalDevice<KeyType, LocationType,IO> {
     // local memory read/write should succeed or crash
     type RemoteMemory = u64;
@@ -27,7 +38,6 @@ impl<KeyType, LocationType,IO> super::Device for LocalDevice<KeyType, LocationTy
     type LocalMemory = BytesMut;
     type Size = ();
 
-    /// the addr must be a valid virtual address that can be read by the kernel
     unsafe fn read(
         &mut self,
         _loc: &Self::Location,
