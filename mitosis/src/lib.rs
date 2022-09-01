@@ -1,11 +1,11 @@
 #![no_std]
 #![feature(
-    core_intrinsics,
-    allocator_api,
-    nonnull_slice_from_raw_parts,
-    alloc_layout_extra,
-    get_mut_unchecked,
-    trait_alias
+core_intrinsics,
+allocator_api,
+nonnull_slice_from_raw_parts,
+alloc_layout_extra,
+get_mut_unchecked,
+trait_alias
 )]
 
 extern crate alloc;
@@ -52,22 +52,22 @@ declare_global!(max_nics_used, usize);
 /// Global configurations of the MITOSIS kernel
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub(crate) num_nics_used: usize,
+    pub num_nics_used: usize,
 
-    pub(crate) rpc_threads_num: usize,
+    pub rpc_threads_num: usize,
 
     // my machine ID
-    pub(crate) machine_id: usize,
+    pub machine_id: usize,
     // how many CPU core is available on the machine
-    pub(crate) max_core_cnt: usize,
+    pub max_core_cnt: usize,
     // gid is RDMA address
-    pub(crate) peers_gid: Vec<alloc::string::String>,
+    pub peers_gid: Vec<alloc::string::String>,
 
-    pub(crate) init_dc_targets: usize,
+    pub init_dc_targets: usize,
 
-    pub(crate) max_cluster_size: usize,
+    pub max_cluster_size: usize,
 
-    pub(crate) mem_pool_size: usize,
+    pub mem_pool_size: usize,
 }
 
 impl Default for Config {
@@ -203,14 +203,19 @@ pub unsafe fn get_dc_factory_ref(
 }
 
 #[inline]
-pub fn random_select_dc_factory_on_core(
-) -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
+pub fn random_select_dc_factory_on_core() -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
     let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
     let id = unsafe { pool_idx % crate::dc_factories::get_ref().len() };
     unsafe { crate::dc_factories::get_ref().get(id) }
 }
 
 declare_global!(service_rpc, crate::rpc_service::Service);
+
+#[inline]
+pub unsafe fn set_service_rpc(arg: crate::rpc_service::Service)
+{
+    crate::service_rpc::init(arg);
+}
 
 /// A pool of connected RPC clients
 pub mod rpc_caller_pool;
@@ -229,6 +234,14 @@ pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::
 {
     crate::service_caller_pool::get_mut()
 }
+
+
+#[inline]
+pub unsafe fn set_rpc_caller_pool(arg: crate::rpc_caller_pool::CallerPool<'static>)
+{
+    crate::service_caller_pool::init(arg);
+}
+
 
 /// A pool of DCQPs
 pub mod dc_pool;
