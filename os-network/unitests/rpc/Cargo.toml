@@ -23,7 +23,7 @@ rust-kernel-rdma-base = {path = "../../../deps/krcore/rust-kernel-rdma/rust-kern
 thiserror-no-std = "2.0.2"
 
 [dev-dependencies]
-kernel-module-testlib = { path = "../../../deps/rust-kernel-rdma/testlib" }
+kernel-module-testlib = { path = "../../../deps/krcore/rust-kernel-rdma/testlib" }
 
 [profile.dev]
 opt-level = 2
