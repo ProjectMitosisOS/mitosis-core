@@ -4,7 +4,7 @@ pub use page::*;
 
 use crate::descriptors::{ParentDescriptor, CompactPageTable};
 use alloc::vec::Vec;
-use os_network::KRdmaKit::rust_kernel_rdma_base::VmallocAllocator;
+use rust_kernel_rdma_base::VmallocAllocator;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;

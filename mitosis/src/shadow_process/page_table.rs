@@ -1,4 +1,4 @@
-use crate::KRdmaKit::rust_kernel_rdma_base::VmallocAllocator;
+use rust_kernel_rdma_base::VmallocAllocator;
 use alloc::vec::Vec;
 
 pub trait GetPhyAddr {
