@@ -187,7 +187,7 @@ impl ChildDescriptor {
             let new_page_pa = unsafe { crate::bindings::pmem_page_to_phy(new_page_p) } as u64;
 
             let result = {
-                use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
+                use rust_kernel_rdma_base::bindings::*;
                 let (dst, src, sz) = (new_page_pa, remote_pa.unwrap(), 4096);
                 let flag = if i == addr_list.len() - 1 {
                     ib_send_flags::IB_SEND_SIGNALED

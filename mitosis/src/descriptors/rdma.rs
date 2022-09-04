@@ -1,7 +1,7 @@
 use crate::kern_wrappers::mm::PhyAddrType;
 use os_network::rdma::dc::DCTarget;
 
-use os_network::KRdmaKit::rust_kernel_rdma_base::bindings::ib_gid;
+use rust_kernel_rdma_base::bindings::ib_gid;
 
 #[allow(dead_code)]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]

@@ -13,7 +13,6 @@ use os_network::{
     future::{Async, Poll},
     rdma::{
         dc::{DCConn, DCFactory},
-        ConnErr,
     },
     Factory, Future,
 };
@@ -21,7 +20,7 @@ use os_network::{
 use crate::remote_mapping::{PhysAddrBitFlag, RemotePageTableIter, K_MAGIC_IN_PREFETCH};
 
 use crate::bindings::page;
-use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
+use rust_kernel_rdma_base::bindings::*;
 
 use super::Prefetch;
 

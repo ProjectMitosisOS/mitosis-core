@@ -7,7 +7,7 @@ use os_network::rpc::impls::ud::UDSession;
 use os_network::rpc::*;
 use os_network::ud::UDFactory;
 use os_network::Factory;
-use os_network::KRdmaKit::device::RContext;
+use os_network::KRdmaKit::context::Context;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
@@ -106,7 +106,7 @@ impl<'a> CallerPool<'a> {
         &self,
         idx: usize,
         meta: UDHyperMeta,
-    ) -> core::option::Option<(crate::KRdmaKit::cm::EndPoint, u32)> {
+    ) -> core::option::Option<(crate::KRdmaKit::queue_pairs::DatagramEndpoint, u32)> {
         let factory = self
             .factories
             .get(idx)

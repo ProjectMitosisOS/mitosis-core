@@ -1,10 +1,11 @@
 use core::pin::Pin;
 
+use os_network::KRdmaKit::DatagramEndpoint;
 use os_network::timeout::TimeoutWRef;
 use os_network::{block_on, Conn};
 
 use crate::kern_wrappers::mm::PhyAddrType;
-use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
+use rust_kernel_rdma_base::bindings::*;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
@@ -15,38 +16,31 @@ pub const TIMEOUT_USEC: i64 = 1000_000; // 1s
 /// This structure is aimed for global usage
 #[derive(Debug)]
 pub struct AccessInfo {
-    pub(crate) ah: os_network::rdma::IBAddressHandler,
+    pub(crate) access_handler: crate::KRdmaKit::queue_pairs::DatagramEndpoint,
     pub(crate) rkey: u32,
-    pub(crate) dct_num: u32,
-    pub(crate) dct_key: usize,
     pub(crate) mac_id : usize,
 }
 
 impl AccessInfo {
     // FIXME: what if the context of the access info doesn't match the one 
     // in the core_id? 
-    pub fn new(descriptor: &crate::descriptors::RDMADescriptor) -> core::option::Option<Self> {
+    pub fn new(descriptor: &crate::descriptors::RDMADescriptor, local_port: u8) -> core::option::Option<Self> {
         let factory = crate::random_select_dc_factory_on_core()?;
         // FIXME: get from global (mapping from gid into ah)
-        let ah = os_network::rdma::IBAddressHandlerMeta::create_ah(
-            factory.get_context(),
-            os_network::rdma::IBAddressHandlerMeta {
-                lid: descriptor.lid,
-                port_num: descriptor.port_num as _,
-                gid: descriptor.gid,
-            },
-        );
-
-        if ah.is_none() { 
-            crate::log::error!("failed to create ah @ mac_id: {}", descriptor.mac_id);
-            return None;
-        }
+        let endpoint = DatagramEndpoint::new(
+            &factory.get_context(),
+            local_port,
+            descriptor.lid,
+            descriptor.gid,
+            0, // qpn, meaningless
+            0, // qkey, meaningless
+            descriptor.dct_num,
+            descriptor.dct_key,
+        ).ok()?;
         
         Some(Self {
-            ah: ah.unwrap(),
+            access_handler: endpoint,
             rkey: descriptor.rkey,
-            dct_num: descriptor.dct_num,
-            dct_key: descriptor.dct_key,
             mac_id : descriptor.mac_id,
         })
     }

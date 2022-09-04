@@ -11,14 +11,16 @@
 extern crate alloc;
 extern crate static_assertions;
 
+use alloc::sync::Arc;
 use mitosis_macros::declare_global;
 
 pub use os_network;
 pub use os_network::KRdmaKit;
 
+use os_network::KRdmaKit::context::Context;
 pub use rust_kernel_linux_util;
 pub use rust_kernel_linux_util as log;
-pub use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
+pub use rust_kernel_rdma_base::linux_kernel_module;
 
 pub const VERSION: usize = 0;
 
@@ -135,35 +137,46 @@ impl Config {
 
 /***** RDMA-related global data structures */
 
-use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::device::RContext;
-use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::device::Context;
+use rust_kernel_rdma_base::*;
 
 /// low-level contexts are directly exposed as global variables
 /// These variables can use `start_rdma` and `end_rdma` in rdma_context to
 /// create and destroy.
 pub mod rdma_context;
 
-declare_global!(rdma_driver, alloc::boxed::Box<crate::KRdmaKit::KDriver>);
-declare_global!(rdma_contexts, alloc::vec::Vec<crate::RContext<'static>>);
+declare_global!(rdma_driver, alloc::sync::Arc<crate::KRdmaKit::KDriver>);
+declare_global!(rdma_contexts, alloc::vec::Vec<alloc::sync::Arc<crate::KRdmaKit::context::Context>>);
 
 #[inline]
 pub unsafe fn get_rdma_context_ref(
     nic_idx: usize,
-) -> core::option::Option<&'static crate::RContext<'static>> {
+) -> core::option::Option<&'static Arc<Context>> {
     crate::rdma_contexts::get_ref().get(nic_idx)
 }
 
 declare_global!(
     rdma_cm_service,
-    alloc::vec::Vec<core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>>
+    alloc::vec::Vec<crate::KRdmaKit::comm_manager::CMServer<crate::KRdmaKit::services::UnreliableDatagramAddressService>>
+);
+
+declare_global!(
+    ud_service,
+    alloc::vec::Vec<alloc::sync::Arc<crate::KRdmaKit::services::UnreliableDatagramAddressService>>
 );
 
 #[inline]
 pub unsafe fn get_rdma_cm_server_ref(
     nic_idx: usize,
-) -> core::option::Option<&'static core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>> {
+) -> core::option::Option<&'static crate::KRdmaKit::comm_manager::CMServer<crate::KRdmaKit::services::UnreliableDatagramAddressService>> {
     crate::rdma_cm_service::get_ref().get(nic_idx)
+}
+
+#[inline]
+pub unsafe fn get_ud_service_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static alloc::sync::Arc<crate::KRdmaKit::services::UnreliableDatagramAddressService>> {
+    crate::ud_service::get_ref().get(nic_idx)
 }
 
 /***** RDMA-related global data structures ends*/
@@ -180,7 +193,7 @@ pub mod rpc_service;
 
 declare_global!(
     ud_factories,
-    alloc::vec::Vec<os_network::datagram::ud::UDFactory<'static>>
+    alloc::vec::Vec<os_network::datagram::ud::UDFactory>
 );
 
 #[inline]
@@ -192,7 +205,7 @@ pub unsafe fn get_ud_factory_ref(
 
 declare_global!(
     dc_factories,
-    alloc::vec::Vec<os_network::rdma::dc::DCFactory<'static>>
+    alloc::vec::Vec<os_network::rdma::dc::DCFactory>
 );
 
 #[inline]
