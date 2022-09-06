@@ -1,14 +1,14 @@
 use core::pin::Pin;
 
-use alloc::collections::VecDeque;
+use alloc::{collections::VecDeque, sync::Arc};
 
 #[allow(unused_imports)]
 use crate::{
     linux_kernel_module,
     remote_mapping::{PageTable, PhysAddr},
-    remote_paging::{AccessInfo, DCReqPayload},
+    remote_paging::{AccessInfo},
 };
-use os_network::Conn;
+use os_network::{Conn, KRdmaKit::{MemoryRegion, ControlpathError}, rdma::{payload::{RDMAOp, dc::DCReqPayload}, DCCreationMeta}};
 use os_network::{
     future::{Async, Poll},
     rdma::{
@@ -34,22 +34,24 @@ pub struct ReplyEntry {
 }
 
 /// Each DCAsyncPrefetcher has a DCConn responsible for executing the async RDMA requests
-pub struct DCAsyncPrefetcher<'a> {
-    conn: DCConn<'a>,
-    lkey: u32,
+pub struct DCAsyncPrefetcher {
+    conn: DCConn,
     pending_queues: VecDeque<ReplyEntry>,
     access_info: AccessInfo,
 }
 
 type PrefetchReq = <RemotePageTableIter as Iterator>::Item;
 
-impl<'a> DCAsyncPrefetcher<'a> {
-    pub fn new(fact: &'a DCFactory, remote_info: AccessInfo) -> Result<Self, ConnErr> {
-        let lkey = unsafe { fact.get_context().get_lkey() };
-        let conn = fact.create(())?;
+impl DCAsyncPrefetcher {
+    pub fn new(fact: &DCFactory, remote_info: AccessInfo) -> Result<Self, ControlpathError> {
+        // Create the DC qp with the default port number 1
+        Self::new_with_meta(fact, remote_info, DCCreationMeta { port: 1 })
+    }
+
+    pub fn new_with_meta(fact: &DCFactory, remote_info: AccessInfo, meta: DCCreationMeta) -> Result<Self, ControlpathError> {
+        let conn = fact.create(meta)?;
         Ok(Self {
             conn: conn,
-            lkey: lkey,
             pending_queues: Default::default(),
             access_info: remote_info,
         })
@@ -58,7 +60,7 @@ impl<'a> DCAsyncPrefetcher<'a> {
     /// Clean my prefetch requests
     /// This call is necessary to drain pending RDMA requests related to this QP.
     /// After call drain_conenctions, another container can use this QP for the prefetch. 
-    pub fn drain_connections(&mut self) -> Result<(DCConn<'a>, u32), <Self as Future>::Error> {
+    pub fn drain_connections(&mut self) -> Result<DCConn, <Self as Future>::Error> {
         while !self.pending_queues.is_empty() {
             // let pt = self.pending_queues.front().unwrap().pt;
             // let idx = self.pending_queues.front().unwrap().idx;
@@ -78,14 +80,13 @@ impl<'a> DCAsyncPrefetcher<'a> {
                 _ => {}
             };
         }
-        Ok((self.conn.clone(), self.lkey))
+        Ok(self.conn.clone())
     }
 
     #[inline]
-    pub fn new_from_raw(conn: DCConn<'a>, lkey: u32, access_info: AccessInfo) -> Self {
+    pub fn new_from_raw(conn: DCConn, lkey: u32, access_info: AccessInfo) -> Self {
         Self {
             conn: conn,
-            lkey: lkey,
             pending_queues: Default::default(),
             access_info: access_info,
         }
@@ -135,26 +136,22 @@ impl<'a> DCAsyncPrefetcher<'a> {
             let user_page =
                 unsafe { crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER) };
             let new_page_pa = unsafe { crate::bindings::pmem_page_to_phy(user_page) as u64 };
+            let new_page_va = unsafe { crate::bindings::pmem_page_to_virt(user_page) as u64 };
 
             // TODO: doorbell optimization
-            let mut payload = DCReqPayload::default()
-                .set_laddr(new_page_pa)
-                .set_raddr(remote_pa) // copy from src into dst
-                .set_sz(4096)
-                .set_lkey(self.lkey)
-                .set_rkey(self.access_info.rkey)
-                .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-                .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
-                .set_ah_ptr(unsafe { self.access_info.ah.get_inner() })
-                .set_dc_access_key(self.access_info.dct_key as _)
-                .set_dc_num(self.access_info.dct_num);
-
-            let mut payload = unsafe { Pin::new_unchecked(&mut payload) };
-            os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+            let payload = DCReqPayload::new(
+                unsafe { Arc::new(MemoryRegion::new_from_raw(self.conn.get_qp().ctx().clone(), new_page_va as _, 4096).unwrap()) },
+                0..4096,
+                true,
+                RDMAOp::READ,
+                self.access_info.rkey,
+                remote_pa,
+                self.access_info.access_handler.clone(),
+            );
 
             // crate::log::debug!("post reqs {}", self.access_info.dct_num);
             // send the requests
-            self.conn.post(&payload.as_ref()).unwrap(); // FIXME: it should never fail
+            self.conn.post(&payload).unwrap(); // FIXME: it should never fail
 
             // 3. record the prefetch information here
             self.pending_queues.push_back(ReplyEntry {
@@ -166,9 +163,9 @@ impl<'a> DCAsyncPrefetcher<'a> {
     }
 }
 
-impl<'a> Future for DCAsyncPrefetcher<'a> {
+impl Future for DCAsyncPrefetcher {
     type Output = *mut page;
-    type Error = <DCConn<'a> as Future>::Error;
+    type Error = <DCConn as Future>::Error;
 
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         match self.conn.poll() {

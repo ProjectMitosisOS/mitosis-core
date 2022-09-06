@@ -66,6 +66,18 @@ pub enum Err {
     WCErr(WCStatus),
 }
 
+impl From<DatapathError> for Err {
+    fn from(e: DatapathError) -> Self {
+        Self::DatapathError(e)
+    }
+}
+
+impl From<WCStatus> for Err {
+    fn from(s: WCStatus) -> Self {
+        Self::WCErr(s)
+    }
+}
+
 impl Err {
     pub fn is_wc_err(&self) -> bool {
         match self {

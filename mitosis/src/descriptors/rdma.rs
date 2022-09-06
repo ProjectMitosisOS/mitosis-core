@@ -33,18 +33,20 @@ impl RDMADescriptor {
         let (target, idx, key) = service
             .pop_one()
             .expect("failed to create a DCTarget from the pool");
+        let target_meta = target.get_datagram_meta()
+            .expect("failed to get datagram meta from a DCT qp");
         let ctx = unsafe { crate::get_rdma_context_ref(idx).unwrap() };
 
         // now fill the fields
         let my = Self {
             service_id: 0, // deprecated field
-            port_num: ctx.get_port(),
-            gid: ctx.get_gid(),
-            lid: ctx.get_lid(),
+            port_num: target.port_num(),
+            gid: target_meta.gid,
+            lid: target_meta.lid,
 
             rkey: key,
-            dct_key: target.get_dc_key(),
-            dct_num: target.get_dct_num(),
+            dct_key: target.dc_key() as usize,
+            dct_num: target.dct_num(),
 
             mac_id : unsafe { *crate::mac_id::get_ref() }
         };

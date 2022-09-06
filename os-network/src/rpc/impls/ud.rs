@@ -16,6 +16,11 @@ impl UDSession {
         &self.meta
     }
 
+    #[inline]
+    pub fn get_inner(&self) -> &UDDatagram {
+        &self.inner
+    }
+
 }
 
 impl crate::future::Future for UDSession {

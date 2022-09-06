@@ -1,3 +1,4 @@
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 
 use os_network::datagram::msg::UDMsg;
@@ -12,18 +13,18 @@ use os_network::KRdmaKit::context::Context;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 
-pub(crate) type UDCaller<'a> = Caller<UDReceiver<'a>, UDSession<'a>>;
+pub(crate) type UDCaller = Caller<UDReceiver, UDSession>;
 
 /// The pool maintains a thread_local_pool of callers
 /// Each CPU core can use the dedicated pool
 pub struct CallerPool<'a> {
     // the major caller that is used by the clients
-    pool: Vec<UDCaller<'a>>,
+    pool: Vec<UDCaller>,
 
     // each entry stored the caller to create the corresponding caller
-    factories: Vec<&'a UDFactory<'a>>,
+    factories: Vec<&'a UDFactory>,
 
-    contexts: Vec<&'a RContext<'a>>,
+    contexts: Vec<&'a Arc<Context>>,
 
     // Vec<(qd_hint, service_ida)>
     metas: Vec<(usize, u64)>,
@@ -35,7 +36,7 @@ impl<'a> CallerPool<'a> {
     #[inline(always)]
     pub unsafe fn get_global_caller(
         idx: usize,
-    ) -> core::option::Option<&'static mut UDCaller<'static>> {
+    ) -> core::option::Option<&'static mut UDCaller> {
         crate::service_caller_pool::get_mut().get_caller(idx)
     }
 
@@ -45,12 +46,12 @@ impl<'a> CallerPool<'a> {
     }
 
     #[inline(always)]
-    pub fn get_caller(&'a mut self, idx: usize) -> core::option::Option<&'a mut UDCaller<'a>> {
+    pub fn get_caller(&'a mut self, idx: usize) -> core::option::Option<&'a mut UDCaller> {
         self.pool.get_mut(idx)
     }
 
     #[inline(always)]
-    pub fn get_caller_context(&'a self, idx: usize) -> core::option::Option<&'a RContext<'a>> {
+    pub fn get_caller_context(&'a self, idx: usize) -> core::option::Option<&'a Arc<Context>> {
         self.contexts.get(idx).map(|r| *r)
     }
 
@@ -64,9 +65,7 @@ impl<'a> CallerPool<'a> {
     ) -> core::option::Option<()> {
         // fetch by sidr connect
         let meta = self.create_meta_at(idx, meta)?;
-        let my_gid =
-            os_network::rdma::RawGID::new(self.contexts.get(idx).unwrap().get_gid_as_string())
-                .unwrap();
+        let my_gid = self.contexts.get(idx).unwrap().query_gid(1, 0).unwrap();
         let (hint, service_id) = self.metas.get(idx).unwrap().clone();
 
         let caller = self.get_caller(idx)?;
@@ -76,6 +75,7 @@ impl<'a> CallerPool<'a> {
         }
 
         let client_session = caller.get_transport_mut().create(meta).unwrap();
+        let local_port_num = client_session.get_inner().get_qp().port_num();
 
         // send the connect message
         caller
@@ -87,6 +87,7 @@ impl<'a> CallerPool<'a> {
                     gid: my_gid,
                     service_id: service_id as _,
                     qd_hint: hint as _,
+                    local_port: local_port_num,
                 },
             )
             .unwrap();
@@ -106,7 +107,7 @@ impl<'a> CallerPool<'a> {
         &self,
         idx: usize,
         meta: UDHyperMeta,
-    ) -> core::option::Option<(crate::KRdmaKit::queue_pairs::DatagramEndpoint, u32)> {
+    ) -> core::option::Option<crate::KRdmaKit::queue_pairs::DatagramEndpoint> {
         let factory = self
             .factories
             .get(idx)
@@ -136,21 +137,23 @@ impl<'a> CallerPool<'a> {
                     .expect("should initialize the pool before RDMA context is started.")
             };
             let factory = unsafe { crate::get_ud_factory_ref(nic_idx).unwrap() };
+            let ud_service = unsafe { crate::get_ud_service_ref(nic_idx).unwrap() };
             let cm_server = unsafe { crate::get_rdma_cm_server_ref(nic_idx).unwrap() };
 
             // init
-            let client_ud = factory.create(()).expect("failed to create RPC UD");
-            cm_server.reg_ud(client_ud_hint, client_ud.get_qp());
+            let client_ud = factory.create(
+                UDCreationMeta { port: 1 } // WTX: port is default to 1
+            ).expect("failed to create RPC UD");
+            ud_service.reg_qp(client_ud_hint, &client_ud.get_qp());
 
             let client_receiver = UDReceiverFactory::new()
                 .set_qd_hint(client_ud_hint)
-                .set_lkey(unsafe { context.get_lkey() })
-                .create(client_ud);
+                .create(client_ud.clone());
 
             let mut caller = UDCaller::new(client_receiver);
             for _ in 0..64 {
                 caller
-                    .register_recv_buf(UDMsg::new(4096, 73))
+                    .register_recv_buf(UDMsg::new(4096, 0, client_ud.get_qp().ctx().clone()))
                     .expect("failed to register receive buffer for the RPC caller");
                 // should succeed
             }
@@ -158,7 +161,7 @@ impl<'a> CallerPool<'a> {
             pool.push(caller);
             factories.push(factory);
             contexts.push(context);
-            metas.push((client_ud_hint, cm_server.get_id()))
+            metas.push((client_ud_hint, cm_server.listen_id()))
         }
 
         Some(Self {
