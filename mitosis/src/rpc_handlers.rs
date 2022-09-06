@@ -1,4 +1,3 @@
-use crate::linux_kernel_module;
 use core::fmt::Write;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
