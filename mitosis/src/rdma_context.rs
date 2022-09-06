@@ -22,7 +22,7 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
                     .devices()
                     .get(i)
                     .expect("no available RDMA NIC")
-                    .open()
+                    .open_context()
                     .expect("failed to create RDMA context"),
             );
         }

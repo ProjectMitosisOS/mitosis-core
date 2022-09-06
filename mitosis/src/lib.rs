@@ -54,6 +54,8 @@ declare_global!(max_nics_used, usize);
 /// Global configurations of the MITOSIS kernel
 #[derive(Debug, Clone)]
 pub struct Config {
+    pub(crate) default_nic_port: u8,
+
     pub(crate) num_nics_used: usize,
 
     pub(crate) rpc_threads_num: usize,
@@ -75,6 +77,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            default_nic_port: 1,
             num_nics_used: 1,
             rpc_threads_num: 2,
             machine_id: 0,
@@ -88,6 +91,11 @@ impl Default for Config {
 }
 
 impl Config {
+    pub fn set_default_nic_port(&mut self, port: u8) -> &mut Self {
+        self.default_nic_port = port;
+        self
+    }
+
     pub fn set_num_nics_used(&mut self, num: usize) -> &mut Self {
         self.num_nics_used = num;
         self
@@ -137,7 +145,6 @@ impl Config {
 
 /***** RDMA-related global data structures */
 
-use KRdmaKit::device::Context;
 use rust_kernel_rdma_base::*;
 
 /// low-level contexts are directly exposed as global variables
@@ -193,14 +200,21 @@ pub mod rpc_service;
 
 declare_global!(
     ud_factories,
-    alloc::vec::Vec<os_network::datagram::ud::UDFactory>
+    alloc::vec::Vec<alloc::sync::Arc<os_network::datagram::ud::UDFactory>>
 );
+
+#[inline]
+pub unsafe fn get_ud_factory(
+    nic_idx: usize
+) -> core::option::Option<&'static alloc::sync::Arc<os_network::datagram::ud::UDFactory>> {
+    crate::ud_factories::get_ref().get(nic_idx)
+}
 
 #[inline]
 pub unsafe fn get_ud_factory_ref(
     nic_idx: usize,
-) -> core::option::Option<&'static os_network::datagram::ud::UDFactory<'static>> {
-    crate::ud_factories::get_ref().get(nic_idx)
+) -> core::option::Option<&'static os_network::datagram::ud::UDFactory> {
+    Some(crate::ud_factories::get_ref().get(nic_idx)?.as_ref())
 }
 
 declare_global!(
@@ -211,13 +225,13 @@ declare_global!(
 #[inline]
 pub unsafe fn get_dc_factory_ref(
     nic_idx: usize,
-) -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
+) -> core::option::Option<&'static os_network::rdma::dc::DCFactory> {
     crate::dc_factories::get_ref().get(nic_idx)
 }
 
 #[inline]
 pub fn random_select_dc_factory_on_core(
-) -> core::option::Option<&'static os_network::rdma::dc::DCFactory<'static>> {
+) -> core::option::Option<&'static os_network::rdma::dc::DCFactory> {
     let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
     let id = unsafe { pool_idx % crate::dc_factories::get_ref().len() };
     unsafe { crate::dc_factories::get_ref().get(id) }
@@ -247,7 +261,7 @@ pub unsafe fn get_rpc_caller_pool_mut() -> &'static mut crate::rpc_caller_pool::
 pub mod dc_pool;
 pub mod remote_paging;
 
-declare_global!(dc_pool_service, crate::dc_pool::DCPool<'static>);
+declare_global!(dc_pool_service, crate::dc_pool::DCPool);
 declare_global!(dc_target_service, crate::dc_pool::DCTargetPool);
 declare_global!(access_info_service, crate::dc_pool::AccessInfoPool);
 
@@ -259,7 +273,7 @@ type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::D
 declare_global!(dc_pool_service_async, crate::AsyncDCPool);
 
 #[inline]
-pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool<'static> {
+pub unsafe fn get_dc_pool_service_ref() -> &'static crate::dc_pool::DCPool {
     crate::dc_pool_service::get_ref()
 }
 
@@ -272,7 +286,7 @@ pub unsafe fn get_dc_pool_async_service_ref() -> &'static crate::AsyncDCPool {
 }
 
 #[inline]
-pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool<'static> {
+pub unsafe fn get_dc_pool_service_mut() -> &'static mut crate::dc_pool::DCPool {
     crate::dc_pool_service::get_mut()
 }
 

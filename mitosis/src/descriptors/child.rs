@@ -1,7 +1,12 @@
 #[allow(unused_imports)]
 use crate::bindings::page;
 use crate::linux_kernel_module;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
+use os_network::KRdmaKit::{MemoryRegion, DatapathError};
+use os_network::rdma::payload::RDMAOp;
+use os_network::rdma::payload::dc::DCReqPayload;
+use os_network::timeout::TimeoutWRef;
 #[allow(unused_imports)]
 use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
 
@@ -74,7 +79,10 @@ impl ChildDescriptor {
         let mut task = Task::new();
         // 1. Unmap origin vma regions
         task.unmap_self();
-        let access_info = AccessInfo::new(&self.machine_info).unwrap();
+        let access_info = AccessInfo::new(
+            &self.machine_info,
+            1 // WTX: port is default to 1
+        ).unwrap();
         // let access_info = AccessInfo::new_from_cache(self.machine_info.mac_id, &self.machine_info).unwrap();
 
         // 2. Map new vma regions
@@ -185,45 +193,38 @@ impl ChildDescriptor {
             let new_page_p =
                 unsafe { crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER) };
             let new_page_pa = unsafe { crate::bindings::pmem_page_to_phy(new_page_p) } as u64;
+            let new_page_va = unsafe { crate::bindings::pmem_page_to_virt(new_page_p) } as u64;
 
             let result = {
                 use rust_kernel_rdma_base::bindings::*;
                 let (dst, src, sz) = (new_page_pa, remote_pa.unwrap(), 4096);
-                let flag = if i == addr_list.len() - 1 {
-                    ib_send_flags::IB_SEND_SIGNALED
-                } else {
-                    0
-                };
+                let signaled = (i == (addr_list.len() - 1));
                 let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
-                let (dc_qp, lkey) =
-                    unsafe { crate::get_dc_pool_service_mut().get_dc_qp_key(pool_idx) }
-                        .expect("failed to get DCQP");
-
-                let mut payload = crate::remote_paging::DCReqPayload::default()
-                    .set_laddr(dst)
-                    .set_raddr(PhysAddr::decode(src)) // copy from src into dst
-                    .set_sz(sz as _)
-                    .set_lkey(*lkey)
-                    .set_rkey(access_info.rkey)
-                    .set_send_flags(flag)
-                    .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
-                    .set_ah_ptr(unsafe { access_info.ah.get_inner() })
-                    .set_dc_access_key(access_info.dct_key as _)
-                    .set_dc_num(access_info.dct_num);
-
-                let mut payload = unsafe { core::pin::Pin::new_unchecked(&mut payload) };
-                os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+                let mut dc_qp =
+                    unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
+                        .expect("failed to get DCQP").clone();
 
                 // now sending the RDMA request
-                let res = dc_qp.post(&payload.as_ref());
+                let payload = DCReqPayload::new(
+                    unsafe{ Arc::new(MemoryRegion::new_from_raw(dc_qp.get_qp().ctx().clone(), new_page_va as _, sz).unwrap()) },
+                    0..sz as u64,
+                    signaled,
+                    RDMAOp::READ,
+                    access_info.rkey,
+                    src,
+                    access_info.access_handler.clone()
+                );
+                let res = unsafe {
+                    Arc::get_mut_unchecked(&mut dc_qp)
+                }.post(&payload);
                 if res.is_err() {
                     crate::log::error!("failed to batch read pages {:?}", res);
                 }
 
                 if i == addr_list.len() - 1 {
                     // wait for the request to complete
-                    let mut timeout_dc = os_network::timeout::TimeoutWRef::new(
-                        dc_qp,
+                    let mut timeout_dc = TimeoutWRef::new(
+                        unsafe { Arc::get_mut_unchecked(&mut dc_qp) },
                         crate::remote_paging::TIMEOUT_USEC,
                     );
                     match os_network::block_on(&mut timeout_dc) {
@@ -231,7 +232,7 @@ impl ChildDescriptor {
                         Err(e) => {
                             if e.is_elapsed() {
                                 crate::log::error!("fatal, timeout on reading the DC QP");
-                                Err(os_network::rdma::Err::Timeout)
+                                Err(DatapathError::TimeoutError)
                             } else {
                                 Err(e.into_inner().unwrap())
                             }

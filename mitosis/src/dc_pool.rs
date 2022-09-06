@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use os_network::rdma::dc::*;
+use os_network::rdma::{dc::*, DCCreationMeta};
 
 use hashbrown::HashMap;
 
@@ -8,8 +8,8 @@ use hashbrown::HashMap;
 use crate::linux_kernel_module;
 
 /// The clients(children)-side DCQP pool
-pub struct DCPool<'a> {
-    pool: Vec<(DCConn<'a>, u32)>,
+pub struct DCPool {
+    pool: Vec<Arc<DCConn>>,
     nic_idxs: Vec<usize>,
 }
 
@@ -52,13 +52,9 @@ impl Drop for AccessInfoPool {
     }
 }
 
-impl<'a> DCPool<'a> {
-    pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&mut DCConn<'a>> {
-        self.pool.get_mut(idx).map(|v| &mut v.0)
-    }
-
-    pub fn get_dc_qp_key(&mut self, idx: usize) -> core::option::Option<&mut (DCConn<'a>, u32)> {
-        self.pool.get_mut(idx)
+impl DCPool {
+    pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&Arc<DCConn>> {
+        self.pool.get(idx)
     }
 
     pub fn get_ctx_id(&self, idx: usize) -> core::option::Option<usize> {
@@ -69,37 +65,31 @@ impl<'a> DCPool<'a> {
     /// This function is not **thread-safe**,
     /// must be used by a single thread / protected by a mutex
     #[inline]
-    pub fn pop_one_qp(&mut self) -> core::option::Option<(DCConn<'a>, u32)> {
+    pub fn pop_one_qp(&mut self) -> core::option::Option<Arc<DCConn>> {
         self.pool.pop()
     }
 
     #[inline]
     pub fn create_one_qp(&mut self) {
         let nic_idx = 0;
-        self.pool.push((
-            unsafe { crate::get_dc_factory_ref(nic_idx) }
+        self.pool.push(
+            Arc::new(unsafe { crate::get_dc_factory_ref(nic_idx) }
                 .expect("fatal, should not fail to create dc factory")
-                .create(())
-                .expect("Failed to create DC QP"),
-            unsafe {
-                crate::get_dc_factory_ref(nic_idx)
-                    .expect("fatal, should not fail to create dc factory")
-                    .get_context()
-                    .get_lkey()
-            },
-        ));
+                .create(DCCreationMeta { port: 1 }) // WTX: port is default to 1
+                .expect("Failed to create DC QP"))
+        );
     }
 
     /// Arg: DCQP, its corresponding lkey
     #[inline]
-    pub fn push_one_qp(&mut self, qp: (DCConn<'a>, u32)) {
+    pub fn push_one_qp(&mut self, qp: Arc<DCConn>) {
         self.pool.push(qp)
     }
 }
 
 use os_network::Factory;
 
-impl<'a> DCPool<'a> {
+impl DCPool {
     pub fn new(config: &crate::Config) -> core::option::Option<Self> {
         crate::log::info!("Start initializing client-side DCQP pool.");
 
@@ -108,18 +98,14 @@ impl<'a> DCPool<'a> {
 
         for i in 0..config.max_core_cnt {
             let nic_idx = i % config.num_nics_used;
-            res.push((
-                unsafe { crate::get_dc_factory_ref(nic_idx) }
+            res.push(
+                Arc::new(unsafe { crate::get_dc_factory_ref(nic_idx) }
                     .expect("fatal, should not fail to create dc factory")
-                    .create(())
-                    .expect("Failed to create DC QP"),
-                unsafe {
-                    crate::get_dc_factory_ref(nic_idx)
-                        .expect("fatal, should not fail to create dc factory")
-                        .get_context()
-                        .get_lkey()
-                },
-            ));
+                    .create(
+                        DCCreationMeta { port: config.default_nic_port }
+                    )
+                    .expect("Failed to create DC QP")),
+            );
             nic_idxs.push(nic_idx);
         }
 
@@ -157,10 +143,10 @@ impl DCTargetPool {
                 unsafe { crate::get_dc_factory_ref(nic_idx).expect("Failed to get DC factory") };
             pool.push(
                 factory
-                    .create_target((i + 73) as _)
+                    .create_target((i + 73) as _, config.default_nic_port)
                     .expect("Failed to create DC Target"),
             );
-            keys.push(unsafe { factory.get_context().get_rkey() });
+            keys.push(unsafe { factory.get_context().rkey() });
             nic_idxs.push(nic_idx);
         }
         Some(Self {

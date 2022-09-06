@@ -28,6 +28,7 @@ pub(crate) fn handle_echo(input: &BytesMut, output: &mut BytesMut) -> usize {
 pub(crate) struct DescriptorLookupReply {
     pub(crate) pa: u64,
     pub(crate) sz: usize,
+    pub(crate) rkey: u32,
     pub(crate) ready: bool,
 }
 
@@ -48,10 +49,11 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     }
 
     let reply = match buf {
-        Some((addr, len)) => {
+        Some((addr, len, rkey)) => {
             DescriptorLookupReply {
                 pa: addr.get_pa(),
                 sz: len,
+                rkey: rkey,
                 ready: true,
             }
         }
@@ -60,6 +62,7 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
             DescriptorLookupReply {
                 pa: 0,
                 sz: 0,
+                rkey: 0,
                 ready: false,
             }
         }
