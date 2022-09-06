@@ -146,7 +146,7 @@ impl DCTargetPool {
                     .create_target((i + 73) as _, config.default_nic_port)
                     .expect("Failed to create DC Target"),
             );
-            keys.push(unsafe { factory.get_context().rkey() });
+            keys.push(factory.get_context().rkey());
             nic_idxs.push(nic_idx);
         }
         Some(Self {

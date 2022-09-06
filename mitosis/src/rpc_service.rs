@@ -7,8 +7,6 @@ use rust_kernel_linux_util::kthread::JoinHandler;
 
 use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
 
-use crate::linux_kernel_module;
-
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 static RPC_HANDLER_READY_NUM: AtomicUsize = AtomicUsize::new(0);
@@ -180,8 +178,6 @@ impl Service {
             os_network::rpc::hook::RPCHook<'a, UDDatagram, UDReceiver, UDFactory>;
 
         let local_context = unsafe { crate::rdma_contexts::get_ref().get(arg.nic_to_use).unwrap() };
-        let lkey = unsafe { local_context.lkey() };
-
         crate::log::info!(
             "MITOSIS RPC thread {} started, listing on gid: {:?}",
             arg.id,

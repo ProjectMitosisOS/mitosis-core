@@ -1,12 +1,9 @@
-use core::pin::Pin;
-
 use alloc::sync::Arc;
 use os_network::KRdmaKit::{DatagramEndpoint, DatapathError};
-use os_network::rdma::payload::dc::DCReqPayload;
 use os_network::remote_memory::Device;
 use os_network::remote_memory::rdma::{DCRemoteDevice, DCKeys};
-use os_network::timeout::{TimeoutWRef, Timeout};
-use os_network::{block_on, Conn, Future};
+use os_network::timeout::Timeout;
+use os_network::{block_on, Future};
 
 use crate::kern_wrappers::mm::PhyAddrType;
 use rust_kernel_rdma_base::bindings::*;

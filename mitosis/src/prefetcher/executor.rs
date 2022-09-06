@@ -1,5 +1,3 @@
-use core::pin::Pin;
-
 use alloc::{collections::VecDeque, sync::Arc};
 
 #[allow(unused_imports)]
@@ -84,7 +82,7 @@ impl DCAsyncPrefetcher {
     }
 
     #[inline]
-    pub fn new_from_raw(conn: DCConn, lkey: u32, access_info: AccessInfo) -> Self {
+    pub fn new_from_raw(conn: DCConn, access_info: AccessInfo) -> Self {
         Self {
             conn: conn,
             pending_queues: Default::default(),
@@ -135,7 +133,6 @@ impl DCAsyncPrefetcher {
             // 2. submit the RDMA request to read the page
             let user_page =
                 unsafe { crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER) };
-            let new_page_pa = unsafe { crate::bindings::pmem_page_to_phy(user_page) as u64 };
             let new_page_va = unsafe { crate::bindings::pmem_page_to_virt(user_page) as u64 };
 
             // TODO: doorbell optimization

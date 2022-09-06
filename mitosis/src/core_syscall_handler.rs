@@ -574,10 +574,9 @@ impl MitosisSysCallHandler {
 
         let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
 
-        use crate::rpc_handlers::DescriptorLookupReply;
         use os_network::serialize::Serialize;
         let _reply = match block_on(&mut timeout_caller) {
-            Ok((msg, reply)) => {
+            Ok((msg, _reply)) => {
                 // first re-purpose the data
                 caller
                     .register_recv_buf(msg)

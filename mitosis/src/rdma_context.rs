@@ -31,7 +31,7 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
 
     unsafe {
         let mut ud_services = Vec::new();
-        for i in 0..config.num_nics_used {
+        for _ in 0..config.num_nics_used {
             ud_services.push(
                 UnreliableDatagramAddressService::create()
             );

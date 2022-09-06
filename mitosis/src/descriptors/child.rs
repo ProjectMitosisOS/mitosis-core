@@ -192,13 +192,12 @@ impl ChildDescriptor {
 
             let new_page_p =
                 unsafe { crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER) };
-            let new_page_pa = unsafe { crate::bindings::pmem_page_to_phy(new_page_p) } as u64;
             let new_page_va = unsafe { crate::bindings::pmem_page_to_virt(new_page_p) } as u64;
 
             let result = {
                 use rust_kernel_rdma_base::bindings::*;
-                let (dst, src, sz) = (new_page_pa, remote_pa.unwrap(), 4096);
-                let signaled = (i == (addr_list.len() - 1));
+                let (src, sz) = (remote_pa.unwrap(), 4096);
+                let signaled = i == (addr_list.len() - 1);
                 let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
                 let mut dc_qp =
                     unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }

@@ -30,12 +30,11 @@ use alloc::sync::Arc;
 impl RDMADescriptor {
     pub fn new_from_dc_target_pool() -> core::option::Option<(Arc<DCTarget>, Self)> {
         let service = unsafe { crate::get_dc_target_service_mut() };
-        let (target, idx, key) = service
+        let (target, _idx, key) = service
             .pop_one()
             .expect("failed to create a DCTarget from the pool");
         let target_meta = target.get_datagram_meta()
             .expect("failed to get datagram meta from a DCT qp");
-        let ctx = unsafe { crate::get_rdma_context_ref(idx).unwrap() };
 
         // now fill the fields
         let my = Self {
