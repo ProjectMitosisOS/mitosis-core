@@ -9,7 +9,7 @@ use crate::linux_kernel_module;
 
 /// The clients(children)-side DCQP pool
 pub struct DCPool {
-    pool: Vec<Arc<DCConn>>,
+    pool: Vec<DCConn>,
     nic_idxs: Vec<usize>,
 }
 
@@ -53,8 +53,8 @@ impl Drop for AccessInfoPool {
 }
 
 impl DCPool {
-    pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&Arc<DCConn>> {
-        self.pool.get(idx)
+    pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&mut DCConn> {
+        self.pool.get_mut(idx)
     }
 
     pub fn get_ctx_id(&self, idx: usize) -> core::option::Option<usize> {
@@ -65,7 +65,7 @@ impl DCPool {
     /// This function is not **thread-safe**,
     /// must be used by a single thread / protected by a mutex
     #[inline]
-    pub fn pop_one_qp(&mut self) -> core::option::Option<Arc<DCConn>> {
+    pub fn pop_one_qp(&mut self) -> core::option::Option<DCConn> {
         self.pool.pop()
     }
 
@@ -73,16 +73,16 @@ impl DCPool {
     pub fn create_one_qp(&mut self) {
         let nic_idx = 0;
         self.pool.push(
-            Arc::new(unsafe { crate::get_dc_factory_ref(nic_idx) }
+            unsafe { crate::get_dc_factory_ref(nic_idx) }
                 .expect("fatal, should not fail to create dc factory")
                 .create(DCCreationMeta { port: 1 }) // WTX: port is default to 1
-                .expect("Failed to create DC QP"))
+                .expect("Failed to create DC QP")
         );
     }
 
     /// Arg: DCQP, its corresponding lkey
     #[inline]
-    pub fn push_one_qp(&mut self, qp: Arc<DCConn>) {
+    pub fn push_one_qp(&mut self, qp: DCConn) {
         self.pool.push(qp)
     }
 }
@@ -99,12 +99,12 @@ impl DCPool {
         for i in 0..config.max_core_cnt {
             let nic_idx = i % config.num_nics_used;
             res.push(
-                Arc::new(unsafe { crate::get_dc_factory_ref(nic_idx) }
+                unsafe { crate::get_dc_factory_ref(nic_idx) }
                     .expect("fatal, should not fail to create dc factory")
                     .create(
                         DCCreationMeta { port: config.default_nic_port }
                     )
-                    .expect("Failed to create DC QP")),
+                    .expect("Failed to create DC QP")
             );
             nic_idxs.push(nic_idx);
         }

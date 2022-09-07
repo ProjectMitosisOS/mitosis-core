@@ -25,7 +25,11 @@ pub struct AccessInfo {
 impl AccessInfo {
     // FIXME: what if the context of the access info doesn't match the one 
     // in the core_id? 
-    pub fn new(descriptor: &crate::descriptors::RDMADescriptor, local_port: u8) -> core::option::Option<Self> {
+    pub fn new(descriptor: &crate::descriptors::RDMADescriptor) -> core::option::Option<Self> {
+        Self::new_with_port(descriptor, 1) // WTX: port is default to 1
+    }
+
+    pub fn new_with_port(descriptor: &crate::descriptors::RDMADescriptor, local_port: u8) -> core::option::Option<Self> {
         let factory = crate::random_select_dc_factory_on_core()?;
         // FIXME: get from global (mapping from gid into ah)
         let endpoint = DatagramEndpoint::new(
