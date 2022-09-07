@@ -9,13 +9,13 @@ use crate::rdma::rc::RCConn;
 use crate::Future;
 
 pub struct RCRemoteDevice {
-    rc: Arc<RCConn>,
+    rc:RCConn,
 }
 
 pub type RCKeys = super::MemoryKeys;
 
 impl RCRemoteDevice {
-    pub fn new(rc: Arc<RCConn>) -> Self {
+    pub fn new(rc:RCConn) -> Self {
         Self { rc: rc }
     }
 }
@@ -57,7 +57,7 @@ impl crate::remote_memory::Device for RCRemoteDevice {
         let rkey = key.rkey;
         let raddr = *addr;
         let payload = RCReqPayload::new(mr, range, signaled, op, rkey, raddr);
-        Arc::get_mut_unchecked(&mut self.rc).post(&payload)
+        self.rc.post(&payload)
     }
 
     unsafe fn write(
@@ -78,7 +78,7 @@ impl crate::remote_memory::Device for RCRemoteDevice {
         let rkey = key.rkey;
         let raddr = *addr;
         let payload = RCReqPayload::new(mr, range, signaled, op, rkey, raddr);
-        Arc::get_mut_unchecked(&mut self.rc).post(&payload)
+        self.rc.post(&payload)
     }
 }
 
@@ -94,7 +94,7 @@ impl Future for RCRemoteDevice {
     type Error = crate::rdma::Err;
 
     fn poll<'a>(&'a mut self) -> crate::future::Poll<Self::Output, Self::Error> {
-        let res = unsafe { Arc::get_mut_unchecked(&mut self.rc) }.poll();
+        let res = self.rc.poll();
         match res {
             Ok(Async::Ready(res)) => {
                 if res.status == rust_kernel_rdma_base::ib_wc_status::IB_WC_SUCCESS {
