@@ -267,7 +267,7 @@ declare_global!(access_info_service, crate::dc_pool::AccessInfoPool);
 
 
 #[cfg(feature = "prefetch")]
-type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::DCPool<'static>>>;
+type AsyncDCPool = alloc::boxed::Box<lock_bundler::LockBundler<crate::dc_pool::DCPool>>;
 
 #[cfg(feature = "prefetch")]
 declare_global!(dc_pool_service_async, crate::AsyncDCPool);

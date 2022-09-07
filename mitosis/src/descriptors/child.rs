@@ -51,7 +51,7 @@ pub struct ChildDescriptor {
     pub machine_info: RDMADescriptor,
 
     #[cfg(feature = "prefetch")]
-    pub prefetcher: DCAsyncPrefetcher<'static>,
+    pub prefetcher: DCAsyncPrefetcher,
     #[cfg(feature = "eager-resume")]
     pub eager_fetched_pages: hashbrown::HashSet<VirtAddrType>,
     #[cfg(feature = "resume-profile")]
@@ -79,10 +79,7 @@ impl ChildDescriptor {
         let mut task = Task::new();
         // 1. Unmap origin vma regions
         task.unmap_self();
-        let access_info = AccessInfo::new(
-            &self.machine_info,
-            1 // WTX: port is default to 1
-        ).unwrap();
+        let access_info = AccessInfo::new(&self.machine_info).unwrap();
         // let access_info = AccessInfo::new_from_cache(self.machine_info.mac_id, &self.machine_info).unwrap();
 
         // 2. Map new vma regions
@@ -199,9 +196,9 @@ impl ChildDescriptor {
                 let (src, sz) = (remote_pa.unwrap(), 4096);
                 let signaled = i == (addr_list.len() - 1);
                 let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
-                let mut dc_qp =
+                let dc_qp =
                     unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
-                        .expect("failed to get DCQP").clone();
+                        .expect("failed to get DCQP");
 
                 // now sending the RDMA request
                 let payload = DCReqPayload::new(
@@ -213,9 +210,7 @@ impl ChildDescriptor {
                     src,
                     access_info.access_handler.clone()
                 );
-                let res = unsafe {
-                    Arc::get_mut_unchecked(&mut dc_qp)
-                }.post(&payload);
+                let res = dc_qp.post(&payload);
                 if res.is_err() {
                     crate::log::error!("failed to batch read pages {:?}", res);
                 }
@@ -223,7 +218,7 @@ impl ChildDescriptor {
                 if i == addr_list.len() - 1 {
                     // wait for the request to complete
                     let mut timeout_dc = TimeoutWRef::new(
-                        unsafe { Arc::get_mut_unchecked(&mut dc_qp) },
+                        dc_qp,
                         crate::remote_paging::TIMEOUT_USEC,
                     );
                     match os_network::block_on(&mut timeout_dc) {
@@ -386,43 +381,36 @@ impl ChildDescriptor {
         }
 
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
-        let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
+        let new_page_va = crate::bindings::pmem_page_to_virt(new_page_p) as u64;
 
         let pool_idx = crate::bindings::pmem_get_current_cpu() as usize;
         // hold the lock 
-        unsafe { crate::global_locks::get_ref()[pool_idx].lock() };        
+        crate::global_locks::get_ref()[pool_idx].lock();
 
 
         // FIXME: currently this code is from the remote_mapping.rs
         // But we need to use this piece of code
         let res = {
-            use crate::remote_paging::{DCReqPayload, TIMEOUT_USEC};
-            use crate::KRdmaKit::rust_kernel_rdma_base::bindings::*;
-            use core::pin::Pin;
+            use crate::remote_paging::TIMEOUT_USEC;
             use os_network::block_on;
-            use os_network::timeout::TimeoutWRef;
 
-            let (dc_qp, lkey) = crate::get_dc_pool_service_mut()
-                .get_dc_qp_key(pool_idx)
+            let dc_qp = crate::get_dc_pool_service_mut()
+                .get_dc_qp(pool_idx)
                 .expect("failed to get DCQP");
 
-            let mut payload = DCReqPayload::default()
-                .set_laddr(new_page_pa)
-                .set_raddr(PhysAddr::decode(remote_pa)) // copy from src into dst
-                .set_sz(4096)
-                .set_lkey(*lkey)
-                .set_rkey(access_info.rkey)
-                .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-                .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
-                .set_ah_ptr(access_info.ah.get_inner())
-                .set_dc_access_key(access_info.dct_key as _)
-                .set_dc_num(access_info.dct_num);
+            let payload = DCReqPayload::new(
+                Arc::new(
+                    MemoryRegion::new_from_raw(dc_qp.get_qp().ctx().clone(), new_page_va as _, 4096).unwrap()
+                ),
+                0..4096,
+                true,
+                RDMAOp::READ,
+                access_info.rkey,
+                PhysAddr::decode(remote_pa), // copy remote to local
+                access_info.access_handler.clone(),
+            );
 
-            let mut payload = Pin::new_unchecked(&mut payload);
-            os_network::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
-
-            // now sending the RDMA request
-            dc_qp.post(&payload.as_ref()).unwrap(); // FIXME: it should never fail
+            dc_qp.post(&payload).unwrap(); // FIXME: it should never fail
 
             // Note, we do the prefetch things here
             // This can overlap with the networking requests latency
@@ -445,15 +433,15 @@ impl ChildDescriptor {
                         // The fallback path? DC cannot distinguish from failures
                         // unimplemented!();
                         crate::log::error!("fatal, timeout on reading the DC QP");
-                        Err(os_network::rdma::Err::Timeout)
+                        Err(os_network::rdma::Err::DatapathError(DatapathError::TimeoutError))
                     } else {
-                        Err(e.into_inner().unwrap())
+                        Err(os_network::rdma::Err::DatapathError(e.into_inner().unwrap()))
                     }
                 }
             }
         };
 
-        unsafe { crate::global_locks::get_ref()[pool_idx].unlock() };
+        crate::global_locks::get_ref()[pool_idx].unlock();
 
         return match res {
             Ok(_) => Some(new_page_p),
@@ -567,7 +555,7 @@ impl os_network::serialize::Serialize for ChildDescriptor {
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
         #[cfg(feature = "prefetch")]
-        let (prefetch_conn, lkey) =
+        let prefetch_conn =
             unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.pop_one_qp())? };
 
         #[cfg(feature = "prefetch")]
@@ -584,7 +572,7 @@ impl os_network::serialize::Serialize for ChildDescriptor {
             machine_info: machine_info,
 
             #[cfg(feature = "prefetch")]
-            prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info.unwrap()),
+            prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, access_info.unwrap()),
             #[cfg(feature = "eager-resume")]
             eager_fetched_pages: Default::default(),
             #[cfg(feature = "resume-profile")]
