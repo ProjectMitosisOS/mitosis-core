@@ -158,3 +158,11 @@ impl Future for RCConn {
         }
     }
 }
+
+impl Clone for RCConn {
+    fn clone(&self) -> Self {
+        Self {
+            rc: self.rc.clone(),
+        }
+    }
+}

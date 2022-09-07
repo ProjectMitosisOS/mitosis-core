@@ -1,4 +1,3 @@
-use alloc::sync::Arc;
 use KRdmaKit::{DatapathError, MemoryRegion};
 
 use KRdmaKit::queue_pairs::endpoint::DatagramEndpoint;
@@ -8,14 +7,14 @@ use crate::rdma::dc::DCConn;
 use crate::Future;
 
 pub struct DCRemoteDevice {
-    dc: Arc<DCConn>,
+    dc: DCConn,
 }
 
 #[allow(dead_code)]
 pub type DCKeys = super::MemoryKeys;
 
 impl DCRemoteDevice {
-    pub fn new(dc: Arc<DCConn>) -> Self {
+    pub fn new(dc: DCConn) -> Self {
         Self { dc: dc }
     }
 }
@@ -89,7 +88,7 @@ impl Future for DCRemoteDevice {
     type Error = crate::rdma::Err;
 
     fn poll<'a>(&'a mut self) -> crate::future::Poll<Self::Output, Self::Error> {
-        let res = unsafe { Arc::get_mut_unchecked(&mut self.dc) }.poll();
+        let res = self.dc.poll();
         match res {
             Ok(Async::Ready(res)) => {
                 if res.status == rust_kernel_rdma_base::ib_wc_status::IB_WC_SUCCESS {

@@ -176,7 +176,7 @@ fn test_dc_remote() -> Result<(), TestError> {
     let rkey = server_mr.rkey().0;
 
     // read 8 bytes from remote raddr to the local laddr
-    let mut remote_device = DCRemoteDevice::new(Arc::new(dc));
+    let mut remote_device = DCRemoteDevice::new(dc);
     unsafe {
         remote_device.read(
             endpoint.as_ref(),
@@ -317,7 +317,7 @@ fn test_rc_remote() -> Result<(), TestError> {
     let rkey = server_mr.rkey().0;
 
     // read 8 bytes from remote raddr to the local laddr
-    let mut remote_device = RCRemoteDevice::new(Arc::new(rc));
+    let mut remote_device = RCRemoteDevice::new(rc);
     unsafe { remote_device.read(&(), &raddr, &RCKeys::new(rkey), &mut laddr, &8) }.map_err(
         |_| {
             log::error!("Failed to issue read request to RCRemoteDevice.");
