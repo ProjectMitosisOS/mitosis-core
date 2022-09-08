@@ -119,7 +119,6 @@ impl crate::conn::Factory for UDFactory {
     }
 }
 
-#[derive(Default)]
 pub struct UDHyperMeta {
     pub gid: KRdmaKit::rdma_shim::bindings::ib_gid,
     pub service_id: u64,
@@ -127,11 +126,19 @@ pub struct UDHyperMeta {
     pub local_port: u8,
 }
 
+impl Default for UDHyperMeta {
+    fn default() -> Self {
+        // We use 1 as the default local port number
+        Self { local_port: 1 as u8, gid: Default::default(), service_id: Default::default(), qd_hint: Default::default()  }
+    }
+}
+
 #[derive(Default)]
 pub struct UDCreationMeta {
     pub port: u8,
 }
 
+#[derive(Debug)]
 pub enum UDMetaFactoryError {
     ControlpathError(ControlpathError),
     CMError(CMError),
