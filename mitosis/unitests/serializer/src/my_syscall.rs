@@ -1,11 +1,10 @@
 use alloc::vec;
 use alloc::vec::Vec;
-use KRdmaKit::rust_kernel_rdma_base::VmallocAllocator;
-use rust_kernel_linux_util::LevelFilter::Debug;
 
 use crate::linux_kernel_module::bindings::vm_area_struct;
 use crate::linux_kernel_module::c_types::*;
 use crate::*;
+use crate::KRdmaKit::rdma_shim::utils::VmallocAllocator;
 
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
