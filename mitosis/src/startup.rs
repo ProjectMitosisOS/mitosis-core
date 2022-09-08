@@ -169,6 +169,9 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
+        crate::ud_factories::drop();
+        crate::dc_factories::drop();
+
         crate::service_rpc::drop();
         crate::access_info_service::drop();
 
@@ -193,7 +196,7 @@ pub fn end_instance() {
     };
     end_rdma();
 
-    crate::log::info!("MITOSIS instance stopped, byte~")
+    crate::log::info!("MITOSIS instance stopped, bye~")
 }
 
 /// calculate the session ID of the remote end handler
