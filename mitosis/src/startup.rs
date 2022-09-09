@@ -39,7 +39,7 @@ pub fn check_global_configurations() {
     crate::log::info!("********* All configuration check passes !*********");
 }
 
-pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
+pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
     crate::log::info!("Try to start MITOSIS instance, init global services");
     check_global_configurations();
 
@@ -50,9 +50,8 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
         crate::max_cluster_size::init(config.max_cluster_size);
     };
 
-    let timer = KTimer::new();
 
-    start_rdma(&config).expect("fail to create RDMA context");
+    start_rdma(config).expect("fail to create RDMA context");
     crate::log::info!("Initialize RDMA context done");
 
     // high-level RDMA-related data structures
@@ -77,44 +76,29 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
             dc_factories.push(DCFactory::new(c));
         }
         crate::dc_factories::init(dc_factories);
-        
+
         crate::access_info_service::init(crate::dc_pool::AccessInfoPool::new(config.max_core_cnt));
     };
 
     // global lock
     {
         let mut locks = Vec::new();
-        for _ in 0..config.max_core_cnt { 
+        for _ in 0..config.max_core_cnt {
             locks.push(crate::linux_kernel_module::mutex::LinuxMutex::new(()));
         }
 
-        for i in 0..locks.len() { 
+        for i in 0..locks.len() {
             locks[i].init();
         }
 
         unsafe { crate::global_locks::init(locks) };
     }
 
-    // RPC service
-    unsafe {
-        crate::service_rpc::init(
-            crate::rpc_service::Service::new(&config).expect("Failed to create the RPC service. "),
-        );
-    };
-    crate::log::info!("RPC service initializes done");
-
-    // RPC caller pool
-    unsafe {
-        crate::service_caller_pool::init(
-            crate::rpc_caller_pool::CallerPool::new(&config)
-                .expect("Failed to create the RPC caller pool"),
-        )
-    };
 
     // DCQP & target pool
     unsafe {
         crate::dc_pool_service::init(
-            crate::dc_pool::DCPool::new(&config).expect("Failed to create DCQP pool"),
+            crate::dc_pool::DCPool::new(config).expect("Failed to create DCQP pool"),
         );
 
         #[cfg(feature = "prefetch")]
@@ -124,7 +108,7 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
         ));
 
         crate::dc_target_service::init(
-            crate::dc_pool::DCTargetPool::new(&config).expect("Failed to create DC Target pool"),
+            crate::dc_pool::DCTargetPool::new(config).expect("Failed to create DC Target pool"),
         )
     };
 
@@ -140,11 +124,13 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
         crate::global_pt_cache::init(crate::remote_pt_cache::RemotePageTableCache::default())
     };
 
+
+    unsafe {
+        crate::service_rpc::init(Default::default());
+        crate::service_caller_pool::init(Default::default())
+    };
     // TODO: other services
 
-    crate::log::info!("Start waiting for the RPC servers to start...");
-    crate::rpc_service::wait_handlers_ready_barrier(config.rpc_threads_num);
-    crate::log::info!("All RPC thread handlers initialized!");
 
     // establish an RPC to myself
     // for i in 0..config.rpc_threads_num {
@@ -158,11 +144,45 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
     // }
     // crate::log::info!("Probe myself RPC handlers done");
 
+
+    Some(())
+}
+
+pub fn init_rpc(config: &crate::Config,
+                rpc_worker: extern "C" fn(*mut crate::linux_kernel_module::c_types::c_void) -> i32) -> core::option::Option<()> {
+    // RPC service
+    unsafe {
+        crate::service_rpc::init(
+            crate::rpc_service::Service::new_with_worker(config, rpc_worker).expect("Failed to create the RPC service. "),
+        );
+    };
+    crate::log::info!("RPC service initializes done");
+
+    // RPC caller pool
+    unsafe {
+        crate::service_caller_pool::init(
+            crate::rpc_caller_pool::CallerPool::new(config)
+                .expect("Failed to create the RPC caller pool"),
+        )
+    };
+
+    crate::log::info!("Start waiting for the RPC servers to start...");
+    crate::rpc_service::wait_handlers_ready_barrier(config.rpc_threads_num);
+    crate::log::info!("All RPC thread handlers initialized!");
+
+    Some(())
+}
+
+pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
+    let timer = KTimer::new();
+
+    init_mitosis(&config)?;
+    init_rpc(&config, crate::rpc_service::Service::worker)?;
+
     crate::log::info!(
         "All initialization done, takes {} ms",
         timer.get_passed_usec() / 1000
     );
-
     Some(())
 }
 

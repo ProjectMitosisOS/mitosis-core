@@ -17,6 +17,7 @@ pub(crate) type UDCaller = Caller<UDReceiver, UDSession>;
 
 /// The pool maintains a thread_local_pool of callers
 /// Each CPU core can use the dedicated pool
+#[derive(Default)]
 pub struct CallerPool<'a> {
     // the major caller that is used by the clients
     pool: Vec<UDCaller>,
