@@ -5,14 +5,6 @@ use alloc::sync::Arc;
 
 use core::fmt::Write;
 
-use KRdmaKit::KDriver;
-use KRdmaKit::comm_manager::CMServer;
-use KRdmaKit::services::UnreliableDatagramAddressService;
-
-use rust_kernel_rdma_base::linux_kernel_module;
-use rust_kernel_rdma_base::*;
-use rust_kernel_linux_util as log;
-
 use os_network::block_on;
 use os_network::Receiver;
 use os_network::MetaFactory;
@@ -23,6 +15,13 @@ use os_network::bytes::ToBytes;
 use os_network::timeout::Timeout;
 use os_network::rdma::payload::ud::UDReqPayload;
 use os_network::ud_receiver::UDReceiverFactory;
+use os_network::KRdmaKit;
+
+use KRdmaKit::rdma_shim::bindings::*;
+use KRdmaKit::rdma_shim::{linux_kernel_module, log};
+use KRdmaKit::KDriver;
+use KRdmaKit::comm_manager::CMServer;
+use KRdmaKit::services::UnreliableDatagramAddressService;
 
 use krdma_test::*;
 
