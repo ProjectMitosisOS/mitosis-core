@@ -74,6 +74,7 @@ impl Clone for HandlerConnectInfo {
 /// Session ID mapping:
 ///    The RPC caller that connects to the machine (mac_id)'s (thread_id)'s:
 ///    * session_id = mac_id * max_rpc_threads + thread_id
+#[derive(Default)]
 pub struct Service {
     threads: Vec<JoinHandler>,
     connect_infos: Vec<HandlerConnectInfo>,
@@ -99,6 +100,7 @@ impl Service {
 }
 
 impl Service {
+    /// Deprecated
     pub fn new(config: &crate::Config) -> core::option::Option<Self> {
         let mut res = Self {
             threads: Vec::new(),
@@ -139,6 +141,48 @@ impl Service {
     }
 }
 
+impl Service {
+    pub fn new_with_worker(config: &crate::Config,
+                           worker: extern "C" fn(*mut c_void) -> i32) -> core::option::Option<Self> {
+        let mut res = Self {
+            threads: Vec::new(),
+            connect_infos: Vec::new(),
+        };
+
+        // init the RPC connect info
+        for i in 0..config.rpc_threads_num {
+            let nic_to_use = i % config.num_nics_used;
+            let local_context = unsafe { crate::rdma_contexts::get_ref().get(nic_to_use).unwrap() };
+            let qd_hint = Self::calculate_qd_hint(i);
+
+            res.connect_infos.push(HandlerConnectInfo {
+                gid: Explorer::gid_to_string(&local_context.query_gid(config.default_nic_port, 0).unwrap()),
+                service_id: crate::rdma_context::SERVICE_ID_BASE + nic_to_use as u64,
+                qd_hint: qd_hint,
+                local_port: config.default_nic_port,
+            });
+        }
+
+        for i in 0..config.rpc_threads_num {
+            let arg = Box::new(ThreadCTX {
+                id: i,
+                nic_to_use: i % config.num_nics_used,
+            });
+            let arg_ptr = Box::into_raw(arg);
+
+            let builder = kthread::Builder::new()
+                .set_name(alloc::format!("MITOSIS RPC handler Thread {}", i))
+                .set_parameter(arg_ptr as *mut c_void);
+            let handler = builder.spawn(worker).ok()?;
+            res.threads.push(handler);
+        }
+
+        crate::log::debug!("RPC service creation done: {:?}", res);
+
+        Some(res)
+    }
+}
+
 impl Drop for Service {
     fn drop(&mut self) {
         let total = self.threads.len();
@@ -170,7 +214,7 @@ impl Service {
     const YIELD_TIME_USEC: i64 = 2000; // 1ms
 
     #[allow(non_snake_case)]
-    extern "C" fn worker(ctx: *mut c_void) -> c_int {
+    pub(crate) extern "C" fn worker(ctx: *mut c_void) -> c_int {
         let arg = unsafe { Box::from_raw(ctx as *mut ThreadCTX) };
 
         // init the UD RPC hook
