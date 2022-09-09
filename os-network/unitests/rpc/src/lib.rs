@@ -1,19 +1,20 @@
 #![no_std]
 
 extern crate alloc;
+use alloc::sync::Arc;
+use alloc::vec;
+
+use core::fmt::Write;
+
+use os_network::bytes::*;
+use os_network::rpc::*;
+use os_network::KRdmaKit;
+use os_network::KRdmaKit::rdma_shim::{linux_kernel_module, log};
 
 use KRdmaKit::comm_manager::CMServer;
 use KRdmaKit::services::UnreliableDatagramAddressService;
-use alloc::sync::Arc;
-use alloc::vec;
-use core::fmt::Write;
-
-use rust_kernel_rdma_base::linux_kernel_module;
-use rust_kernel_linux_util as log;
 
 use krdma_test::*;
-use os_network::bytes::*;
-use os_network::rpc::*;
 
 #[derive(thiserror_no_std::Error, Debug)]
 pub enum TestError {
@@ -53,7 +54,7 @@ fn test_service() -> Result<(), TestError> {
     Ok(())
 }
 
-use rust_kernel_rdma_base::*;
+use KRdmaKit::rdma_shim::bindings::*;
 use KRdmaKit::KDriver;
 
 use os_network::datagram::msg::UDMsg;

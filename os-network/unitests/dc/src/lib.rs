@@ -8,20 +8,19 @@ use os_network::rdma::DCCreationMeta;
 use os_network::rdma::payload::RDMAOp;
 use os_network::rdma::payload::dc::DCReqPayload;
 use os_network::ud::{UDHyperMeta, UDFactory};
-
-use rust_kernel_rdma_base::*;
-use rust_kernel_linux_util as log;
-
-use KRdmaKit::{KDriver, MemoryRegion};
-use KRdmaKit::comm_manager::CMServer;
-use KRdmaKit::services::dc::DCTargetService;
-
+use os_network::KRdmaKit::rdma_shim::bindings::*;
+use os_network::KRdmaKit::rdma_shim::{linux_kernel_module, log};
+use os_network::KRdmaKit;
 use os_network::block_on;
 use os_network::MetaFactory;
 use os_network::conn::Factory;
 use os_network::timeout::Timeout;
 use os_network::Conn;
 use os_network::rdma::payload::{RDMAWR, LocalMR, Signaled};
+
+use KRdmaKit::{KDriver, MemoryRegion};
+use KRdmaKit::comm_manager::CMServer;
+use KRdmaKit::services::dc::DCTargetService;
 
 use krdma_test::*;
 

@@ -4,22 +4,19 @@ extern crate alloc;
 
 use alloc::sync::Arc;
 
-use KRdmaKit::services::ReliableConnectionServer;
-use KRdmaKit::comm_manager::CMServer;
-use KRdmaKit::MemoryRegion;
-
-use rust_kernel_rdma_base::linux_kernel_module;
-use rust_kernel_rdma_base::*;
-use KRdmaKit::KDriver;
-
-use rust_kernel_linux_util as log;
-
 use os_network::block_on;
+use os_network::KRdmaKit;
 use os_network::rdma::payload::rc::RCReqPayload;
 use os_network::conn::Factory;
 use os_network::timeout::Timeout;
 use os_network::rdma::payload::{RDMAOp, RDMAWR, LocalMR, Signaled};
 use os_network::{rdma, Conn};
+use os_network::KRdmaKit::rdma_shim::{linux_kernel_module, log};
+
+use KRdmaKit::services::ReliableConnectionServer;
+use KRdmaKit::comm_manager::CMServer;
+use KRdmaKit::MemoryRegion;
+use KRdmaKit::KDriver;
 
 use krdma_test::*;
 

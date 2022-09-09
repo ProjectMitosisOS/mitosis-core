@@ -4,13 +4,6 @@ extern crate alloc;
 
 use core::fmt::Write;
 
-use rust_kernel_linux_util as log;
-use rust_kernel_rdma_base::*;
-
-use KRdmaKit::comm_manager::CMServer;
-use KRdmaKit::services::UnreliableDatagramAddressService;
-use KRdmaKit::KDriver;
-
 use os_network::bytes::ToBytes;
 use os_network::conn::{Factory, MetaFactory};
 use os_network::datagram::msg::UDMsg;
@@ -19,6 +12,13 @@ use os_network::datagram::ud_receiver::*;
 use os_network::rpc::*;
 use os_network::timeout::Timeout;
 use os_network::block_on;
+use os_network::KRdmaKit;
+
+use KRdmaKit::rdma_shim::bindings::*;
+use KRdmaKit::rdma_shim::{linux_kernel_module, log};
+use KRdmaKit::comm_manager::CMServer;
+use KRdmaKit::services::UnreliableDatagramAddressService;
+use KRdmaKit::KDriver;
 
 use krdma_test::*;
 

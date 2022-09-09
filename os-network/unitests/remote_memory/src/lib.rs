@@ -5,6 +5,8 @@ extern crate alloc;
 use alloc::sync::Arc;
 use alloc::vec;
 
+use core::fmt::Write;
+
 use os_network::block_on;
 use os_network::bytes::*;
 use os_network::rdma::dc::DCFactory;
@@ -19,17 +21,14 @@ use os_network::ud::UDFactory;
 use os_network::ud::UDHyperMeta;
 use os_network::Factory;
 use os_network::MetaFactory;
+use os_network::KRdmaKit;
+use os_network::KRdmaKit::rdma_shim::{linux_kernel_module, log};
 
 use KRdmaKit::comm_manager::CMServer;
 use KRdmaKit::services::dc::DCTargetService;
 use KRdmaKit::services::ReliableConnectionServer;
 use KRdmaKit::KDriver;
 use KRdmaKit::MemoryRegion;
-
-use core::fmt::Write;
-
-use rust_kernel_linux_util as log;
-use rust_kernel_linux_util::linux_kernel_module;
 
 use krdma_test::*;
 
