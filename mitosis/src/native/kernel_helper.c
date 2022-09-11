@@ -333,6 +333,13 @@ void pmem_clear_pte_write(pte_t *pte)
   set_pte(pte, temp_pte);
 }
 
+void pmem_set_pte_write(pte_t *pte)
+{
+  pte_t temp_pte;
+  temp_pte = pte_set_flags(*pte, _PAGE_RW);
+  set_pte(pte, temp_pte);
+}
+
 unsigned int pmem_check_pte_write(pte_t *pte)
 {
     return pte_write(*pte);
