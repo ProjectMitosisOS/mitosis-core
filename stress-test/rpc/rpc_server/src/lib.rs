@@ -72,6 +72,7 @@ fn start_rpc_server() {
     // ctrl.reg_ud(qd_hint::read() as usize, server_ud.get_qp());
     let ud_service = UnreliableDatagramAddressService::create();
     let _server_cm = CMServer::new(service_id::read(), &ud_service, ctx.get_dev_ref());
+    ud_service.reg_qp(qd_hint::read() as usize, &server_ud.get_qp());
 
     // register callback and wait for requests
     let mut rpc_server = UDRPCHook::new(
