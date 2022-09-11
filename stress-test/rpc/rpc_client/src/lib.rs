@@ -3,23 +3,13 @@
 extern crate alloc;
 use alloc::format;
 use alloc::vec::Vec;
-use rust_kernel_linux_util::timer::KTimer;
-use rust_kernel_linux_util::string::ptr2string;
-use rust_kernel_linux_util::linux_kernel_module::c_types::c_void;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
-use rust_kernel_linux_util as log;
-
-use krdma_test::*;
+use os_network::KRdmaKit::comm_manager::CMServer;
+use os_network::KRdmaKit::comm_manager::Explorer;
+use os_network::KRdmaKit::services::UnreliableDatagramAddressService;
 use os_network::bytes::*;
 use os_network::rpc::*;
 use os_network::block_on;
-
-use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
-use KRdmaKit::rust_kernel_rdma_base::*;
-use KRdmaKit::KDriver;
-
 use os_network::timeout::Timeout;
 use os_network::rpc::header::MsgHeader;
 use os_network::datagram::msg::UDMsg;
@@ -28,11 +18,24 @@ use os_network::datagram::ud_receiver::*;
 use os_network::Factory;
 use os_network::MetaFactory;
 use os_network::serialize::Serialize;
+use os_network::KRdmaKit;
+
+use KRdmaKit::rdma_shim::linux_kernel_module;
+use KRdmaKit::rdma_shim::linux_kernel_module::c_types::*;
+use KRdmaKit::rdma_shim::log;
+use KRdmaKit::rdma_shim::rust_kernel_linux_util::string::ptr2string;
+
+use KRdmaKit::rdma_shim::rust_kernel_linux_util::kthread;
+use KRdmaKit::rdma_shim::rust_kernel_linux_util::timer::KTimer;
+use KRdmaKit::rdma_shim::bindings::*;
+use KRdmaKit::KDriver;
+
+use krdma_test::*;
 
 use mitosis_macros::{declare_module_param, declare_global};
 
-declare_module_param!(server_qd_hint, u64);
-declare_module_param!(client_qd_hint, u64);
+declare_module_param!(server_qd_hint, usize);
+declare_module_param!(client_qd_hint, usize);
 declare_module_param!(server_service_id, u64);
 declare_module_param!(client_service_id_base, u64);
 declare_module_param!(session_id_base, usize);
@@ -42,7 +45,7 @@ declare_module_param!(running_secs, i64);
 declare_module_param!(report_interval, i64);
 declare_module_param!(gid, *mut u8);
 
-declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
+declare_global!(KDRIVER, alloc::sync::Arc<os_network::KRdmaKit::KDriver>);
 declare_global!(COUNTERS, alloc::vec::Vec<u64>);
 
 struct WrappedPayload(rpc_common::payload::DefaultSizedPayload);
@@ -60,42 +63,49 @@ extern "C" fn stress_test_routine(id: *mut c_void) -> i32 {
     log::info!("start stress test client {}", id);
     log::info!("gid: {}", server_gid_str);
 
-    let ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    let ctx = driver.devices().into_iter().next().unwrap().open_context().unwrap();
     let factory = UDFactory::new(&ctx);
-    let client_ud = factory.create(()).unwrap();
+    let client_ud = factory.create(
+        UDCreationMeta {
+            port: 1, // Create with default port number 1
+        }
+    ).unwrap();
 
-    let ctrl = RCtrl::create(client_service_id, &ctx).unwrap();
-    ctrl.reg_ud(client_qd_hint::read() as usize, client_ud.get_qp());
+    // let ctrl = RCtrl::create(client_service_id, &ctx).unwrap();
+    // ctrl.reg_ud(client_qd_hint::read() as usize, client_ud.get_qp());
+    let ud_service = UnreliableDatagramAddressService::create();
+    let _server_cm = CMServer::new(client_service_id, &ud_service, ctx.get_dev_ref());
+    ud_service.reg_qp(client_qd_hint::read() as usize, &client_ud.get_qp());
 
-    let server_gid = os_network::rdma::RawGID::new(server_gid_str).unwrap();
-    let (endpoint, key) = factory
+    let server_gid = Explorer::string_to_gid(&server_gid_str).unwrap();
+    let endpoint = factory
         .create_meta(UDHyperMeta {
             gid: server_gid,
             service_id: server_service_id::read(),
             qd_hint: server_qd_hint::read(),
+            local_port: 1,
         })
         .unwrap();
-    log::info!("check endpoint, key: {:?}, {}", endpoint, key);
+    log::info!("check endpoint, key: {:?}", endpoint);
 
-    let lkey = unsafe { ctx.get_lkey() };
-    let mut client_session = client_ud.create((endpoint, key)).unwrap();
+    let mut client_session = client_ud.create(endpoint).unwrap();
     let mut client_receiver = UDReceiverFactory::new()
         .set_qd_hint(client_qd_hint::read() as _)
-        .set_lkey(lkey)
-        .create(client_ud);
+        .create(client_ud.clone());
 
     for _ in 0..12 {
-        client_receiver.post_recv_buf(UDMsg::new(4096, test_rpc_id::read())).unwrap();
+        client_receiver.post_recv_buf(UDMsg::new(4096, test_rpc_id::read(), client_ud.get_qp().ctx().clone())).unwrap();
     }
 
     // rpc connection request
-    let mut request = UDMsg::new(1024, test_rpc_id::read());
+    let mut request = UDMsg::new(1024, test_rpc_id::read(), client_ud.get_qp().ctx().clone());
     let req_sz = os_network::rpc::ConnectStubFactory::new(my_session_id)
         .generate(
             &UDHyperMeta {
-                gid: os_network::rdma::RawGID::new(ctx.get_gid_as_string()).unwrap(),
+                gid: ctx.query_gid(1, 0).unwrap(), // the default port is set to 1
                 service_id: client_service_id,
                 qd_hint: client_qd_hint::read(),
+                local_port: 1,
             },
             request.get_bytes_mut(),
         )
