@@ -19,7 +19,7 @@ use os_network::serialize::Serialize;
 use os_network::KRdmaKit;
 
 use KRdmaKit::rdma_shim::linux_kernel_module;
-use KRdmaKit::rdma_shim::utils::kthread;
+use KRdmaKit::rdma_shim::rust_kernel_linux_util::kthread;
 use KRdmaKit::rdma_shim::utils::KTimer;
 use KRdmaKit::rdma_shim::bindings::*;
 use KRdmaKit::rdma_shim::log;
