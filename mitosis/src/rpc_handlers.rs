@@ -60,7 +60,7 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     let (lid, gid) = (meta.lid, meta.gid);
 
     let reply = match buf {
-        Some((addr, len, _)) => {
+        Some((addr, len)) => {
             DescriptorLookupReply {
                 pa: addr.get_pa(),
                 sz: len,
