@@ -143,7 +143,7 @@ impl<'a> CallerPool<'a> {
 
             // init
             let client_ud = factory.create(
-                UDCreationMeta { port: 1 } // WTX: port is default to 1
+                UDCreationMeta { port: config.default_nic_port, }
             ).expect("failed to create RPC UD");
             ud_service.reg_qp(client_ud_hint, &client_ud.get_qp());
 
