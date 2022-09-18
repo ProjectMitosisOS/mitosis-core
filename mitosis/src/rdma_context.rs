@@ -1,8 +1,9 @@
 use alloc::vec::Vec;
 
-use os_network::KRdmaKit::{self, services::UnreliableDatagramAddressService, comm_manager::CMServer};
+use os_network::{KRdmaKit::{self, services::UnreliableDatagramAddressService, comm_manager::CMServer, services::dc::DCTargetService}, rdma::dc::DCFactory};
 
 pub const SERVICE_ID_BASE: u64 = 73; // not using 0 to prevent error
+pub const GLOBAL_DC_KEY: u64 = 73;
 
 /// Note: need to call `end_rdma` before destroying the kernel module
 /// Return
@@ -40,6 +41,16 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
     };
 
     unsafe {
+        let mut dc_targets = Vec::new();
+        for i in 0..config.num_nics_used {
+            let factory = DCFactory::new(crate::get_rdma_context_ref(i).unwrap());
+            let dct_target = factory.create_target(GLOBAL_DC_KEY, config.default_nic_port).unwrap();
+            dc_targets.push(dct_target);
+        }
+        crate::dc_target::init(dc_targets);
+    }
+
+    unsafe {
         let mut servers = Vec::new();
         for i in 0..config.num_nics_used {
             servers.push(
@@ -61,6 +72,7 @@ pub fn end_rdma() {
     unsafe {
         crate::rdma_cm_service::drop();
         crate::ud_service::drop();
+        crate::dc_target::drop();
         crate::rdma_contexts::drop();
         crate::rdma_driver::drop();
     };

@@ -172,6 +172,11 @@ declare_global!(
     alloc::vec::Vec<alloc::sync::Arc<crate::KRdmaKit::services::UnreliableDatagramAddressService>>
 );
 
+declare_global!(
+    dc_target,
+    alloc::vec::Vec<alloc::sync::Arc<crate::KRdmaKit::queue_pairs::DynamicConnectedTarget>>
+);
+
 #[inline]
 pub unsafe fn get_rdma_cm_server_ref(
     nic_idx: usize,

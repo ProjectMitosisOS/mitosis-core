@@ -92,13 +92,22 @@ impl RemotePagingService {
             .expect("failed to get DCQP").clone();
 
         let descriptor_buf = RMemory::new(d.sz, 0, dc_qp.get_qp().ctx().clone());
-        let point = caller.get_ss(session_id).unwrap().0.get_ss_meta();
+        let point = DatagramEndpoint::new(
+            dc_qp.get_qp().ctx(),
+            1, // local port is default to 1
+            d.lid,
+            d.gid,
+            0, // qpn, meaningless in dct
+            0, // qkey, meaningless in dct
+            d.dct_num,
+            d.dc_key,
+        ).unwrap();
 
         // read the descriptor from remote machine
         let mut remote_device = DCRemoteDevice::new(dc_qp);
         unsafe {
             remote_device.read(
-                point,
+                &point,
                 &d.pa,
                 &DCKeys::new(d.rkey),
                 &mut descriptor_buf.get_pa(),
