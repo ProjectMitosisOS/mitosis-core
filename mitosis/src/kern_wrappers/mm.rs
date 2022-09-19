@@ -68,6 +68,22 @@ impl MemoryDescriptor {
             pmem_flush_tlb_mm(self.mm_inner as *mut _);
         }
     }
+
+    // Walk the Linux page table, find the PTE corresponding
+    // to the target virtual address.
+    pub fn find_pte(
+        &mut self, 
+        addr: VirtAddrType
+    ) -> core::option::Option<&'static mut crate::bindings::pte_t> {
+        let pte_p = unsafe { 
+            crate::bindings::pmem_get_pte(
+                self.mm_inner as *const _ as *mut mm_struct, addr) 
+        };
+        if pte_p == core::ptr::null_mut() {
+            return None;
+        }
+        return unsafe { Some(&mut (*pte_p)) };
+    }
 }
 
 impl MemoryDescriptor {

@@ -69,6 +69,7 @@ void pmem_flush_tlb_all(void);
 void pmem_flush_tlb_mm(struct mm_struct *mm);
 
 void pmem_clear_pte_present(pte_t *pte);
+unsigned int pmem_check_pte_present(pte_t *pte);
 
 struct pt_regs *
 pmem_get_current_pt_regs(void);
@@ -174,7 +175,9 @@ void pmem_page_dup_rmap(struct page *page, bool compound);
 void pmem_page_free_rmap(struct page *page, bool compound);
 
 void pmem_clear_pte_write(pte_t *pte);
+void pmem_set_pte_write(pte_t *pte);
 unsigned int pmem_check_pte_write(pte_t *pte);
+
 struct page *
 pmem_pte_to_page(pte_t *pte);
 
