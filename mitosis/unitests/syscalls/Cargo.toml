@@ -16,6 +16,7 @@ default = ["mitosis","krdma-test",]
 
 [dependencies]
 krdma-test = {path="../../../deps/krcore/rust-kernel-rdma/krdma-test",optional = true}
+mitosis-protocol = {path="../../../mitosis-user-libs/mitosis-protocol"}
 mitosis = {path = "../../../mitosis", version="0.1.0", optional = true}
 
 [dev-dependencies]
