@@ -14,6 +14,9 @@ use KRdmaKit::{
 pub const MAX_MTU: usize = 4096;
 // 40: global routing header (GRH)
 pub const MAX_MSG_SZ: usize = MAX_MTU - 40;
+// max_send_wr: the maximum number of outstanding WRs that can be posted to the qp
+// set to 2048 for a ud qp
+pub const MAX_SEND_WR: u32 = 2048;
 
 pub struct UDFactory {
     rctx: Arc<Context>,
@@ -113,6 +116,7 @@ impl crate::conn::Factory for UDFactory {
         builder
             .allow_remote_rw()
             .allow_remote_atomic()
+            .set_max_send_wr(MAX_SEND_WR)
             .set_port_num(meta.port);
         let qp = builder.build_ud()?.bring_up_ud()?;
         Ok(UDDatagram { ud: qp, pending: 0 })
@@ -173,7 +177,9 @@ impl crate::conn::MetaFactory for UDFactory {
         let explorer = Explorer::new(self.get_context().get_dev_ref());
         let path = unsafe { explorer.resolve_inner(service_id, local_port, gid) }?;
         let querier = DatagramEndpointQuerier::create(&self.get_context(), local_port)?;
+        crate::log::info!("before query endpoint");
         let endpoint = querier.query(service_id, qd_hint, path)?;
+        crate::log::info!("after query endpoint");
         Ok(endpoint)
     }
 }
