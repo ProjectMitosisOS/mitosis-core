@@ -154,6 +154,18 @@ pub unsafe fn get_rdma_context_ref(
     crate::rdma_contexts::get_ref().get(nic_idx)
 }
 
+#[inline]
+pub unsafe fn get_max_caller_num()
+    -> usize {
+    *crate::max_caller_num::get_ref()
+}
+
+#[inline]
+pub unsafe fn get_mac_id()
+    -> usize {
+    *crate::mac_id::get_ref()
+}
+
 declare_global!(
     rdma_cm_service,
     alloc::vec::Vec<core::pin::Pin<alloc::boxed::Box<crate::RCtrl<'static>>>>
