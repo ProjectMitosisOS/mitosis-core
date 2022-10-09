@@ -177,9 +177,7 @@ impl crate::conn::MetaFactory for UDFactory {
         let explorer = Explorer::new(self.get_context().get_dev_ref());
         let path = unsafe { explorer.resolve_inner(service_id, local_port, gid) }?;
         let querier = DatagramEndpointQuerier::create(&self.get_context(), local_port)?;
-        crate::log::info!("before query endpoint");
         let endpoint = querier.query(service_id, qd_hint, path)?;
-        crate::log::info!("after query endpoint");
         Ok(endpoint)
     }
 }
