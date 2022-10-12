@@ -9,4 +9,4 @@
 	url = https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/mitosis-project/hashbrown.git
 [submodule "deps/krcore"]
 	path = deps/krcore
-	url = https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/krcore.git
+	url = https://gitlab-runner-ci:rKwzETD9QWVx7CSsPaJb@ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/krcore.git
