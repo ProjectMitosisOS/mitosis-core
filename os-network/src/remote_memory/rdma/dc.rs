@@ -80,7 +80,7 @@ impl crate::remote_memory::Device for DCRemoteDevice {
 ///
 /// # Errors:
 /// - `WCErr`: This error means that the work completion's status is not correct.
-/// See https://www.rdmamojo.com/2013/02/15/ibv_poll_cq/ for the meaning of each error status.
+/// See <https://www.rdmamojo.com/2013/02/15/ibv_poll_cq/> for the meaning of each error status.
 /// - `DatapathError`: This error means that there is something wrong in polling the work completion.
 impl Future for DCRemoteDevice {
     type Output = KRdmaKit::rdma_shim::bindings::ib_wc;
