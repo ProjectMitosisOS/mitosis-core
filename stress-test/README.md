@@ -151,7 +151,7 @@ Related tomls:
 
 * `templates-build/template-build-cpp.toml` for building the related C++ program
 * `templates-build/template-build-mitosis.toml` for building the mitosis with default configuration (only COW)
-* `templates-run/peak-rpc-kernel-module.toml` for running the stress test
+* `templates-run/peak-lean-container.toml` for running the stress test
 * `templates-build/template-clean.toml` for cleaning the environment
 
 Remark:
