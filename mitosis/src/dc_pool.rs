@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
 
+use rust_kernel_rdma_base::*;
+
 use os_network::rdma::{dc::*, DCCreationMeta};
 
 use hashbrown::HashMap;
@@ -122,9 +124,17 @@ use os_network::rdma::dc::DCTarget;
 /// The servers(Parents)-side DC targets pool
 /// FIXME: need lock protection
 pub struct DCTargetPool {
-    pool: Vec<Arc<DCTarget>>,
-    nic_idxs: Vec<usize>,
-    keys: Vec<u32>,
+    pool: Vec<DCTargetMeta>,
+}
+
+/// The DCTarget and its corresponding metadata
+/// We cache the lid/gid instead of querying them in any critical path
+pub struct DCTargetMeta {
+    pub(crate) target: Arc<DCTarget>,
+    pub(crate) nic_idx: usize,
+    pub(crate) rkey: u32,
+    pub(crate) lid: u16,
+    pub(crate) gid: ib_gid,
 }
 
 impl DCTargetPool {
@@ -134,34 +144,35 @@ impl DCTargetPool {
         crate::log::info!("Start initializing server-side DCTarget pool.");
 
         let mut pool = Vec::new();
-        let mut keys = Vec::new();
-        let mut nic_idxs = Vec::new();
-
         for i in 0..config.init_dc_targets {
             let nic_idx = i % config.num_nics_used;
             let factory =
                 unsafe { crate::get_dc_factory_ref(nic_idx).expect("Failed to get DC factory") };
+            let rkey = factory.get_context().rkey();
+            let target = factory
+                .create_target((i + 73) as _, config.default_nic_port)
+                .expect("Failed to create DC Target");
+            let meta = target
+                .get_datagram_meta()
+                .expect("Failed to get datagram meta from DCTarget QP");
+            
             pool.push(
-                factory
-                    .create_target((i + 73) as _, config.default_nic_port)
-                    .expect("Failed to create DC Target"),
+                DCTargetMeta {
+                    target,
+                    nic_idx,
+                    rkey,
+                    lid: meta.lid,
+                    gid: meta.gid,
+                }
             );
-            keys.push(factory.get_context().rkey());
-            nic_idxs.push(nic_idx);
         }
         Some(Self {
-            pool: pool,
-            keys: keys,
-            nic_idxs: nic_idxs,
+            pool,
         })
     }
 
-    pub fn pop_one(&mut self) -> core::option::Option<(Arc<DCTarget>, usize, u32)> {
-        let target = self.pool.pop().expect("No target left");
-        let key = self.keys.pop().unwrap();
-        let idx = self.nic_idxs.pop().unwrap();
-
-        Some((target, idx, key))
+    pub fn pop_one(&mut self) -> core::option::Option<DCTargetMeta> {
+        self.pool.pop()
     }
 
     // fill the dc target pool in the background
