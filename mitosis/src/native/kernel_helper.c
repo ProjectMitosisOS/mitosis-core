@@ -140,7 +140,7 @@ unsigned int pmem_check_pte_present(pte_t *pte)
 }
 
 // The higher 12 bit of a pte entry should be masked when we are extracting physical address
-#define X86_64_PTE_HIGHER_BIT_MASK (((long) 1 << 63) >> 11)
+#define X86_64_PTE_HIGHER_BIT_MASK ~(((long) 1 << 63) >> 11)
 
 unsigned long
 pmem_get_phy_from_pte(pte_t *pte)
