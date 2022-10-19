@@ -38,8 +38,8 @@ impl RDMADescriptor {
         let my = Self {
             service_id: 0, // deprecated field
             port_num: dc_target.port_num(),
-            gid: dc_target_meta.gid,
-            lid: dc_target_meta.lid,
+            gid: dc_target_meta.meta.gid,
+            lid: dc_target_meta.meta.lid,
 
             rkey: dc_target_meta.rkey,
             dct_key: dc_target.dc_key() as usize,
