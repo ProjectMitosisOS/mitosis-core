@@ -56,7 +56,7 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     let dc_target_idx = unsafe { crate::bindings::pmem_get_current_cpu()  as usize % (crate::dc_target::get_ref().len()) };
     let dc_target = unsafe { crate::dc_target::get_ref().get(dc_target_idx).unwrap() };
 
-    let meta = dc_target.get_datagram_meta().expect("should not fail");
+    let meta = unsafe { crate::dc_target_meta::get_ref().get(dc_target_idx).unwrap() };
     let (lid, gid) = (meta.lid, meta.gid);
 
     let reply = match buf {
