@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use rust_kernel_rdma_base::*;
 
-use os_network::rdma::{dc::*, DCCreationMeta};
+use os_network::{rdma::{dc::*, DCCreationMeta}, KRdmaKit::services::DatagramMeta};
 
 use hashbrown::HashMap;
 
@@ -133,8 +133,7 @@ pub struct DCTargetMeta {
     pub(crate) target: Arc<DCTarget>,
     pub(crate) nic_idx: usize,
     pub(crate) rkey: u32,
-    pub(crate) lid: u16,
-    pub(crate) gid: ib_gid,
+    pub(crate) meta: DatagramMeta,
 }
 
 impl DCTargetPool {
@@ -161,8 +160,7 @@ impl DCTargetPool {
                     target,
                     nic_idx,
                     rkey,
-                    lid: meta.lid,
-                    gid: meta.gid,
+                    meta,
                 }
             );
         }
