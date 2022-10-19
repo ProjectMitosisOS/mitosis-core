@@ -42,12 +42,16 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
 
     unsafe {
         let mut dc_targets = Vec::new();
+        let mut dc_target_metas = Vec::new();
         for i in 0..config.num_nics_used {
             let factory = DCFactory::new(crate::get_rdma_context_ref(i).unwrap());
             let dct_target = factory.create_target(GLOBAL_DC_KEY, config.default_nic_port).unwrap();
+            let dct_target_meta = dct_target.get_datagram_meta().expect("should not fail");
             dc_targets.push(dct_target);
+            dc_target_metas.push(dct_target_meta);
         }
         crate::dc_target::init(dc_targets);
+        crate::dc_target_meta::init(dc_target_metas);
     }
 
     unsafe {
@@ -72,6 +76,7 @@ pub fn end_rdma() {
     unsafe {
         crate::rdma_cm_service::drop();
         crate::ud_service::drop();
+        crate::dc_target_meta::drop();
         crate::dc_target::drop();
         crate::rdma_contexts::drop();
         crate::rdma_driver::drop();
