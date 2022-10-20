@@ -1,9 +1,6 @@
 use super::header::*;
 use crate::bytes::BytesMut;
 
-#[allow(unused_imports)]
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
-
 pub struct ConnectStubFactory(usize);
 
 impl ConnectStubFactory {

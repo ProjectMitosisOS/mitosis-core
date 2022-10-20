@@ -8,8 +8,8 @@ export c_flags
 export UTEST
 
 $(src)/target/$(TARGET)/debug/lib%.a: cargo_will_determine_dependencies
-	cd $(src)/$(TEST_PATH); CARGO_TARGET_DIR=../target $(CARGO) build -Z build-std=core,alloc --target=$(TARGET) --features "mitosis os-network KRdmaKit rust-kernel-linux-util krdma-test cow page-cache" --no-default-features
-	cd $(src)/$(TEST_PATH); CARGO_TARGET_DIR=../target $(CARGO) doc --quiet -Z build-std=core,alloc --target=$(TARGET) 
+	cd $(src)/$(TEST_PATH); CARGO_TARGET_DIR=../target $(CARGO) build -Z build-std=core,alloc --target=$(TARGET) --features "mitosis krdma-test cow page-cache" --no-default-features
+	cd $(src)/$(TEST_PATH); CARGO_TARGET_DIR=../target $(CARGO) doc --quiet -Z build-std=core,alloc --target=$(TARGET)
 
 .PHONY: cargo_will_determine_dependencies
 

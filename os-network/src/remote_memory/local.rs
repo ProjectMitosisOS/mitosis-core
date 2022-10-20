@@ -18,23 +18,35 @@ impl<KeyType, LocationType, IOResult> LocalDevice<KeyType, LocationType, IOResul
     }
 }
 
+/// Read/Write memory in local device
+///
+/// # Parameters:
+/// read:
+/// - `addr`: The virtual address of the target memory region to read from
+/// - `to`: The target memory region described by `BytesMut` to write to
+/// 
+/// write:
+/// - `addr`: The virtual address of the target memory region to write to
+/// - `payload`: The target memory region described by `BytesMut` to read from
+///
 impl<KeyType, LocationType,IO> super::Device for LocalDevice<KeyType, LocationType,IO> {
     // local memory read/write should succeed or crash
-    type Address = u64;
+    type RemoteMemory = u64;
     type Location = LocationType;
     type Key = KeyType;
     type IOResult = IO;
     type LocalMemory = BytesMut;
+    type Size = ();
 
-    /// the addr must be a valid virtual address that can be read by the kernel
     unsafe fn read(
         &mut self,
         _loc: &Self::Location,
-        addr: &Self::Address,
+        addr: &Self::RemoteMemory,
         _key: &Self::Key,
         to: &mut Self::LocalMemory,
+        _size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
-        // to do: shall we check the validity of the in-passing address?
+        // TODO: shall we check the validity of the in-passing address?
         to.copy(&BytesMut::from_raw(*addr as _, to.len()), 0);
         Ok(())
     }
@@ -43,9 +55,10 @@ impl<KeyType, LocationType,IO> super::Device for LocalDevice<KeyType, LocationTy
     unsafe fn write(
         &mut self,
         _loc: &Self::Location,
-        addr: &Self::Address,
+        addr: &Self::RemoteMemory,
         _key: &Self::Key,
-        payload: &Self::LocalMemory,
+        payload: &mut Self::LocalMemory,
+        _size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
         BytesMut::from_raw(*addr as _, payload.len()).copy(payload, 0);
         Ok(())

@@ -7,15 +7,14 @@ use crate::{bytes::ToBytes, conn::*};
 /// The hook will receive datagram requests, and call the RPC callback correspondingly.
 /// * Factory: the connection factory that creates the session
 /// * R: Receiver
-pub struct RPCHook<'a, 'b, F, R, MF>
+pub struct RPCHook<'a, F, R, MF>
 where
-    F: 'a + RPCFactory,
+    F: RPCFactory,
     R: Receiver,
-    Self: 'a,
 {
-    service: Service<'b>,
+    service: Service<'a>,
     session_factory: F,
-    meta_factory: &'a MF,
+    meta_factory: Arc<MF>,
     transport: R,
     connected_sessions: HashMap<usize, (F::ConnType, R::MsgBuf)>,
 
@@ -23,21 +22,21 @@ where
     analysis: super::analysis::RPCAnalysis,
 }
 
-impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
+impl<'a, F, R, MF> RPCHook<'a, F, R, MF>
 where
     F: RPCFactory,
     R: Receiver,
 {
-    pub fn get_mut_service(&mut self) -> &mut Service<'b> {
+    pub fn get_mut_service(&mut self) -> &mut Service<'a> {
         &mut self.service
     }
 }
 
 use super::header_factory::*;
 
-impl<'a, 'b, F, R, MF> RPCHook<'a, 'b, F, R, MF>
+impl<'a, F, R, MF> RPCHook<'a, F, R, MF>
 where
-    F: RPCFactory + 'a,
+    F: RPCFactory,
     // we need to ensure that the polled result can be sent back to
     R: Receiver<
         Output = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
@@ -47,7 +46,7 @@ where
     <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload: ToBytes,
     <F as RPCFactory>::ConnType: crate::future::Future,
 {
-    pub fn new(meta_f: &'a MF, factory: F, transport: R) -> Self {
+    pub fn new(meta_f: Arc<MF>, factory: F, transport: R) -> Self {
         Self {
             service: Service::new(),
             meta_factory: meta_f,
@@ -103,16 +102,17 @@ where
 
 #[allow(unused_imports)]
 use super::header::*;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
-impl<'a, 'b, F, R, MF> Future for RPCHook<'a, 'b, F, R, MF>
+impl<'a, F, R, MF> Future for RPCHook<'a, F, R, MF>
 where
-    F: RPCFactory + 'a,
+    F: RPCFactory,
     // we need to ensure that the polled result can be sent back to
     R: Receiver<
         Output = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
         MsgBuf = <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload,
         IOResult = <R as Future>::Error,
+    > + GetContext<
+        Context = <<<F as RPCFactory>::ConnType as RPCConn>::ReqPayload as AllocMsgBuf>::Context,
     >,
     <<F as RPCFactory>::ConnType as RPCConn>::ReqPayload: ToBytes,
     MF: MetaFactory<Meta = F::ConnMeta>,
@@ -169,7 +169,7 @@ where
                                 .create(connect_meta)
                                 .map_err(|_| Error::session_creation_error())?;
 
-                            let session_buf = R::MsgBuf::create(R::MTU, 0);
+                            let session_buf = R::MsgBuf::create(R::MTU, 0, self.transport.get_context());
 
                             // add to my connected session
                             self.connected_sessions
@@ -257,9 +257,9 @@ where
 
 use core::fmt::{Debug, Display, Formatter};
 
-impl<'a, 'b, F, R, MF> Debug for RPCHook<'a, 'b, F, R, MF>
+impl<'a, F, R, MF> Debug for RPCHook<'a, F, R, MF>
 where
-    F: 'a + RPCFactory,
+    F: RPCFactory,
     R: Receiver,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
@@ -274,9 +274,9 @@ where
     }
 }
 
-impl<'a, 'b, F, R, MF> Display for RPCHook<'a, 'b, F, R, MF>
+impl<'a, F, R, MF> Display for RPCHook<'a, F, R, MF>
 where
-    F: 'a + RPCFactory,
+    F: RPCFactory,
     R: Receiver,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {

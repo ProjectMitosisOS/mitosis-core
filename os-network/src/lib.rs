@@ -34,8 +34,8 @@ pub mod rpc;
 pub mod rdma;
 
 #[allow(unused_imports)]
-pub(crate) use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util as log;
-pub(crate) use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
+pub(crate) use rust_kernel_rdma_base::rust_kernel_linux_util as log;
+pub(crate) use rust_kernel_rdma_base::linux_kernel_module;
 
 #[allow(unused_imports)]
 pub use KRdmaKit; // expose to others
@@ -57,7 +57,7 @@ pub fn block_on<F: Future>(f: &mut F) -> Result<F::Output, F::Error> {
 #[allow(non_snake_case)]
 pub fn block_on_w_yield<F: Future>(f: &mut F) -> Result<F::Output, F::Error> {
     use future::Async;
-    use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread::yield_now;
+    use rust_kernel_linux_util::kthread::yield_now;
 
     loop {
         match f.poll() {

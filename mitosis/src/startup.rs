@@ -6,6 +6,7 @@ use crate::linux_kernel_module;
 use rust_kernel_linux_util::timer::KTimer;
 
 use alloc::vec::Vec;
+use alloc::sync::Arc;
 
 pub fn check_global_configurations() {
     if cfg!(feature = "eager-resume") {
@@ -61,7 +62,7 @@ pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
 
         let mut ud_factories = Vec::new();
         for c in crate::rdma_contexts::get_ref() {
-            ud_factories.push(UDFactory::new(c));
+            ud_factories.push(Arc::new(UDFactory::new(c)));
         }
         crate::ud_factories::init(ud_factories);
     };
@@ -114,8 +115,9 @@ pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
     // Global shadow process service
     unsafe { crate::sp_service::init(crate::shadow_process_service::ShadowProcessService::new()) };
 
-    //  Memory pool for the shadow process service
-    unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size)) };
+    // Memory pool for the shadow process service
+    // The context is not important here as we only allocate a slice of memory
+    unsafe { crate::mem_pool::init(crate::mem_pools::MemPool::new(config.mem_pool_size, crate::get_rdma_context_ref(0).unwrap().clone())) };
 
     // cache for storing the remote page table cache
     unsafe {
@@ -187,6 +189,9 @@ pub fn start_instance(config: crate::Config) -> core::option::Option<()> {
 pub fn end_instance() {
     crate::log::info!("Stop MITOSIS instance, start cleaning up...");
     unsafe {
+        crate::ud_factories::drop();
+        crate::dc_factories::drop();
+
         crate::service_rpc::drop();
         crate::access_info_service::drop();
 
@@ -211,7 +216,7 @@ pub fn end_instance() {
     };
     end_rdma();
 
-    crate::log::info!("MITOSIS instance stopped, byte~")
+    crate::log::info!("MITOSIS instance stopped, bye~")
 }
 
 /// calculate the session ID of the remote end handler
@@ -220,7 +225,7 @@ pub fn calculate_session_id(mac_id: usize, thread_id: usize, max_callers: usize)
     mac_id * max_callers + thread_id
 }
 
-use os_network::ud::UDHyperMeta;
+use os_network::{ud::UDHyperMeta, KRdmaKit::comm_manager::Explorer};
 
 /// Connect the RPC session to the remote nodes
 ///
@@ -236,6 +241,7 @@ pub fn probe_remote_rpc_end(
     for i in 0..len {
         let session_id = calculate_session_id(remote_machine_id, i, len);
         let my_session_id = calculate_session_id(unsafe { *crate::mac_id::get_ref() }, i, len);
+        let gid = Explorer::string_to_gid(&connect_info.gid).ok()?;
         // assert_ne!(session_id, my_session_id);
 
         unsafe { crate::get_rpc_caller_pool_mut() }.connect_session_at(
@@ -244,9 +250,10 @@ pub fn probe_remote_rpc_end(
             my_session_id,
             UDHyperMeta {
                 // the remote machine's RDMA gid. Since we are unit test, we use the local gid
-                gid: os_network::rdma::RawGID::new(connect_info.gid.clone()).unwrap(),
+                gid,
                 service_id: connect_info.service_id,
                 qd_hint: connect_info.qd_hint,
+                local_port: connect_info.local_port,
             },
         )?;
     }

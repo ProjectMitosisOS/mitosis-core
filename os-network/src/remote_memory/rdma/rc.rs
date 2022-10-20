@@ -1,98 +1,112 @@
 use alloc::sync::Arc;
-
-use core::marker::PhantomData;
-use core::pin::Pin;
+use KRdmaKit::{DatapathError, MemoryRegion};
 
 use crate::conn::Conn;
+use crate::future::Async;
+use crate::rdma::payload::rc::RCReqPayload;
+use crate::rdma::payload::RDMAOp;
 use crate::rdma::rc::RCConn;
+use crate::Future;
 
-use KRdmaKit::rust_kernel_rdma_base::{ib_rdma_wr, ib_send_flags, ib_wr_opcode};
-
-pub struct RCRemoteDevice<'a, LocalMemory> {
-    rc: Arc<RCConn<'a>>,
-    phantom: PhantomData<LocalMemory>,
+pub struct RCRemoteDevice {
+    rc:RCConn,
 }
 
 pub type RCKeys = super::MemoryKeys;
 
-impl RCKeys {
-    pub fn new(lkey: u32, rkey: u32) -> Self {
-        Self {
-            lkey: lkey,
-            rkey: rkey,
-        }
+impl RCRemoteDevice {
+    pub fn new(rc:RCConn) -> Self {
+        Self { rc: rc }
     }
 }
 
-impl<'a, LocalMemory> RCRemoteDevice<'a, LocalMemory> {
-    pub fn new(rc: Arc<RCConn<'a>>) -> Self {
-        Self {
-            rc: rc,
-            phantom: PhantomData,
-        }
-    }
-}
-
-type RCReqPayload = crate::rdma::payload::Payload<ib_rdma_wr>;
-
-impl<LocalMemory> crate::remote_memory::Device for RCRemoteDevice<'_, LocalMemory>
-where
-    LocalMemory: crate::remote_memory::ToPhys,
-{
-    // remote memory read/write will succeed or return rdma specific error
-    type Address = u64;
+/// Read/Write memory from remote device with physical memory addresss with DC qp
+///
+/// # Parameters:
+/// - `addr`: The remote physical address of the target memory region
+/// - `key`: The remote memory key
+/// - `to`: The local physical address of the local target memory region
+/// - `size`: The size of the target memory region
+///
+/// # Errors:
+/// - `DatapathError`: There is something wrong in the data path.
+///
+impl crate::remote_memory::Device for RCRemoteDevice {
+    type RemoteMemory = u64;
     type Location = ();
     type Key = RCKeys;
-    type IOResult = crate::rdma::Err;
-    type LocalMemory = LocalMemory;
+    type IOResult = DatapathError;
+    type LocalMemory = u64;
+    type Size = usize;
 
     unsafe fn read(
         &mut self,
         _loc: &Self::Location,
-        addr: &Self::Address,
+        addr: &Self::RemoteMemory,
         key: &Self::Key,
         to: &mut Self::LocalMemory,
+        size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
-        let mut payload = RCReqPayload::default()
-            .set_laddr(to.to_phys().0)
-            .set_raddr(*addr)
-            .set_sz(to.to_phys().1)
-            .set_lkey(key.lkey)
-            .set_rkey(key.rkey)
-            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ);
-
-        let mut payload = Pin::new_unchecked(&mut payload);
-        let rc = Arc::get_mut_unchecked(&mut self.rc);
-        crate::rdma::payload::Payload::<ib_rdma_wr>::finalize(payload.as_mut());
-
-        rc.post(&payload.as_ref())?;
-        crate::block_on(rc)?;
-        Ok(())
+        let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
+        let mr = Arc::new(
+            MemoryRegion::new_from_raw(self.rc.get_qp().ctx().clone(), vaddr as _, *size).unwrap(),
+        );
+        let range = 0..*size as u64;
+        let signaled = true;
+        let op = RDMAOp::READ;
+        let rkey = key.rkey;
+        let raddr = *addr;
+        let payload = RCReqPayload::new(mr, range, signaled, op, rkey, raddr);
+        self.rc.post(&payload)
     }
 
     unsafe fn write(
         &mut self,
         _loc: &Self::Location,
-        addr: &Self::Address,
+        addr: &Self::RemoteMemory,
         key: &Self::Key,
-        payload: &Self::LocalMemory,
+        to: &mut Self::LocalMemory,
+        size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
-        let mut payload = RCReqPayload::default()
-            .set_laddr(payload.to_phys().0)
-            .set_raddr(*addr)
-            .set_sz(payload.to_phys().1)
-            .set_lkey(key.lkey)
-            .set_rkey(key.rkey)
-            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-            .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE);
+        let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
+        let mr = Arc::new(
+            MemoryRegion::new_from_raw(self.rc.get_qp().ctx().clone(), vaddr as _, *size).unwrap(),
+        );
+        let range = 0..*size as u64;
+        let signaled = true;
+        let op = RDMAOp::WRITE;
+        let rkey = key.rkey;
+        let raddr = *addr;
+        let payload = RCReqPayload::new(mr, range, signaled, op, rkey, raddr);
+        self.rc.post(&payload)
+    }
+}
 
-        let mut payload = Pin::new_unchecked(&mut payload);
-        let rc = Arc::get_mut_unchecked(&mut self.rc);
-        crate::rdma::payload::Payload::<ib_rdma_wr>::finalize(payload.as_mut());
+/// Poll the completion from the underlying device
+///
+/// # Errors:
+/// - `WCErr`: This error means that the work completion's status is not correct.
+/// See <https://www.rdmamojo.com/2013/02/15/ibv_poll_cq/> for the meaning of each error status.
+/// - `DatapathError`: This error means that there is something wrong in polling the work completion.
+impl Future for RCRemoteDevice {
+    type Output = KRdmaKit::rdma_shim::bindings::ib_wc;
 
-        rc.post(&payload.as_ref())?;
-        crate::block_on(rc)?;
-        Ok(())
+    type Error = crate::rdma::Err;
+
+    fn poll<'a>(&'a mut self) -> crate::future::Poll<Self::Output, Self::Error> {
+        let res = self.rc.poll();
+        match res {
+            Ok(Async::Ready(res)) => {
+                if res.status == rust_kernel_rdma_base::ib_wc_status::IB_WC_SUCCESS {
+                    Ok(Async::Ready(res))
+                } else {
+                    Err(crate::rdma::Err::WCErr(unsafe {
+                        core::mem::transmute(res.status)
+                    }))
+                }
+            }
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(e) => Err(crate::rdma::Err::DatapathError(e)),
+        }
     }
 }

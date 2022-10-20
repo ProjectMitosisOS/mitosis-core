@@ -1,6 +1,8 @@
 use alloc::vec::Vec;
 
-use os_network::rdma::dc::*;
+use rust_kernel_rdma_base::*;
+
+use os_network::{rdma::{dc::*, DCCreationMeta}, KRdmaKit::services::DatagramMeta};
 
 use hashbrown::HashMap;
 
@@ -8,8 +10,8 @@ use hashbrown::HashMap;
 use crate::linux_kernel_module;
 
 /// The clients(children)-side DCQP pool
-pub struct DCPool<'a> {
-    pool: Vec<(DCConn<'a>, u32)>,
+pub struct DCPool {
+    pool: Vec<DCConn>,
     nic_idxs: Vec<usize>,
 }
 
@@ -52,12 +54,8 @@ impl Drop for AccessInfoPool {
     }
 }
 
-impl<'a> DCPool<'a> {
-    pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&mut DCConn<'a>> {
-        self.pool.get_mut(idx).map(|v| &mut v.0)
-    }
-
-    pub fn get_dc_qp_key(&mut self, idx: usize) -> core::option::Option<&mut (DCConn<'a>, u32)> {
+impl DCPool {
+    pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&mut DCConn> {
         self.pool.get_mut(idx)
     }
 
@@ -69,37 +67,31 @@ impl<'a> DCPool<'a> {
     /// This function is not **thread-safe**,
     /// must be used by a single thread / protected by a mutex
     #[inline]
-    pub fn pop_one_qp(&mut self) -> core::option::Option<(DCConn<'a>, u32)> {
+    pub fn pop_one_qp(&mut self) -> core::option::Option<DCConn> {
         self.pool.pop()
     }
 
     #[inline]
     pub fn create_one_qp(&mut self) {
         let nic_idx = 0;
-        self.pool.push((
+        self.pool.push(
             unsafe { crate::get_dc_factory_ref(nic_idx) }
                 .expect("fatal, should not fail to create dc factory")
-                .create(())
-                .expect("Failed to create DC QP"),
-            unsafe {
-                crate::get_dc_factory_ref(nic_idx)
-                    .expect("fatal, should not fail to create dc factory")
-                    .get_context()
-                    .get_lkey()
-            },
-        ));
+                .create(DCCreationMeta { port: 1 }) // WTX: port is default to 1
+                .expect("Failed to create DC QP")
+        );
     }
 
     /// Arg: DCQP, its corresponding lkey
     #[inline]
-    pub fn push_one_qp(&mut self, qp: (DCConn<'a>, u32)) {
+    pub fn push_one_qp(&mut self, qp: DCConn) {
         self.pool.push(qp)
     }
 }
 
 use os_network::Factory;
 
-impl<'a> DCPool<'a> {
+impl DCPool {
     pub fn new(config: &crate::Config) -> core::option::Option<Self> {
         crate::log::info!("Start initializing client-side DCQP pool.");
 
@@ -108,18 +100,14 @@ impl<'a> DCPool<'a> {
 
         for i in 0..config.max_core_cnt {
             let nic_idx = i % config.num_nics_used;
-            res.push((
+            res.push(
                 unsafe { crate::get_dc_factory_ref(nic_idx) }
                     .expect("fatal, should not fail to create dc factory")
-                    .create(())
-                    .expect("Failed to create DC QP"),
-                unsafe {
-                    crate::get_dc_factory_ref(nic_idx)
-                        .expect("fatal, should not fail to create dc factory")
-                        .get_context()
-                        .get_lkey()
-                },
-            ));
+                    .create(
+                        DCCreationMeta { port: config.default_nic_port }
+                    )
+                    .expect("Failed to create DC QP")
+            );
             nic_idxs.push(nic_idx);
         }
 
@@ -136,9 +124,16 @@ use os_network::rdma::dc::DCTarget;
 /// The servers(Parents)-side DC targets pool
 /// FIXME: need lock protection
 pub struct DCTargetPool {
-    pool: Vec<Arc<DCTarget>>,
-    nic_idxs: Vec<usize>,
-    keys: Vec<u32>,
+    pool: Vec<DCTargetMeta>,
+}
+
+/// The DCTarget and its corresponding metadata
+/// We cache the lid/gid instead of querying them in any critical path
+pub struct DCTargetMeta {
+    pub(crate) target: Arc<DCTarget>,
+    pub(crate) nic_idx: usize,
+    pub(crate) rkey: u32,
+    pub(crate) meta: DatagramMeta,
 }
 
 impl DCTargetPool {
@@ -148,34 +143,34 @@ impl DCTargetPool {
         crate::log::info!("Start initializing server-side DCTarget pool.");
 
         let mut pool = Vec::new();
-        let mut keys = Vec::new();
-        let mut nic_idxs = Vec::new();
-
         for i in 0..config.init_dc_targets {
             let nic_idx = i % config.num_nics_used;
             let factory =
                 unsafe { crate::get_dc_factory_ref(nic_idx).expect("Failed to get DC factory") };
+            let rkey = factory.get_context().rkey();
+            let target = factory
+                .create_target((i + 73) as _, config.default_nic_port)
+                .expect("Failed to create DC Target");
+            let meta = target
+                .get_datagram_meta()
+                .expect("Failed to get datagram meta from DCTarget QP");
+            
             pool.push(
-                factory
-                    .create_target((i + 73) as _)
-                    .expect("Failed to create DC Target"),
+                DCTargetMeta {
+                    target,
+                    nic_idx,
+                    rkey,
+                    meta,
+                }
             );
-            keys.push(unsafe { factory.get_context().get_rkey() });
-            nic_idxs.push(nic_idx);
         }
         Some(Self {
-            pool: pool,
-            keys: keys,
-            nic_idxs: nic_idxs,
+            pool,
         })
     }
 
-    pub fn pop_one(&mut self) -> core::option::Option<(Arc<DCTarget>, usize, u32)> {
-        let target = self.pool.pop().expect("No target left");
-        let key = self.keys.pop().unwrap();
-        let idx = self.nic_idxs.pop().unwrap();
-
-        Some((target, idx, key))
+    pub fn pop_one(&mut self) -> core::option::Option<DCTargetMeta> {
+        self.pool.pop()
     }
 
     // fill the dc target pool in the background

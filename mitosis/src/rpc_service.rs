@@ -1,12 +1,11 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
+use os_network::KRdmaKit::comm_manager::Explorer;
 use rust_kernel_linux_util::kthread;
 use rust_kernel_linux_util::kthread::JoinHandler;
 
 use rust_kernel_linux_util::linux_kernel_module::c_types::{c_int, c_void};
-
-use crate::linux_kernel_module;
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
@@ -24,7 +23,8 @@ pub(crate) fn wait_handlers_ready_barrier(wait_num: usize) {
 pub struct HandlerConnectInfo {
     pub gid: alloc::string::String,
     pub service_id: u64,
-    pub qd_hint: u64,
+    pub qd_hint: usize,
+    pub local_port: u8,
 }
 
 impl HandlerConnectInfo {
@@ -35,6 +35,11 @@ impl HandlerConnectInfo {
     /// * tid: the remote RPC id
     #[inline]
     pub fn create(gid: &alloc::string::String, nic_idx: u64, tid: usize) -> Self {
+        Self::create_with_port(gid, nic_idx, tid, 1)
+    }
+
+    #[inline]
+    pub fn create_with_port(gid: &alloc::string::String, nic_idx: u64, tid: usize, port_num: u8) -> Self {
         let (service_id, qd_hint) = (
             crate::rdma_context::SERVICE_ID_BASE as u64
                 // FIXME! we assume that the remote machine has the same number of NICs used
@@ -48,6 +53,7 @@ impl HandlerConnectInfo {
             gid: gid.clone(),
             service_id,
             qd_hint,
+            local_port: port_num,
         }
     }
 }
@@ -58,6 +64,7 @@ impl Clone for HandlerConnectInfo {
             gid: self.gid.clone(),
             service_id: self.service_id,
             qd_hint: self.qd_hint,
+            local_port: self.local_port,
         }
     }
 }
@@ -107,9 +114,10 @@ impl Service {
             let qd_hint = Self::calculate_qd_hint(i);
 
             res.connect_infos.push(HandlerConnectInfo {
-                gid: local_context.get_gid_as_string(),
+                gid: Explorer::gid_to_string(&local_context.query_gid(config.default_nic_port, 0).ok()?),
                 service_id: crate::rdma_context::SERVICE_ID_BASE + nic_to_use as u64,
-                qd_hint: qd_hint as u64,
+                qd_hint: qd_hint,
+                local_port: config.default_nic_port,
             });
         }
 
@@ -148,9 +156,10 @@ impl Service {
             let qd_hint = Self::calculate_qd_hint(i);
 
             res.connect_infos.push(HandlerConnectInfo {
-                gid: local_context.get_gid_as_string(),
+                gid: Explorer::gid_to_string(&local_context.query_gid(config.default_nic_port, 0).unwrap()),
                 service_id: crate::rdma_context::SERVICE_ID_BASE + nic_to_use as u64,
-                qd_hint: qd_hint as u64,
+                qd_hint: qd_hint,
+                local_port: config.default_nic_port,
             });
         }
 
@@ -209,40 +218,37 @@ impl Service {
         let arg = unsafe { Box::from_raw(ctx as *mut ThreadCTX) };
 
         // init the UD RPC hook
-        type UDRPCHook<'a, 'b> =
-        os_network::rpc::hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
+        type UDRPCHook<'a> =
+            os_network::rpc::hook::RPCHook<'a, UDDatagram, UDReceiver, UDFactory>;
 
         let local_context = unsafe { crate::rdma_contexts::get_ref().get(arg.nic_to_use).unwrap() };
-        let lkey = unsafe { local_context.get_lkey() };
-
         crate::log::info!(
-            "MITOSIS RPC thread {} started, listing on gid: {}",
+            "MITOSIS RPC thread {} started, listing on gid: {:?}",
             arg.id,
-            local_context.get_gid_as_string()
+            local_context.query_gid(1, 0).unwrap(), // WTX: use the default port to query gid
         );
 
         let server_ud = unsafe {
             crate::ud_factories::get_ref()
                 .get(arg.nic_to_use)
                 .expect("failed to query the factory")
-                .create(())
+                .create(UDCreationMeta { port: 1 }) // WTX: use the default port to create server-side ud
                 .expect("failed to create server UD")
         };
         let temp_ud = server_ud.clone();
 
         unsafe {
-            crate::rdma_cm_service::get_mut()
+            crate::ud_service::get_mut()
                 .get(arg.nic_to_use)
                 .unwrap()
-                .reg_ud(Service::calculate_qd_hint(arg.id), server_ud.get_qp())
+                .reg_qp(Service::calculate_qd_hint(arg.id), &server_ud.get_qp())
         };
 
         let mut rpc_server = UDRPCHook::new(
-            unsafe { crate::ud_factories::get_ref().get(arg.nic_to_use).unwrap() },
-            server_ud,
+            unsafe { crate::get_ud_factory(arg.nic_to_use).unwrap().clone() },
+            server_ud.clone(),
             UDReceiverFactory::new()
                 .set_qd_hint(Service::calculate_qd_hint(arg.id) as _)
-                .set_lkey(lkey)
                 .create(temp_ud),
         );
 
@@ -261,7 +267,7 @@ impl Service {
         // pre-most receive buffers
         for _ in 0..2048 {
             // 64 is the header
-            match rpc_server.post_msg_buf(UDMsg::new(4096, 73)) {
+            match rpc_server.post_msg_buf(UDMsg::new(4096, 0, server_ud.get_qp().ctx().clone())) {
                 Ok(_) => {}
                 Err(e) => crate::log::error!("post recv buf err: {:?}", e),
             }
