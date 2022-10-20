@@ -43,7 +43,7 @@ use mitosis::kern_wrappers::*;
 // real system call implementations
 impl MySyscallHandler {
     fn test_task(&self) -> c_long {
-        crate::log::debug!("test task");
+        crate::log::info!("test task");
 
         let task = task::Task::new();
         crate::log::info!("get task {:?}", task);
@@ -54,7 +54,7 @@ impl MySyscallHandler {
     }
 
     fn test_mm(&self) -> c_long {
-        crate::log::debug!("test mm");
+        crate::log::info!("test mm");
         let task = task::Task::new();
         let mm = task.get_memory_descriptor();
         let vma_iters = mm.get_vma_iter();
@@ -68,7 +68,7 @@ impl MySyscallHandler {
     }
 
     fn test_vma(&self) -> c_long {
-        crate::log::debug!("test vma");
+        crate::log::info!("test vma");
 
         let task = task::Task::new();
         let mm = task.get_memory_descriptor();
