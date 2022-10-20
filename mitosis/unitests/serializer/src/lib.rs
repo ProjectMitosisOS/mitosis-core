@@ -2,10 +2,11 @@
 #![feature(allocator_api)]
 extern crate alloc;
 
-use rust_kernel_linux_util as log;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
-
+use mitosis::log;
 use mitosis::syscalls::*;
+use mitosis::KRdmaKit;
+use mitosis::os_network;
+use mitosis::rust_kernel_linux_util::linux_kernel_module;
 
 mod my_syscall;
 use my_syscall::MySyscallHandler;

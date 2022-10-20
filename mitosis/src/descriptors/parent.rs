@@ -64,7 +64,7 @@ impl ParentDescriptor {
         }
 
         #[cfg(feature = "prefetch")]
-        let (prefetch_conn, lkey) = unsafe {
+        let prefetch_conn = unsafe {
             crate::get_dc_pool_async_service_ref()
                 .lock(|p| p.pop_one_qp())
                 .expect("failed to create prefetcher")
@@ -80,7 +80,7 @@ impl ParentDescriptor {
             machine_info: self.machine_info.clone(),
 
             #[cfg(feature = "prefetch")]
-            prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, lkey, access_info),
+            prefetcher: DCAsyncPrefetcher::new_from_raw(prefetch_conn, access_info),
             #[cfg(feature = "eager-resume")]
             eager_fetched_pages: Default::default(),
             #[cfg(feature = "resume-profile")]

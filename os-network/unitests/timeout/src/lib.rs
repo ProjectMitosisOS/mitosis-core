@@ -2,13 +2,12 @@
 
 extern crate alloc;
 
-use krdma_test::*;
 use os_network::future::*;
 use os_network::timeout::*;
 use os_network::{block_on, block_on_w_yield};
+use os_network::KRdmaKit::rdma_shim::{linux_kernel_module, log};
 
-use rust_kernel_linux_util as log;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
+use krdma_test::*;
 
 pub struct DummyFuture;
 

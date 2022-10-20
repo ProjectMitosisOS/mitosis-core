@@ -1,109 +1,106 @@
-use alloc::sync::Arc;
+use KRdmaKit::{DatapathError, MemoryRegion};
 
-use core::marker::PhantomData;
-use core::pin::Pin;
+use KRdmaKit::queue_pairs::endpoint::DatagramEndpoint;
 
-use KRdmaKit::cm::EndPoint;
-
-use crate::conn::Conn;
+use crate::future::Async;
 use crate::rdma::dc::DCConn;
+use crate::Future;
 
-pub struct DCRemoteDevice<'a, LocalMemory> {
-    dc: Arc<DCConn<'a>>,
-    phantom: PhantomData<LocalMemory>,
+pub struct DCRemoteDevice {
+    dc: DCConn,
 }
 
 #[allow(dead_code)]
-pub struct DCKeys {
-    key_pair: super::MemoryKeys,
-    dct_access_key: u32,
-}
+pub type DCKeys = super::MemoryKeys;
 
-impl DCKeys {
-    pub fn new(lkey: u32, rkey: u32, dct_access_key: u32) -> Self {
-        Self {
-            key_pair: super::MemoryKeys {
-                lkey: lkey,
-                rkey: rkey,
-            },
-            dct_access_key: dct_access_key,
-        }
+impl DCRemoteDevice {
+    pub fn new(dc: DCConn) -> Self {
+        Self { dc: dc }
     }
 }
 
-impl<'a, LocalMemory> DCRemoteDevice<'a, LocalMemory> {
-    pub fn new(dc: Arc<DCConn<'a>>) -> Self {
-        Self {
-            dc: dc,
-            phantom: PhantomData,
-        }
-    }
-}
-
-use KRdmaKit::rust_kernel_rdma_base::{ib_dc_wr, ib_send_flags, ib_wr_opcode};
-
-type DCReqPayload = crate::rdma::payload::Payload<ib_dc_wr>;
-
-impl<LocalMemory> crate::remote_memory::Device for DCRemoteDevice<'_, LocalMemory>
-where
-    LocalMemory: crate::remote_memory::ToPhys,
-{
-    // remote memory read/write will succeed or return rdma specific error
-    type Address = u64;
-    type Location = EndPoint;
+/// Read/Write memory from remote device with physical memory addresss with DC qp
+///
+/// # Parameters:
+/// - `loc`: The endpoint specifying the target node.
+/// - `addr`: The remote physical address of the target memory region.
+/// - `key`: The remote memory key.
+/// - `to`: The local physical address of the local target memory region.
+/// - `size`: The size of the target memory region.
+///
+/// # Errors:
+/// - `DatapathError`: There is something wrong in the data path.
+///
+impl crate::remote_memory::Device for DCRemoteDevice {
+    type RemoteMemory = u64;
+    type Location = DatagramEndpoint;
     type Key = DCKeys;
-    type IOResult = crate::rdma::Err;
-    type LocalMemory = LocalMemory;
+    type IOResult = DatapathError;
+    type LocalMemory = u64;
+    type Size = usize;
 
     unsafe fn read(
         &mut self,
         loc: &Self::Location,
-        addr: &Self::Address,
+        addr: &Self::RemoteMemory,
         key: &Self::Key,
         to: &mut Self::LocalMemory,
+        size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
-        let mut payload = DCReqPayload::default()
-            .set_laddr(to.to_phys().0)
-            .set_raddr(*addr)
-            .set_sz(to.to_phys().1)
-            .set_lkey(key.key_pair.lkey)
-            .set_rkey(key.key_pair.rkey)
-            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-            .set_opcode(ib_wr_opcode::IB_WR_RDMA_READ)
-            .set_ah(loc);
-
-        let mut payload = Pin::new_unchecked(&mut payload);
-        let dc = Arc::get_mut_unchecked(&mut self.dc);
-        crate::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
-
-        dc.post(&payload.as_ref())?;
-        crate::block_on(dc)?;
-        Ok(())
+        let qp = self.dc.get_qp();
+        let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
+        let mr = MemoryRegion::new_from_raw(qp.ctx().clone(), vaddr as _, *size).unwrap();
+        let range = 0..*size as u64;
+        let signaled = true;
+        let raddr = addr;
+        let rkey = key.rkey;
+        qp.post_send_dc_read(loc, &mr, range, signaled, *raddr, rkey)
     }
 
     unsafe fn write(
         &mut self,
         loc: &Self::Location,
-        addr: &Self::Address,
+        addr: &Self::RemoteMemory,
         key: &Self::Key,
-        payload: &Self::LocalMemory,
+        to: &mut Self::LocalMemory,
+        size: &Self::Size,
     ) -> Result<(), Self::IOResult> {
-        let mut payload = DCReqPayload::default()
-            .set_laddr(payload.to_phys().0)
-            .set_raddr(*addr)
-            .set_sz(payload.to_phys().1)
-            .set_lkey(key.key_pair.lkey)
-            .set_rkey(key.key_pair.rkey)
-            .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-            .set_opcode(ib_wr_opcode::IB_WR_RDMA_WRITE)
-            .set_ah(loc);
+        let qp = self.dc.get_qp();
+        let vaddr = rust_kernel_linux_util::bindings::bd_phys_to_virt(*to as _);
+        let mr = MemoryRegion::new_from_raw(qp.ctx().clone(), vaddr as _, *size).unwrap();
+        let range = 0..*size as u64;
+        let signaled = true;
+        let raddr = addr;
+        let rkey = key.rkey;
+        qp.post_send_dc_write(loc, &mr, range, signaled, *raddr, rkey)
+    }
+}
 
-        let mut payload = Pin::new_unchecked(&mut payload);
-        let dc = Arc::get_mut_unchecked(&mut self.dc);
-        crate::rdma::payload::Payload::<ib_dc_wr>::finalize(payload.as_mut());
+/// Poll the completion from the underlying device
+///
+/// # Errors:
+/// - `WCErr`: This error means that the work completion's status is not correct.
+/// See <https://www.rdmamojo.com/2013/02/15/ibv_poll_cq/> for the meaning of each error status.
+/// - `DatapathError`: This error means that there is something wrong in polling the work completion.
+impl Future for DCRemoteDevice {
+    type Output = KRdmaKit::rdma_shim::bindings::ib_wc;
 
-        dc.post(&payload.as_ref())?;
-        crate::block_on(dc)?;
-        Ok(())
+    type Error = crate::rdma::Err;
+
+    fn poll<'a>(&'a mut self) -> crate::future::Poll<Self::Output, Self::Error> {
+        let res = self.dc.poll();
+        match res {
+            Ok(Async::Ready(res)) => {
+                if res.status == rust_kernel_rdma_base::ib_wc_status::IB_WC_SUCCESS {
+                    Ok(Async::Ready(res))
+                } else {
+                    Err(crate::rdma::Err::WCErr(unsafe {
+                        core::mem::transmute(res.status)
+                    }))
+                }
+            }
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(e) => Err(crate::rdma::Err::DatapathError(e)),
+        }
     }
 }

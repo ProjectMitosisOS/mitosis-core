@@ -1,28 +1,31 @@
 #![no_std]
 
 extern crate alloc;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
 
-use rust_kernel_linux_util as log;
-
+use alloc::sync::Arc;
 use krdma_test::*;
+
+use os_network::KRdmaKit::comm_manager::CMServer;
+use os_network::KRdmaKit::services::UnreliableDatagramAddressService;
 use os_network::bytes::*;
 use os_network::rpc::*;
 use os_network::block_on;
-
-use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::kthread;
-use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
-use KRdmaKit::rust_kernel_rdma_base::*;
-use KRdmaKit::KDriver;
-use KRdmaKit::random::FastRandom;
-
 use os_network::timeout::Timeout;
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
 use os_network::datagram::ud_receiver::*;
 use os_network::Factory;
 use os_network::serialize::Serialize;
+use os_network::KRdmaKit;
+
+use KRdmaKit::rdma_shim::linux_kernel_module;
+use KRdmaKit::rdma_shim::rust_kernel_linux_util::kthread;
+use KRdmaKit::rdma_shim::utils::KTimer;
+use KRdmaKit::rdma_shim::bindings::*;
+use KRdmaKit::rdma_shim::log;
+use KRdmaKit::KDriver;
+
+use rpc_common::random::FastRandom;
 
 use mitosis_macros::{declare_module_param, declare_global};
 
@@ -35,7 +38,7 @@ struct WrappedPayload(rpc_common::payload::DefaultSizedPayload);
 
 impl Serialize for WrappedPayload {}
 
-declare_global!(global_random, KRdmaKit::random::FastRandom);
+declare_global!(global_random, rpc_common::random::FastRandom);
 
 #[allow(unused_variables)]
 fn test_callback(_input: &BytesMut, output: &mut BytesMut) -> usize {
@@ -53,29 +56,31 @@ fn test_callback(_input: &BytesMut, output: &mut BytesMut) -> usize {
 fn start_rpc_server() {
     log::info!("starting rpc server");
 
-    type UDRPCHook<'a, 'b> = hook::RPCHook<'a, 'b, UDDatagram<'a>, UDReceiver<'a>, UDFactory<'a>>;
+    type UDRPCHook<'a> = hook::RPCHook<'a, UDDatagram, UDReceiver, UDFactory>;
 
     // init RDMA_related data structures
     let driver = unsafe { KDriver::create().unwrap() };
-    let ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
-    let factory = UDFactory::new(&ctx);
+    let ctx = driver.devices().into_iter().next().unwrap().open_context().unwrap();
+    let factory = Arc::new(UDFactory::new(&ctx));
 
-    let server_ud = factory.create(()).unwrap();
+    let server_ud = factory.create(
+        UDCreationMeta { port: 1 } // Create with default port number 1
+    ).unwrap();
 
     // expose the server-side connection infoit
-    let ctrl = RCtrl::create(service_id::read(), &ctx).unwrap();
-    ctrl.reg_ud(qd_hint::read() as usize, server_ud.get_qp());
+    // let ctrl = RCtrl::create(service_id::read(), &ctx).unwrap();
+    // ctrl.reg_ud(qd_hint::read() as usize, server_ud.get_qp());
+    let ud_service = UnreliableDatagramAddressService::create();
+    let _server_cm = CMServer::new(service_id::read(), &ud_service, ctx.get_dev_ref());
+    ud_service.reg_qp(qd_hint::read() as usize, &server_ud.get_qp());
 
     // register callback and wait for requests
-    let lkey = unsafe { ctx.get_lkey() };
-    let temp_ud = server_ud.clone();
     let mut rpc_server = UDRPCHook::new(
-        &factory,
-        server_ud,
+        factory.clone(),
+        server_ud.clone(),
         UDReceiverFactory::new()
             .set_qd_hint(qd_hint::read() as _)
-            .set_lkey(lkey)
-            .create(temp_ud),
+            .create(server_ud.clone()),
     );
 
     rpc_server
@@ -86,7 +91,7 @@ fn start_rpc_server() {
 
     for _ in 0..1024 {
         // 64 is the header
-        match rpc_server.post_msg_buf(UDMsg::new(4096, test_rpc_id::read() as u32)) {
+        match rpc_server.post_msg_buf(UDMsg::new(4096, test_rpc_id::read() as u32, server_ud.get_qp().ctx().clone())) {
             Ok(_) => {}
             Err(e) => log::error!("post recv buf err: {:?}", e),
         }

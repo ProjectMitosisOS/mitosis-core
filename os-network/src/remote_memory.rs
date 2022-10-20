@@ -1,39 +1,41 @@
+/// A abstraction trait to read/write remote/local memory
+///
 pub trait Device {
-    // data for authentication the validity of the operation
+    /// data for authentication the validity of the operation
     type Key;
 
-    // network address, e.g., IP
+    /// network address, e.g., IP
     type Location;
 
-    // remote memory address
-    type Address;
+    /// remote memory address
+    type RemoteMemory;
 
-    // local memory address
+    /// local memory address
     type LocalMemory;
 
+    /// memory size
+    type Size;
+
+    /// error type
     type IOResult;
 
     unsafe fn read(
         &mut self,
         loc: &Self::Location,
-        addr: &Self::Address,
+        addr: &Self::RemoteMemory,
         key: &Self::Key,
         to: &mut Self::LocalMemory,
+        size: &Self::Size,
     ) -> Result<(), Self::IOResult>;
 
     unsafe fn write(
         &mut self,
         loc: &Self::Location,
-        addr: &Self::Address,
+        addr: &Self::RemoteMemory,
         key: &Self::Key,
-        payload: &Self::LocalMemory,
+        to: &mut Self::LocalMemory,
+        size: &Self::Size,
     ) -> Result<(), Self::IOResult>;
-}
-
-/// Any structure implement ToPhys should return
-/// its physical address and size
-pub trait ToPhys {
-    unsafe fn to_phys(&self) -> (u64, usize);
 }
 
 pub mod local;

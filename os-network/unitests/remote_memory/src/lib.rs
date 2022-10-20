@@ -2,196 +2,374 @@
 
 extern crate alloc;
 
-use alloc::vec;
 use alloc::sync::Arc;
+use alloc::vec;
 
 use core::fmt::Write;
 
-use rust_kernel_linux_util::linux_kernel_module;
-use rust_kernel_linux_util as log;
-
-use KRdmaKit::KDriver;
-use KRdmaKit::cm::SidrCM;
-use KRdmaKit::ctrl::RCtrl;
-
-use os_network::Factory;
+use os_network::block_on;
 use os_network::bytes::*;
-use os_network::msg::UDMsg;
 use os_network::rdma::dc::DCFactory;
+use os_network::rdma::rc::RCFactory;
+use os_network::rdma::ConnMeta;
+use os_network::rdma::DCCreationMeta;
+use os_network::remote_memory::rdma::{DCKeys, DCRemoteDevice};
+use os_network::remote_memory::rdma::{RCKeys, RCRemoteDevice};
 use os_network::remote_memory::Device;
-use os_network::remote_memory::ToPhys;
-use os_network::remote_memory::rdma::{DCRemoteDevice, DCKeys};
+use os_network::timeout::TimeoutWRef;
+use os_network::ud::UDFactory;
+use os_network::ud::UDHyperMeta;
+use os_network::Factory;
+use os_network::MetaFactory;
+use os_network::KRdmaKit;
+use os_network::KRdmaKit::rdma_shim::{linux_kernel_module, log};
+
+use KRdmaKit::comm_manager::CMServer;
+use KRdmaKit::services::dc::DCTargetService;
+use KRdmaKit::services::ReliableConnectionServer;
+use KRdmaKit::KDriver;
+use KRdmaKit::MemoryRegion;
 
 use krdma_test::*;
 
-static MEM_SIZE: usize = 1024;
-static DEFAULT_QD_HINT: u64 = 73;
+static DEFAULT_MEM_SIZE: usize = 1024;
+static DEFAULT_QD_HINT: usize = 73;
+static DEFAULT_PORT: u8 = 1;
+static DEFAULT_DC_KEY: u64 = 37;
 
-type RMemory = UDMsg;
+#[derive(thiserror_no_std::Error, Debug)]
+pub enum TestError {
+    #[error("Test error {0}")]
+    Error(&'static str),
+}
 
 /// A test on `LocalDevice`
-fn test_local() {
-
+fn test_local() -> Result<(), TestError> {
     // init context
-    let max_buf_len = 32; 
+    let max_buf_len = 32;
 
     let mut buf0 = vec![0; max_buf_len];
 
     // this is dangerous!! just for the test
-    let mut src = unsafe { BytesMut::from_raw(buf0.as_mut_ptr(), buf0.len())}; 
+    let mut src = unsafe { BytesMut::from_raw(buf0.as_mut_ptr(), buf0.len()) };
 
     write!(&mut src, "hello world").unwrap();
 
     let mut buf1 = vec![0; max_buf_len];
-    let mut dst = unsafe { BytesMut::from_raw(buf1.as_mut_ptr(), buf1.len())}; 
-    assert_ne!(src,dst); 
+    let mut dst = unsafe { BytesMut::from_raw(buf1.as_mut_ptr(), buf1.len()) };
+    assert_ne!(src, dst);
 
-    use os_network::remote_memory::local::LocalDevice;    
-    let mut dev = LocalDevice::<(),(), os_network::rdma::Err>::new(); 
+    use os_network::remote_memory::local::LocalDevice;
+    let mut dev = LocalDevice::<(), (), os_network::rdma::Err>::new();
 
-    log::info!("pre check dst {:?}", dst);     
-    unsafe { dev.read(&(), &src.get_raw(), &(), &mut dst).unwrap() };
-    log::info!("after check dst {:?}", dst); 
-    assert_eq!(src,dst); 
+    unsafe { dev.read(&(), &src.get_raw(), &(), &mut dst, &()).unwrap() };
+    if src == dst {
+        Ok(())
+    } else {
+        log::error!("No equal after local read");
+        log::error!("source: {:?}", src);
+        log::error!("destination: {:?}", dst);
+        Err(TestError::Error("Local read error."))
+    }
 }
-
 
 /// A test on `DCRemoteDevice`
-fn test_dc_remote() {
-    let driver = unsafe {
-        KDriver::create().unwrap()
-    };
+fn test_dc_remote() -> Result<(), TestError> {
+    let driver = unsafe { KDriver::create().unwrap() };
 
-    // Prepare for server side RCtrl
+    // server side
     let server_ctx = driver
         .devices()
-        .into_iter()
-        .next()
-        .expect("no rdma device available")
-        .open()
-        .unwrap();
-    let service_id: u64 = 0;
-    let gid = server_ctx.get_gid_as_string();
-    let rkey = unsafe { server_ctx.get_rkey() };
-    let _ctrl = RCtrl::create(service_id, &server_ctx);
+        .get(0)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
 
-    // Create the dc qp
-    let client_ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+    // start the listening service
+    let server_service_id = 73;
+    let server = DCTargetService::create();
+    let _server_cm = CMServer::new(server_service_id, &server, server_ctx.get_dev_ref()).unwrap();
+
+    // create and register a DC Target
+    let factory = DCFactory::new(&server_ctx);
+    let dct_target = factory
+        .create_target(DEFAULT_DC_KEY, DEFAULT_PORT)
+        .ok_or_else(|| {
+            log::error!("Create DC Target error.");
+            TestError::Error("DC Target error.")
+        })?;
+    server.reg_qp(DEFAULT_QD_HINT, &dct_target);
+
+    // client side
+    let client_ctx = driver
+        .devices()
+        .get(1)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open client ctx error.");
+            TestError::Error("Client context error.")
+        })?;
+
+    // create dc qp at client side
     let client_factory = DCFactory::new(&client_ctx);
+    let dc = client_factory
+        .create(DCCreationMeta { port: DEFAULT_PORT })
+        .map_err(|_| {
+            log::error!("Create DC qp error.");
+            TestError::Error("DC qp error.")
+        })?;
 
-    let lkey = unsafe { client_ctx.get_lkey() };
-    let dc = client_factory.create(()).unwrap();
-    let dc = Arc::new(dc);
-
-    // Prepare for the EndPoint
-    let path_res = client_factory
-        .get_context()
-        .explore_path(gid, service_id)
-        .unwrap();
-    let mut sidr_cm = SidrCM::new(&client_ctx, core::ptr::null_mut()).unwrap();
-    let endpoint = sidr_cm
-        .sidr_connect(path_res, service_id, DEFAULT_QD_HINT)
-        .unwrap();
-    
-    // Prepare memory regions
-    let mut local_mem = RMemory::new(MEM_SIZE, 0);
-    let remote_mem = RMemory::new(MEM_SIZE, 0);
-    let local_bytes = unsafe { BytesMut::from_raw(local_mem.get_bytes().get_ptr(), local_mem.len()) };
-    let mut remote_bytes = unsafe { BytesMut::from_raw(remote_mem.get_bytes().get_ptr(), remote_mem.len()) };
-
-    write!(&mut remote_bytes, "hello world").unwrap();
-
-    // Create a remote device and perform one-sided read
-    let mut dev = DCRemoteDevice::new(dc);
-    let res = unsafe {
-        dev.read(&endpoint,
-            &remote_mem.to_phys().0,
-            &DCKeys::new(lkey, rkey, 73),
-            &mut local_mem)
+    // get endpoint for DC Operation at client side
+    let gid = server_ctx.get_dev_ref().query_gid(DEFAULT_PORT, 0).unwrap();
+    let meta = UDHyperMeta {
+        gid,
+        service_id: server_service_id,
+        qd_hint: DEFAULT_QD_HINT,
+        local_port: DEFAULT_PORT,
     };
-    if res.is_err() {
-        log::error!("unable to read remote memory");
-        return;
-    }
+    let querier = UDFactory::new(&client_ctx);
+    let endpoint = Arc::new(querier.create_meta(meta).map_err(|_| {
+        log::error!("Create endpoint error.");
+        TestError::Error("Endpoint error.")
+    })?);
 
-    // Sanity check after one-sided operation
-    if local_bytes == remote_bytes {
-        log::info!("equal after remote memory read operation!");
+    // memory region
+    let server_mr = Arc::new(
+        MemoryRegion::new(server_ctx.clone(), DEFAULT_MEM_SIZE).map_err(|_| {
+            log::error!("Failed to create server MR.");
+            TestError::Error("Create mr error.")
+        })?,
+    );
+    let client_mr = Arc::new(
+        MemoryRegion::new(client_ctx.clone(), DEFAULT_MEM_SIZE).map_err(|_| {
+            log::error!("Failed to create client MR.");
+            TestError::Error("Create mr error.")
+        })?,
+    );
+
+    let server_slot_0 = unsafe { (server_mr.get_virt_addr() as *mut u64).as_mut().unwrap() };
+    let client_slot_0 = unsafe { (client_mr.get_virt_addr() as *mut u64).as_mut().unwrap() };
+    let server_slot_1 = unsafe {
+        ((server_mr.get_virt_addr() + 8) as *mut u64)
+            .as_mut()
+            .unwrap()
+    };
+    let client_slot_1 = unsafe {
+        ((client_mr.get_virt_addr() + 8) as *mut u64)
+            .as_mut()
+            .unwrap()
+    };
+    *client_slot_0 = 0;
+    *client_slot_1 = 12345678;
+    *server_slot_0 = 87654321;
+    *server_slot_1 = 0;
+    log::info!("[Before] client: v0 {} v1 {}", client_slot_0, client_slot_1);
+    log::info!("[Before] server: v0 {} v1 {}", server_slot_0, server_slot_1);
+
+    let mut laddr = unsafe { client_mr.get_rdma_addr() };
+    let raddr = unsafe { server_mr.get_rdma_addr() };
+    let rkey = server_mr.rkey().0;
+
+    // read 8 bytes from remote raddr to the local laddr
+    let mut remote_device = DCRemoteDevice::new(dc);
+    unsafe {
+        remote_device.read(
+            endpoint.as_ref(),
+            &raddr,
+            &DCKeys::new(rkey),
+            &mut laddr,
+            &8,
+        )
+    }
+    .map_err(|_| {
+        log::error!("Failed to issue read request to DCRemoteDevice.");
+        TestError::Error("DCRemoteDevice read error.")
+    })?;
+
+    // poll the completion for the read request
+    let timeout_usec = 5000_000;
+    let mut timeout = TimeoutWRef::new(&mut remote_device, timeout_usec);
+    block_on(&mut timeout).map_err(|_| {
+        log::error!("Failed to poll result from DCRemoteDevice.");
+        TestError::Error("DCRemoteDevice poll error.")
+    })?;
+
+    // write 8 bytes to the remote (raddr+8) to local (laddr+8)
+    unsafe {
+        remote_device.write(
+            endpoint.as_ref(),
+            &(raddr + 8),
+            &DCKeys::new(rkey),
+            &mut (laddr + 8),
+            &8,
+        )
+    }
+    .map_err(|_| {
+        log::error!("Failed to issue read request to DCRemoteDevice.");
+        TestError::Error("DCRemoteDevice read error.")
+    })?;
+
+    // poll the completion for the write request
+    let mut timeout = TimeoutWRef::new(&mut remote_device, timeout_usec);
+    block_on(&mut timeout).map_err(|_| {
+        log::error!("Failed to poll result from DCRemoteDevice.");
+        TestError::Error("DCRemoteDevice poll error.")
+    })?;
+
+    log::info!("[After ] client: v0 {} v1 {}", client_slot_0, client_slot_1);
+    log::info!("[After ] server: v0 {} v1 {}", server_slot_0, server_slot_1);
+
+    // check the results
+    if *client_slot_0 == *server_slot_0 && *client_slot_1 == *server_slot_1 {
+        Ok(())
     } else {
-        log::error!("not equal after remote memory read operation!");
-        log::info!("local {:?}", local_bytes); 
-        log::info!("remote {:?}", remote_bytes); 
+        Err(TestError::Error("read write failed"))
     }
 }
 
-use os_network::rdma::ConnMeta;
-use os_network::rdma::rc::RCFactory;
-use os_network::remote_memory::rdma::{RCRemoteDevice, RCKeys};
-
-fn test_rc_remote() {
-    let driver = unsafe {
-        KDriver::create().unwrap()
-    };
-
-    // Prepare for server side RCtrl
+/// A test on `RCRemoteDevice`
+fn test_rc_remote() -> Result<(), TestError> {
+    let driver = unsafe { KDriver::create().unwrap() };
+    // server side
     let server_ctx = driver
         .devices()
-        .into_iter()
-        .next()
-        .expect("no rdma device available")
-        .open()
-        .unwrap();
-    let service_id: u64 = 0;
-    let gid = server_ctx.get_gid_as_string();
-    let rkey = unsafe { server_ctx.get_rkey() };
-    let _ctrl = RCtrl::create(service_id, &server_ctx);
+        .get(0)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
+
+    let server_port: u8 = DEFAULT_PORT;
+    let server_service_id = 73;
+    let rc_server = ReliableConnectionServer::create(&server_ctx, server_port);
+    let _server_cm = CMServer::new(server_service_id, &rc_server, server_ctx.get_dev_ref())
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
+
+    // client side
+    let client_port: u8 = DEFAULT_PORT;
+    let client_ctx = driver
+        .devices()
+        .get(1)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open client ctx error.");
+            TestError::Error("Client context error.")
+        })?;
 
     let conn_meta = ConnMeta {
-        gid: gid,
-        service_id: service_id,
-        qd_hint: 0,
+        gid: server_ctx.get_dev_ref().query_gid(server_port, 0).unwrap(),
+        port: client_port,
+        service_id: server_service_id,
     };
 
-    // Create the rc qp
-    let client_ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
-    let client_factory = RCFactory::new(&client_ctx);
+    let client_factory = RCFactory::new(client_ctx.clone());
+    let rc = client_factory.create(conn_meta).map_err(|_| {
+        log::error!("Error creating rc qp.");
+        TestError::Error("Create rc qp error.")
+    })?;
 
-    let lkey = unsafe { client_ctx.get_lkey() };
-    let rc = client_factory.create(conn_meta).unwrap();
-    let rc = Arc::new(rc);
-    
-    // Prepare memory regions
-    let mut local_mem = RMemory::new(MEM_SIZE, 0);
-    let remote_mem = RMemory::new(MEM_SIZE, 0);
-    let local_bytes = unsafe { BytesMut::from_raw(local_mem.get_bytes().get_ptr(), local_mem.len()) };
-    let mut remote_bytes = unsafe { BytesMut::from_raw(remote_mem.get_bytes().get_ptr(), remote_mem.len()) };
+    // memory region
+    let server_mr = Arc::new(
+        MemoryRegion::new(server_ctx.clone(), DEFAULT_MEM_SIZE).map_err(|_| {
+            log::error!("Failed to create server MR.");
+            TestError::Error("Create mr error.")
+        })?,
+    );
+    let client_mr = Arc::new(
+        MemoryRegion::new(client_ctx.clone(), DEFAULT_MEM_SIZE).map_err(|_| {
+            log::error!("Failed to create client MR.");
+            TestError::Error("Create mr error.")
+        })?,
+    );
 
-    write!(&mut remote_bytes, "hello world").unwrap();
-
-    // Create a remote device and perform one-sided read
-    let mut dev = RCRemoteDevice::new(rc);
-    let res = unsafe {
-        dev.read(&(),
-            &remote_mem.to_phys().0,
-            &RCKeys::new(lkey, rkey),
-            &mut local_mem)
+    let server_slot_0 = unsafe { (server_mr.get_virt_addr() as *mut u64).as_mut().unwrap() };
+    let client_slot_0 = unsafe { (client_mr.get_virt_addr() as *mut u64).as_mut().unwrap() };
+    let server_slot_1 = unsafe {
+        ((server_mr.get_virt_addr() + 8) as *mut u64)
+            .as_mut()
+            .unwrap()
     };
-    if res.is_err() {
-        log::error!("unable to read remote memory");
-        return;
-    }
+    let client_slot_1 = unsafe {
+        ((client_mr.get_virt_addr() + 8) as *mut u64)
+            .as_mut()
+            .unwrap()
+    };
+    *client_slot_0 = 0;
+    *client_slot_1 = 12345678;
+    *server_slot_0 = 87654321;
+    *server_slot_1 = 0;
+    log::info!("[Before] client: v0 {} v1 {}", client_slot_0, client_slot_1);
+    log::info!("[Before] server: v0 {} v1 {}", server_slot_0, server_slot_1);
 
-    // Sanity check after one-sided operation
-    if local_bytes == remote_bytes {
-        log::info!("equal after remote memory read operation!");
+    let mut laddr = unsafe { client_mr.get_rdma_addr() };
+    let raddr = unsafe { server_mr.get_rdma_addr() };
+    let rkey = server_mr.rkey().0;
+
+    // read 8 bytes from remote raddr to the local laddr
+    let mut remote_device = RCRemoteDevice::new(rc);
+    unsafe { remote_device.read(&(), &raddr, &RCKeys::new(rkey), &mut laddr, &8) }.map_err(
+        |_| {
+            log::error!("Failed to issue read request to RCRemoteDevice.");
+            TestError::Error("RCRemoteDevice read error.")
+        },
+    )?;
+
+    // poll the completion for the read request
+    let timeout_usec = 5000_000;
+    let mut timeout = TimeoutWRef::new(&mut remote_device, timeout_usec);
+    block_on(&mut timeout).map_err(|_| {
+        log::error!("Failed to poll result from RCRemoteDevice.");
+        TestError::Error("RCRemoteDevice poll error.")
+    })?;
+
+    // write 8 bytes to the remote (raddr+8) to local (laddr+8)
+    unsafe { remote_device.write(&(), &(raddr + 8), &RCKeys::new(rkey), &mut (laddr + 8), &8) }
+        .map_err(|_| {
+            log::error!("Failed to issue write request to RCRemoteDevice.");
+            TestError::Error("RCRemoteDevice write error.")
+        })?;
+    let mut timeout = TimeoutWRef::new(&mut remote_device, timeout_usec);
+    block_on(&mut timeout).map_err(|_| {
+        log::error!("Failed to poll result from RCRemoteDevice.");
+        TestError::Error("RCRemoteDevice poll error.")
+    })?;
+
+    log::info!("[After ] client: v0 {} v1 {}", client_slot_0, client_slot_1);
+    log::info!("[After ] server: v0 {} v1 {}", server_slot_0, server_slot_1);
+
+    // check the results
+    if *client_slot_0 == *server_slot_0 && *client_slot_1 == *server_slot_1 {
+        Ok(())
     } else {
-        log::error!("not equal after remote memory read operation!");
-        log::info!("local {:?}", local_bytes); 
-        log::info!("remote {:?}", remote_bytes); 
+        Err(TestError::Error("read write failed"))
     }
 }
 
-#[krdma_test(test_local, test_dc_remote, test_rc_remote)]
-fn ctx_init() {
-    // do nothing
+fn test_wrapper() -> Result<(), TestError> {
+    test_local()?;
+    test_rc_remote()?;
+    test_dc_remote()?;
+    Ok(())
+}
+
+#[krdma_main]
+fn main() {
+    match test_wrapper() {
+        Ok(_) => {
+            log::info!("pass all tests")
+        }
+        Err(e) => {
+            log::error!("test error {:?}", e)
+        }
+    };
 }

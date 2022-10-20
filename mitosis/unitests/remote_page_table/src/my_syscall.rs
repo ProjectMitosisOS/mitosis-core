@@ -139,7 +139,7 @@ impl FileOperations for MySyscallHandler {
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
         crate::log::debug!("in ioctrl");
         match cmd {
-            _CALL_NIL => self.handle_page_mapping_test(arg),
+            mitosis_protocol::CALL_NIL => self.handle_page_mapping_test(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1

@@ -16,7 +16,7 @@ enum Kind<T> {
     Elapsed,
 }
 
-use KRdmaKit::rust_kernel_rdma_base::rust_kernel_linux_util::timer::KTimer;
+use rust_kernel_linux_util::timer::KTimer;
 
 pub struct Delay {
     timer: KTimer,

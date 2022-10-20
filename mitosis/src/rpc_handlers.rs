@@ -1,4 +1,3 @@
-use crate::linux_kernel_module;
 use core::fmt::Write;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
@@ -29,6 +28,13 @@ pub(crate) struct DescriptorLookupReply {
     pub(crate) pa: u64,
     pub(crate) sz: usize,
     pub(crate) ready: bool,
+
+    // for remote dct access
+    pub(crate) rkey: u32,
+    pub(crate) lid: u32,
+    pub(crate) gid: rust_kernel_rdma_base::ib_gid,
+    pub(crate) dct_num: u32,
+    pub(crate) dc_key: u64,
 }
 
 impl os_network::serialize::Serialize for DescriptorLookupReply {}
@@ -47,12 +53,24 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
         return 0; // a null reply indicate that the we don't have the key
     }
 
+    let dc_target_idx = unsafe { crate::bindings::pmem_get_current_cpu()  as usize % (crate::dc_target::get_ref().len()) };
+    let dc_target = unsafe { crate::dc_target::get_ref().get(dc_target_idx).unwrap() };
+
+    let meta = unsafe { crate::dc_target_meta::get_ref().get(dc_target_idx).unwrap() };
+    let (lid, gid) = (meta.lid, meta.gid);
+
     let reply = match buf {
         Some((addr, len)) => {
             DescriptorLookupReply {
                 pa: addr.get_pa(),
                 sz: len,
                 ready: true,
+
+                rkey: dc_target.ctx().rkey(),
+                lid: lid as u32,
+                gid,
+                dct_num: dc_target.dct_num(),
+                dc_key: dc_target.dc_key(),
             }
         }
         None => {
@@ -61,6 +79,12 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
                 pa: 0,
                 sz: 0,
                 ready: false,
+
+                rkey: 0,
+                lid: 0,
+                gid: Default::default(),
+                dct_num: 0,
+                dc_key: 0,
             }
         }
     };

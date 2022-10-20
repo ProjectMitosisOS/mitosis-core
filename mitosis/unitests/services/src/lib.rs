@@ -2,14 +2,14 @@
 
 extern crate alloc;
 
+use mitosis::KRdmaKit::comm_manager::CMServer;
+use mitosis::KRdmaKit::services::UnreliableDatagramAddressService;
 use mitosis::linux_kernel_module;
 use mitosis::log;
 use mitosis::rust_kernel_linux_util::kthread;
 
 use mitosis::startup::*;
-use mitosis::{os_network, KRdmaKit};
-
-use KRdmaKit::ctrl::RCtrl;
+use mitosis::os_network;
 
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
@@ -44,8 +44,8 @@ fn test_rpc_two() {
             0xdeadbeaf, // Notice: it is very important to ensure that session ID is unique!
             0xdeadbeaf,
             UDHyperMeta {
-                // the remote machine's RDMA gid. Since we are unit test, we use the local gid
-                gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
+                // the remote machine's RDMA gid. Since we are unit test, we use the local gid (port=1, gid_idx=0)
+                gid: context.query_gid(1, 0).unwrap(),
 
                 // CM server on RNIC 0 listens on mitosis::rdma_context::SERVICE_ID_BASE,
                 // CM server on RNIC 1 listens on mitosis::rdma_context::SERVICE_ID_BASE + 1, etc
@@ -54,6 +54,8 @@ fn test_rpc_two() {
                 // Thread 0's UD registers on mitosis::rpc_service::QD_HINT_BASE,
                 // Thread 1's UD registers on mitosis::rpc_service::QD_HINT_BASE + 1, etcc
                 qd_hint: (mitosis::rpc_service::QD_HINT_BASE) as _,
+
+                ..Default::default()
             },
         )
         .expect("failed to connect the endpoint");
@@ -87,7 +89,7 @@ fn test_rpc_two() {
 }
 
 fn test_rpc() {
-    type UDCaller<'a> = Caller<UDReceiver<'a>, UDSession<'a>>;
+    type UDCaller = Caller<UDReceiver, UDSession>;
 
     log::info!("in test rpc");
 
@@ -97,43 +99,50 @@ fn test_rpc() {
     kthread::sleep(1);
 
     let factory = unsafe { mitosis::get_ud_factory_ref(0).expect("no available factory") };
-    let context = unsafe { mitosis::get_rdma_context_ref(0).expect("no available context") };
+    let context = factory.get_context();
 
     // init caller
-    let client_ud = factory.create(()).unwrap();
+    let client_ud = factory.create(
+        UDCreationMeta { port: 1 }
+    ).unwrap();
 
     // use a disjoint service ID different than the server
-    let ctrl = RCtrl::create(mitosis::rdma_context::SERVICE_ID_BASE - 1, context).unwrap();
-    ctrl.reg_ud(0 as usize, client_ud.get_qp());
+    let my_service_id = mitosis::rdma_context::SERVICE_ID_BASE - 1;
 
-    let (endpoint, key) = factory
+    // let ctrl = RCtrl::create(mitosis::rdma_context::SERVICE_ID_BASE - 1, context).unwrap();
+    // ctrl.reg_ud(0 as usize, client_ud.get_qp());
+    let service = UnreliableDatagramAddressService::create();
+    let _cm_server = CMServer::new(my_service_id, &service, context.get_dev_ref());
+    service.reg_qp(0 as usize, &client_ud.get_qp());
+
+    let endpoint = factory
         .create_meta(UDHyperMeta {
-            gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
+            gid: context.query_gid(1, 0).unwrap(),
             service_id: mitosis::rdma_context::SERVICE_ID_BASE,
             qd_hint: mitosis::rpc_service::QD_HINT_BASE as _,
+            ..Default::default()
         })
         .unwrap();
 
-    let (endpoint1, key1) = factory
+    let endpoint1 = factory
         .create_meta(UDHyperMeta {
-            gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
+            gid: context.query_gid(1, 0).unwrap(),
             service_id: mitosis::rdma_context::SERVICE_ID_BASE,
             qd_hint: (mitosis::rpc_service::QD_HINT_BASE + 1) as _,
+            ..Default::default()
         })
         .unwrap();
 
-    let lkey = unsafe { context.get_lkey() };
-    let client_session = client_ud.create((endpoint, key)).unwrap();
-    let client_session_1 = client_ud.create((endpoint1, key1)).unwrap();
+    let client_session = client_ud.create(endpoint).unwrap();
+    let client_session_1 = client_ud.create(endpoint1).unwrap();
 
     let client_receiver = UDReceiverFactory::new()
         .set_qd_hint(0 as _)
-        .set_lkey(lkey)
         .create(client_ud);
 
     let mut caller = UDCaller::new(client_receiver);
     for _ in 0..12 {
-        caller.register_recv_buf(UDMsg::new(4096, 73)).unwrap(); // should succeed
+        caller.register_recv_buf(UDMsg::new(4096, 0, context.clone())).unwrap(); // should succeed
     }
 
     caller
@@ -142,9 +151,10 @@ fn test_rpc() {
             73,
             client_session,
             UDHyperMeta {
-                gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
+                gid: context.query_gid(1, 0).unwrap(),
                 service_id: mitosis::rdma_context::SERVICE_ID_BASE - 1,
                 qd_hint: 0,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -203,9 +213,10 @@ fn test_rpc() {
             73 + 1,
             client_session_1,
             UDHyperMeta {
-                gid: os_network::rdma::RawGID::new(context.get_gid_as_string()).unwrap(),
+                gid: context.query_gid(1, 0).unwrap(),
                 service_id: mitosis::rdma_context::SERVICE_ID_BASE - 1,
                 qd_hint: 0,
+                ..Default::default()
             },
         )
         .unwrap();

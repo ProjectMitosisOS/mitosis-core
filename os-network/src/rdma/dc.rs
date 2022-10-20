@@ -1,124 +1,166 @@
 use alloc::sync::Arc;
 
-use KRdmaKit::device::RContext;
-use KRdmaKit::qp::{DCOp, DC, DCTServer,Config};
-use KRdmaKit::rust_kernel_rdma_base::ib_dc_wr;
-use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::queue_pairs::dynamic_connected_transport::DynamicConnectedTargetBuilder;
+use KRdmaKit::queue_pairs::DynamicConnectedTarget;
+use KRdmaKit::{context::Context, ControlpathError, QueuePair, QueuePairStatus};
+use KRdmaKit::{DatapathError, QueuePairBuilder};
 
-use rust_kernel_linux_util as log;
+use super::payload::dc::DCReqPayload;
+use super::payload::{RDMAOp, RDMAWR};
 
-use core::marker::PhantomData;
+pub type DCTarget = DynamicConnectedTarget;
 
-pub type DCTarget = DCTServer;
-
-pub struct DCFactory<'a> {
-    rctx: &'a RContext<'a>,
+pub struct DCFactory {
+    rctx: Arc<Context>,
 }
 
-impl<'a> DCFactory<'a> {
-    pub fn new(ctx: &'a RContext<'a>) -> Self {
-        Self { rctx: ctx }
+impl DCFactory {
+    pub fn new(ctx: &Arc<Context>) -> Self {
+        Self { rctx: ctx.clone() }
     }
 
-    pub fn get_context(&self) -> &RContext<'_> {
-        self.rctx
+    pub fn get_context(&self) -> Arc<Context> {
+        self.rctx.clone()
     }
 
-    pub fn create_target(&self, key : u64) -> core::option::Option<Arc<DCTarget>> { 
-        let mut config : Config = Default::default();
-        config.dc_key = key as _;
-        DCTarget::new_from_config(config, self.rctx)
+    /// Create a DC Target
+    ///
+    /// # Parameters:
+    /// - `key`: A 64-bit dct key to identify the DC Target.
+    /// - `port_num`: A number to specified the port to use to create DC Target (The default value should be 1).
+    ///
+    pub fn create_target(&self, key: u64, port_num: u8) -> core::option::Option<Arc<DCTarget>> {
+        let mut builder = DynamicConnectedTargetBuilder::new(&self.rctx);
+        builder
+            .allow_remote_rw()
+            .allow_remote_atomic()
+            .set_port_num(port_num);
+        builder
+            .build_dynamic_connected_target(key)
+            .ok()
+            .map(|dct| Arc::new(dct))
     }
 }
 
-pub struct DCConn<'a> {
-    dc: Arc<DC>,
-    phantom: PhantomData<&'a ()>,
-    watermark : u64,
+pub struct DCConn {
+    dc: Arc<QueuePair>,
+    watermark: u64,
+}
+
+impl DCConn {
+    pub fn get_status(&self) -> Result<QueuePairStatus, ControlpathError> {
+        self.dc.status()
+    }
+
+    pub fn get_qp(&self) -> Arc<QueuePair> {
+        self.dc.clone()
+    }
 }
 
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering::SeqCst;
 
-impl crate::Conn for DCConn<'_> {
-    type ReqPayload = super::payload::Payload<ib_dc_wr>;
+impl crate::Conn for DCConn {
+    type ReqPayload = DCReqPayload;
     type CompPayload = ();
-    type IOResult = super::Err;
+    type IOResult = DatapathError;
 
+    /// Post the request to the underlying dc qp to perform one-sided read/write operation
+    ///
+    /// # Parameters:
+    /// - The request includes
+    ///     * The read/write flag
+    ///     * The endpoint specifying the target node
+    ///     * The local memory region
+    ///     * The signal flag
+    ///     * The remote address
+    ///     * The remote memory key
+    /// # Errors:
+    /// - `DatapathError`: There is something wrong in the data path.
     #[inline]
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
         compiler_fence(SeqCst);
-        let mut op = DCOp::new(&self.dc);
-        unsafe {
-            op.post_send_raw(req.get_wr_ptr() as *mut _)
-                .map_err(|_x| super::Err::Other)
+        match req.get_op() {
+            RDMAOp::READ => self.get_qp().post_send_dc_read(
+                req.get_endpoint().as_ref(),
+                req.get_local_mr().as_ref(),
+                req.get_local_mr_range(),
+                req.is_signaled(),
+                req.get_raddr(),
+                req.get_rkey(),
+            ),
+            RDMAOp::WRITE => self.get_qp().post_send_dc_write(
+                req.get_endpoint().as_ref(),
+                req.get_local_mr().as_ref(),
+                req.get_local_mr_range(),
+                req.is_signaled(),
+                req.get_raddr(),
+                req.get_rkey(),
+            ),
         }
     }
 }
 
 use crate::future::{Async, Future, Poll};
+use crate::rdma::payload::{EndPoint, LocalMR, Signaled};
 
-impl Future for DCConn<'_> {
-    type Output = ib_wc;
-    type Error = super::Err;
+impl Future for DCConn {
+    type Output = KRdmaKit::rdma_shim::bindings::ib_wc;
+    type Error = DatapathError;
 
+    /// Poll 1 completion from the underlying completion queue in the DC qp
+    ///
+    /// # Return value:
+    /// - `NotReady`: There is nothing in the completion queue.
+    /// - A `ib_wc` object: The work completion extracted from the completion queue.
+    /// The caller should check the status field of the `ib_wc` object.
+    ///
+    /// # Errors:
+    /// - `DatapathError`: There is something wrong in polling the completion queue.
+    ///
     #[inline]
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
         compiler_fence(SeqCst);
-        let mut wc: ib_wc = Default::default();
-        let cq = self.dc.get_cq();
-        let ret = unsafe { bd_ib_poll_cq(cq, 1, &mut wc) };
-        match ret {
-            0 => {
-                return Ok(Async::NotReady);
-            }
-            1 => {
-                if wc.status != ib_wc_status::IB_WC_SUCCESS {
-                    return Err(super::Err::WCErr(wc.status.into()));
-                } else {
-                    return Ok(Async::Ready(wc));
-                }
-            }
-            _ => {
-                log::error!("ib_poll_cq returns {}", ret);
-                return Err(super::Err::Other);
-            }
+        let mut completion = [Default::default(); 1];
+        let ret = self.get_qp().poll_send_cq(&mut completion)?;
+        if ret.len() > 0 {
+            Ok(Async::Ready(completion[0]))
+        } else {
+            Ok(Async::NotReady)
         }
     }
 }
 
-impl<'a> Clone for DCConn<'a> {
-    /// Clone is fine for DCQP
-    /// This is because
-    /// 1. it is behind ARC
-    /// 2. the raw QP is thread-safe
+impl Clone for DCConn {
     fn clone(&self) -> Self {
-        Self { 
-            dc : self.dc.clone(), 
-            phantom: PhantomData,    
-            watermark : 0,
+        Self {
+            dc: self.dc.clone(),
+            watermark: 0,
         }
     }
 }
 
-impl crate::conn::Factory for DCFactory<'_> {
-    type ConnMeta = ();
-    type ConnType<'a>
-    where
-        Self: 'a,
-    = DCConn<'a>;
-    type ConnResult = super::ConnErr;
+impl crate::conn::Factory for DCFactory {
+    type ConnMeta = super::DCCreationMeta;
+    type ConnType = DCConn;
+    type ConnResult = ControlpathError;
 
-    fn create(&self, _meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult> {
-        let dc = DC::new(&self.rctx);
-        match dc {
-            Some(dc) => Ok(DCConn::<'_> {
-                dc: dc,
-                phantom: PhantomData,
-                watermark : 0,
-            }),
-            None => Err(super::ConnErr::CreateQPErr),
-        }
+    /// Create a DC qp
+    ///
+    /// # Paramters:
+    /// - The metadata includes
+    ///     * The port to use in creation of the qp
+    ///
+    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult> {
+        let mut builder = QueuePairBuilder::new(&self.rctx);
+        builder
+            .allow_remote_rw()
+            .allow_remote_atomic()
+            .set_port_num(meta.port);
+        let qp = builder.build_dc()?.bring_up_dc()?;
+        Ok(DCConn {
+            dc: qp,
+            watermark: 0,
+        })
     }
 }
-

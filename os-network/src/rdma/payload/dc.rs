@@ -1,69 +1,111 @@
-use KRdmaKit::rust_kernel_rdma_base::{ib_dc_wr, ib_sge};
+use alloc::sync::Arc;
+use core::ops::Range;
+use KRdmaKit::{DatagramEndpoint, MemoryRegion};
 
-impl super::SendWR for ib_dc_wr {
-    fn set_opcode(&mut self, opcode: u32) {
-        self.wr.opcode = opcode;
-    }
+pub struct DCReqPayload {
+    mr: Arc<MemoryRegion>,
+    range: Range<u64>,
+    signaled: bool,
+    op: super::RDMAOp,
+    rkey: u32,
+    raddr: u64,
+    endpoint: Arc<DatagramEndpoint>,
+}
 
-    fn get_opcode(&self) -> u32 {
-        self.wr.opcode
-    }
-
-    fn set_send_flags(&mut self, send_flags: i32) {
-        self.wr.send_flags = send_flags;
-    }
-
-    fn get_send_flags(&self) -> i32 {
-        self.wr.send_flags
-    }
-
-    fn set_imm_data(&mut self, imm_data: u32) {
-        self.wr.ex.imm_data = imm_data;
-    }
-
-    fn set_sge_ptr(&mut self, sge: *mut ib_sge) {
-        self.wr.sg_list = sge;
-        self.wr.num_sge = 1;
-    }
-
-    fn get_sge_ptr(&self) -> *const ib_sge {
-        self.wr.sg_list
+impl DCReqPayload {
+    pub fn new(
+        mr: Arc<MemoryRegion>,
+        range: Range<u64>,
+        signaled: bool,
+        op: super::RDMAOp,
+        rkey: u32,
+        raddr: u64,
+        endpoint: Arc<DatagramEndpoint>,
+    ) -> Self {
+        Self {
+            mr,
+            range,
+            signaled,
+            op,
+            rkey,
+            raddr,
+            endpoint,
+        }
     }
 }
 
-impl super::RDMAWR for ib_dc_wr {
-    fn set_raddr(&mut self, raddr: u64) {
-        self.remote_addr = raddr;
+impl super::LocalMR for DCReqPayload {
+    fn set_local_mr(mut self, mr: Arc<MemoryRegion>) -> Self {
+        self.mr = mr;
+        self
     }
 
-    fn set_rkey(&mut self, rkey: u32) {
+    fn set_local_mr_range(mut self, range: Range<u64>) -> Self {
+        self.range = range;
+        self
+    }
+
+    fn get_local_mr(&self) -> Arc<MemoryRegion> {
+        self.mr.clone()
+    }
+
+    fn get_local_mr_range(&self) -> Range<u64> {
+        self.range.clone()
+    }
+}
+
+impl super::Signaled for DCReqPayload {
+    fn is_signaled(&self) -> bool {
+        self.signaled
+    }
+
+    fn set_signaled(mut self) -> Self {
+        self.signaled = true;
+        self
+    }
+
+    fn set_unsignaled(mut self) -> Self {
+        self.signaled = false;
+        self
+    }
+}
+
+impl super::RDMAWR for DCReqPayload {
+    fn set_raddr(mut self, raddr: u64) -> Self {
+        self.raddr = raddr;
+        self
+    }
+
+    fn set_rkey(mut self, rkey: u32) -> Self {
         self.rkey = rkey;
+        self
+    }
+
+    fn set_op(mut self, op: super::RDMAOp) -> Self {
+        self.op = op;
+        self
+    }
+
+    fn get_raddr(&self) -> u64 {
+        self.raddr
+    }
+
+    fn get_rkey(&self) -> u32 {
+        self.rkey
+    }
+
+    fn get_op(&self) -> super::RDMAOp {
+        self.op
     }
 }
 
-use crate::rdma::payload::ib_ah;
-
-impl super::UDWR for ib_dc_wr {
-    fn set_ah(&mut self, end_point: &KRdmaKit::cm::EndPoint) {
-        self.ah = end_point.ah;
-        self.dct_access_key = 73; // TODO
-        self.dct_number = end_point.dct_num;
-    }
-
-    fn set_ah_ptr(&mut self, ah : *mut ib_ah) -> &mut Self {
-        self.ah = ah;
-        self
-    }
-}
-
-impl super::DCWR for ib_dc_wr {
-    fn set_dc_access_key(&mut self, key : u64) -> &mut Self {
-        self.dct_access_key = key as _;
+impl super::EndPoint for DCReqPayload {
+    fn set_endpoint(mut self, endpoint: Arc<DatagramEndpoint>) -> Self {
+        self.endpoint = endpoint;
         self
     }
 
-    fn set_dc_num(&mut self, num : u32) -> &mut Self {
-        self.dct_number = num;
-        self
+    fn get_endpoint(&self) -> Arc<DatagramEndpoint> {
+        self.endpoint.clone()
     }
 }

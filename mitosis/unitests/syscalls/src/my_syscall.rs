@@ -22,7 +22,7 @@ impl FileOperations for MySyscallHandler
     fn ioctrl(&mut self, cmd: c_uint, arg: c_ulong) -> c_long {
         crate::log::debug!("in ioctrl");
         match cmd {
-            _CALL_NIL => self.handle_nil(arg),
+            mitosis_protocol::CALL_NIL => self.handle_nil(arg),
             _ => {
                 crate::log::error!("unknown system call command ID {}", cmd);
                 -1
@@ -40,7 +40,7 @@ impl FileOperations for MySyscallHandler
 impl MySyscallHandler {
     #[inline(always)]
     fn handle_nil(&self, arg: c_ulong) -> c_long {
-        crate::log::debug!("handle nil call, with arg {}", arg);
+        crate::log::info!("handle nil call, with arg {}", arg);
         0
     }
 }

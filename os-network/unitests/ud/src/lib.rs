@@ -1,163 +1,202 @@
 #![no_std]
 
 extern crate alloc;
+use alloc::sync::Arc;
 
 use core::fmt::Write;
 
-use KRdmaKit::cm::SidrCM;
-use KRdmaKit::ctrl::RCtrl;
-use KRdmaKit::rust_kernel_rdma_base::*;
-use KRdmaKit::KDriver;
-
-use rust_kernel_linux_util as log;
-
 use os_network::block_on;
+use os_network::Receiver;
+use os_network::MetaFactory;
 use os_network::conn::{Conn, Factory};
 use os_network::datagram::msg::UDMsg;
 use os_network::datagram::ud::*;
+use os_network::bytes::ToBytes;
 use os_network::timeout::Timeout;
+use os_network::rdma::payload::ud::UDReqPayload;
+use os_network::ud_receiver::UDReceiverFactory;
+use os_network::KRdmaKit;
 
-use mitosis_macros::declare_global;
+use KRdmaKit::rdma_shim::bindings::*;
+use KRdmaKit::rdma_shim::{linux_kernel_module, log};
+use KRdmaKit::KDriver;
+use KRdmaKit::comm_manager::CMServer;
+use KRdmaKit::services::UnreliableDatagramAddressService;
 
 use krdma_test::*;
 
-const DEFAULT_QD_HINT: u64 = 73;
-const MSG_SIZE: usize = 512;
+const GRH_SIZE: usize = 40;
 
-declare_global!(KDRIVER, alloc::boxed::Box<KRdmaKit::KDriver>);
+/// The error type of data plane operations
+#[derive(thiserror_no_std::Error, Debug)]
+pub enum TestError {
+    #[error("Test error {0}")]
+    Error(&'static str),
+}
 
 /// A test on `UDFactory`
-/// Pre-requisition: `ctx_init`
-fn test_ud_factory() {
-    let driver = unsafe { KDRIVER::get_ref() };
+fn test_ud_factory() -> Result<(), TestError> {
+    let driver = unsafe { KDriver::create().unwrap() };
     let ctx = driver
         .devices()
         .into_iter()
         .next()
         .expect("no rdma device available")
-        .open()
-        .expect("failed to open context");
-
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
     let factory = UDFactory::new(&ctx);
-
-    let ud = factory.create(());
-    if ud.is_err() {
-        log::error!("fail to create ud qp");
-        return;
-    }
-    log::info!("test ud factory passes");
+    let port = 1;
+    let _ud = factory.create(UDCreationMeta {port})
+            .map_err(|_| {
+                log::error!("Create ud qp error.");
+                TestError::Error("UD qp error.")
+            })?;
+    Ok(())
 }
-
-use core::pin::Pin;
-use os_network::bytes::ToBytes;
-use os_network::datagram::ud_receiver::*;
 
 /// A test on one-sided operation on `UDDatagram`
-/// Pre-requisition: `ctx_init`
-fn test_ud_two_sided() {
-    let timeout_usec = 1000_000;
-    let driver = unsafe { KDRIVER::get_ref() };
-    let ctx = driver.devices().into_iter().next().unwrap().open().unwrap();
+fn test_ud_two_sided() -> Result<(), TestError> {
+    let driver = unsafe { KDriver::create().unwrap() };
 
-    let factory = UDFactory::new(&ctx);
-    let ctx = factory.get_context();
+    // server side
+    // create a CMServer to handle requests
+    let server_ctx = driver
+        .devices()
+        .get(0)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
+    let service_id = 73;
+    let ud_server = UnreliableDatagramAddressService::create();
+    let _server_cm = CMServer::new(service_id, &ud_server, server_ctx.get_dev_ref())
+        .map_err(|_| {
+            log::error!("Open server ctx error.");
+            TestError::Error("Server context error.")
+        })?;
+    
+    // create server-side ud
+    let server_port = 1;
+    let factory = UDFactory::new(&server_ctx);
+    let ud = factory.create(UDCreationMeta {port: server_port})
+            .map_err(|_| {
+                log::error!("Create ud qp error.");
+                TestError::Error("UD qp error.")
+            })?;
+    
+    // register UD qp at server side
+    let qd_hint = 37;
+    ud_server.reg_qp(qd_hint, &ud.get_qp());
 
-    let server_ud = factory.create(()).unwrap();
-    let mut client_ud = factory.create(()).unwrap();
+    // client side
+    let client_ctx = driver
+        .devices()
+        .get(1)
+        .ok_or(TestError::Error("Not valid device"))?
+        .open_context()
+        .map_err(|_| {
+            log::error!("Open client ctx error.");
+            TestError::Error("Client context error.")
+        })?;
+    
+    // create client side UDHyperMeta
+    let client_port = 1;
+    let gid = server_ctx.get_dev_ref().query_gid(server_port, 0).unwrap();
+    let meta = UDHyperMeta {
+        gid,
+        service_id,
+        qd_hint,
+        local_port: client_port,
+    };
 
-    let service_id: u64 = 0;
-    let ctrl = RCtrl::create(service_id, &ctx).unwrap();
-    ctrl.reg_ud(DEFAULT_QD_HINT as usize, server_ud.get_qp());
-    let gid = ctx.get_gid_as_string();
+    let client_factory = UDFactory::new(&client_ctx);
+    let endpoint = client_factory.create_meta(meta).map_err(|_| {
+        log::error!("Create endpoint error.");
+        TestError::Error("Endpoint error.")
+    })?;
 
-    let path_res = factory.get_context().explore_path(gid, service_id).unwrap();
-    let mut sidr_cm = SidrCM::new(ctx, core::ptr::null_mut()).unwrap();
-    let endpoint = sidr_cm
-        .sidr_connect(path_res, service_id, DEFAULT_QD_HINT)
-        .unwrap();
+    // create client side ud qp
+    let client_port = 1;
+    let mut client_ud = client_factory.create(UDCreationMeta {port: client_port})
+        .map_err(|_| {
+            log::error!("Create ud qp error.");
+            TestError::Error("UD qp error.")
+        })?;
+    
+    // create memory region for both server and client
+    let server_recv_buf_len = 512;
+    let client_send_buf_len = 256;
+    let server_recv_buf = UDMsg::new(server_recv_buf_len, 0, server_ctx.clone());
+    let mut client_send_buf = UDMsg::new(client_send_buf_len, 0, client_ctx.clone());
+    write!(&mut client_send_buf, "hello world").unwrap();
 
+    // post the recv buf at server side
     let mut ud_receiver = UDReceiverFactory::new()
-        .set_qd_hint(0)
-        .set_lkey(unsafe { ctx.get_lkey() })
-        .create(server_ud);
+        .set_qd_hint(qd_hint)
+        .create(ud);
+    ud_receiver.post_recv_buf(server_recv_buf).map_err(|_| {
+        log::error!("Post recv buf error.");
+        TestError::Error("Server ud post recv buf error.")
+    })?;
+    
+    // post the send buf at client side
+    let payload = UDReqPayload::new(
+        client_send_buf.get_inner(),
+        0..client_send_buf_len as u64,
+        true,
+        Arc::new(endpoint)
+    );
+    client_ud.post(&payload).map_err(|_| {
+        log::error!("Post send buf error.");
+        TestError::Error("Client ud post send buf error.")
+    })?;
 
-    for _ in 0..12 {
-        // 64 is the header
-        match ud_receiver.post_recv_buf(UDMsg::new(MSG_SIZE + 64, 73)) {
-            Ok(_) => {}
-            Err(e) => log::error!("post recv buf err: {:?}", e),
+    // poll at client side
+    let timeout_usec = 1000_000;
+    let mut client_ud = Timeout::new(client_ud, timeout_usec);
+    block_on(&mut client_ud).map_err(|_| {
+        log::error!("Poll client cq error.");
+        TestError::Error("Client cq poll error.")
+    })?;
+
+    // poll at server side
+    let mut ud_receiver = Timeout::new(ud_receiver, timeout_usec);
+    let result = block_on(&mut ud_receiver).map_err(|_| {
+        log::error!("Poll server cq error.");
+        TestError::Error("Server cq poll error.")
+    })?;
+
+    // check the content
+    unsafe {
+        let result = result.get_bytes().truncate_header(GRH_SIZE).unwrap();
+        if result.clone_and_resize(client_send_buf.get_bytes().len()).unwrap()
+        != client_send_buf.get_bytes().clone() {
+            Err(TestError::Error("Error content."))
+        } else {
+            Ok(())
         }
     }
-
-    let mut send_msg = UDMsg::new(MSG_SIZE, 73);
-    write!(&mut send_msg, "hello world").unwrap();
-
-    let mut send_req = send_msg
-        .to_ud_wr(&endpoint)
-        .set_send_flags(ib_send_flags::IB_SEND_SIGNALED)
-        .set_lkey(unsafe { ctx.get_lkey() });
-
-    // pin the request to set the sge_ptr properly.
-    let mut send_req = unsafe { Pin::new_unchecked(&mut send_req) };
-    os_network::rdma::payload::Payload::<ib_ud_wr>::finalize(send_req.as_mut());
-
-    let result = client_ud.post(&send_req.as_ref());
-
-    if result.is_err() {
-        log::error!("fail to post message");
-        return;
-    }
-
-    // check the message has been sent
-    let mut timeout_client_ud = Timeout::new(client_ud, timeout_usec);
-    let result = block_on(&mut timeout_client_ud);
-    if result.is_err() {
-        log::error!("polling send ud qp with error: {:?}", result.err().unwrap());
-    } else {
-        log::info!("post msg done");
-    }
-
-    // start to receive
-    let mut timeout_server_receiver = Timeout::new(ud_receiver, timeout_usec);
-    let result = block_on(&mut timeout_server_receiver);
-    if result.is_err() {
-        log::error!(
-            "polling receive ud qp with error: {:?}",
-            result.err().unwrap()
-        );
-    } else {
-        let received_msg = unsafe { result.unwrap().get_bytes().truncate_header(0).unwrap() };
-        log::info!(
-            "Get received msg: {:?}",
-            // if the result is correct, then the truncate size should be 40
-            received_msg
-        );
-        let received_msg = unsafe { received_msg.truncate_header(40).unwrap() };
-        log::debug!("received msg: {} {:?} ", received_msg.len(), received_msg);
-
-        assert!(
-            unsafe { received_msg.clone_and_resize(send_msg.get_bytes().len()) }.unwrap()
-                == unsafe { send_msg.get_bytes().clone() }
-        );
-    }
-
-    log::info!(
-        "finally check the content:{} {:?}",
-        send_msg.len(),
-        send_msg.get_bytes()
-    );
 }
 
-#[krdma_test(test_ud_factory, test_ud_two_sided)]
-fn ctx_init() {
-    unsafe {
-        KDRIVER::init(KDriver::create().unwrap());
-    }
+fn test_wrapper() -> Result<(), TestError> {
+    test_ud_factory()?;
+    test_ud_two_sided()?;
+    Ok(())
 }
 
-#[krdma_drop]
-fn ctx_drop() {
-    unsafe {
-        KDRIVER::drop();
-    }
+#[krdma_main]
+fn main() {
+    match test_wrapper() {
+        Ok(_) => {
+            log::info!("pass all tests")
+        }
+        Err(e) => {
+            log::error!("test error {:?}", e)
+        }
+    };
 }

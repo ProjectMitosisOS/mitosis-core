@@ -2,12 +2,12 @@
 
 extern crate alloc;
 
-use rust_kernel_linux_util as log;
-use KRdmaKit::rust_kernel_rdma_base::linux_kernel_module;
-
 use mitosis::core_syscall_handler::*;
 use mitosis::startup::{end_instance, start_instance};
 use mitosis::syscalls::*;
+use mitosis::linux_kernel_module;
+use mitosis::log;
+use mitosis::os_network;
 
 #[allow(dead_code)]
 struct Module {

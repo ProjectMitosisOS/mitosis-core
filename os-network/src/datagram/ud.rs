@@ -1,184 +1,195 @@
-
-use alloc::string::ToString;
 use alloc::sync::Arc;
 
-use crate::future::{Async, Future, Poll};
+use crate::{
+    future::{Async, Future, Poll},
+    rdma::payload::{ud::UDReqPayload, EndPoint, LocalMR, Signaled},
+};
 
-use core::marker::PhantomData;
-
-use KRdmaKit::cm::SidrCM;
-use KRdmaKit::device::{RContext};
-use KRdmaKit::qp::UD;
-use KRdmaKit::rust_kernel_rdma_base::*;
+use KRdmaKit::{
+    comm_manager::Explorer, context::Context, queue_pairs::endpoint::DatagramEndpointQuerier,
+    CMError, ControlpathError, DatapathError, QueuePair, QueuePairBuilder,
+};
 
 // XD: should tuned. maybe use it as a global configure?
 pub const MAX_MTU: usize = 4096;
 // 40: global routing header (GRH)
 pub const MAX_MSG_SZ: usize = MAX_MTU - 40;
+// max_send_wr: the maximum number of outstanding WRs that can be posted to the qp
+// set to 2048 for a ud qp
+pub const MAX_SEND_WR: u32 = 2048;
 
-pub struct UDFactory<'a> {
-    rctx: &'a RContext<'a>,
+pub struct UDFactory {
+    rctx: Arc<Context>,
 }
 
-impl<'a> UDFactory<'a> {
-    pub fn new(ctx: &'a RContext<'a>) -> Self {
-        Self { rctx: ctx }
+impl UDFactory {
+    pub fn new(ctx: &Arc<Context>) -> Self {
+        Self { rctx: ctx.clone() }
     }
 
-    pub fn get_context(&self) -> &RContext<'_> {
-        self.rctx
+    pub fn get_context(&self) -> Arc<Context> {
+        self.rctx.clone()
     }
 }
 
 /// Note:
 /// - we assume that the datagram is only used by one **thread**
 /// UDDatagram wraps a UD qp and serves as client-sided message sender
-pub struct UDDatagram<'a> {
-    pub(crate) ud: Arc<UD>,
-    phantom: PhantomData<&'a ()>,
-    pending : usize,
+///
+pub struct UDDatagram {
+    pub(crate) ud: Arc<QueuePair>,
+    pending: usize,
 }
 
-impl UDDatagram<'_> {
-    pub fn get_qp(&self) -> Arc<UD> {
+impl UDDatagram {
+    pub fn get_qp(&self) -> Arc<QueuePair> {
         self.ud.clone()
     }
 
-    pub fn get_pending(&self) -> usize { 
+    pub fn get_pending(&self) -> usize {
         self.pending
     }
 
     pub fn clone(&self) -> Self {
         Self {
             ud: self.ud.clone(),
-            phantom: PhantomData,
-            pending : 0
+            pending: self.pending,
         }
     }
 }
 
-use crate::rdma::Err;
-
-impl Future for UDDatagram<'_> {
-    type Output = ib_wc;
-    type Error = Err;
+impl Future for UDDatagram {
+    type Output = KRdmaKit::rdma_shim::bindings::ib_wc;
+    type Error = DatapathError;
 
     /// Poll the underlying completion queue for the UD send operation
-    /// 
+    ///
     /// Return
-    /// - If succeed, return the ib_wc
-    /// - If fail, return NotReady, work-completion-related error or other general error
+    /// - If succeed, return the `ib_wc`. The caller should check the status field of the `ib_wc` object.
+    /// - If fail, return NotReady or other `DatapathError`
     fn poll(&mut self) -> Poll<Self::Output, Self::Error> {
-        let mut wc: ib_wc = Default::default();
-        match unsafe { bd_ib_poll_cq(self.ud.get_cq(), 1, &mut wc) } {
-            0 => Ok(Async::NotReady),
-            1 => {
-                self.pending = 0;
-                // FIXME: should dispatch according to the wc_status
-                if wc.status != ib_wc_status::IB_WC_SUCCESS {
-                    crate::log::debug!("check wc: {}", wc.status);
-                    return Err(Err::WCErr(wc.status.into()));
-                }
-                Ok(Async::Ready(wc))
-            }
-            _ => Err(Err::Other),
+        let mut completion = [Default::default()];
+        let ret = self.get_qp().poll_send_cq(&mut completion)?;
+        if ret.len() > 0 {
+            self.pending = 0;
+            Ok(Async::Ready(completion[0]))
+        } else {
+            Ok(Async::NotReady)
         }
     }
 }
 
-impl crate::conn::Conn for UDDatagram<'_> 
-{
-    type ReqPayload = crate::rdma::payload::Payload<ib_ud_wr>;
+impl crate::conn::Conn for UDDatagram {
+    type ReqPayload = UDReqPayload;
+    type IOResult = DatapathError;
 
     /// Post the send requests to the underlying qp
-    /// 
+    ///
     /// Return
     /// - If succeed, return Ok(())
-    /// - If fail, return a general error
+    /// - If fail, return a `DatapathError`
     fn post(&mut self, req: &Self::ReqPayload) -> Result<(), Self::IOResult> {
-        let mut bad_wr: *mut ib_send_wr = core::ptr::null_mut();
-
-        let err = unsafe {
-            bd_ib_post_send(
-                self.ud.get_qp(),
-                req.get_wr_ptr() as *mut _,
-                &mut bad_wr as *mut _,
-            )
-        };
-        if err != 0 {
-            return Err(Err::Other);
-        }
+        self.get_qp().post_datagram(
+            req.get_endpoint().as_ref(),
+            req.get_local_mr().as_ref(),
+            req.get_local_mr_range(),
+            req.get_local_mr().get_virt_addr(),
+            req.is_signaled(),
+        )?;
         self.pending += 1;
-
         Ok(())
     }
 }
 
-impl crate::conn::Factory for UDFactory<'_> {
-    type ConnMeta = ();
-    type ConnType<'a>
-    where
-        Self: 'a,
-    = UDDatagram<'a>;
-
-    type ConnResult = Err;
+impl crate::conn::Factory for UDFactory {
+    type ConnMeta = UDCreationMeta;
+    type ConnType = UDDatagram;
+    type ConnResult = ControlpathError;
 
     /// Create a ud qp
-    /// 
+    ///
     /// Return
     /// - If succeed, return a Ok result with UDDatagram
-    /// - If fail, return a general error
-    fn create(&self, _meta: Self::ConnMeta) -> Result<Self::ConnType<'_>, Self::ConnResult> {
-        let ud = UD::new(&self.rctx).ok_or(Err::Other)?;
-        Ok(UDDatagram {
-            ud: ud,
-            phantom: PhantomData,
-            pending : 0,
-        })
+    /// - If fail, return a `ControlpathError`
+    fn create(&self, meta: Self::ConnMeta) -> Result<Self::ConnType, Self::ConnResult> {
+        let mut builder = QueuePairBuilder::new(&self.get_context());
+        builder
+            .allow_remote_rw()
+            .allow_remote_atomic()
+            .set_max_send_wr(MAX_SEND_WR)
+            .set_port_num(meta.port);
+        let qp = builder.build_ud()?.bring_up_ud()?;
+        Ok(UDDatagram { ud: qp, pending: 0 })
+    }
+}
+
+pub struct UDHyperMeta {
+    pub gid: KRdmaKit::rdma_shim::bindings::ib_gid,
+    pub service_id: u64,
+    pub qd_hint: usize,
+    pub local_port: u8,
+}
+
+impl Default for UDHyperMeta {
+    fn default() -> Self {
+        // We use 1 as the default local port number
+        Self { local_port: 1 as u8, gid: Default::default(), service_id: Default::default(), qd_hint: Default::default()  }
     }
 }
 
 #[derive(Default)]
-pub struct UDHyperMeta {
-    pub gid: crate::rdma::RawGID,
-    pub service_id: u64,
-    pub qd_hint: u64,
+pub struct UDCreationMeta {
+    pub port: u8,
 }
 
-impl crate::conn::MetaFactory for UDFactory<'_> {
-    // gid, service id, qd hint
-    type HyperMeta = UDHyperMeta;
+#[derive(Debug)]
+pub enum UDMetaFactoryError {
+    ControlpathError(ControlpathError),
+    CMError(CMError),
+}
 
-    // ud endpoint, local memory protection key
-    type Meta = (KRdmaKit::cm::EndPoint, u32);
-
-    type MetaResult = Err;
-
-    /// Note: this function is not optimized, but since it is not on the (important) critical
-    /// path of the execution, it is ok to do this
-    fn create_meta(&self, meta: Self::HyperMeta) -> Result<Self::Meta, Self::MetaResult> {
-        let (gid, service_id, qd_hint) = (meta.gid, meta.service_id, meta.qd_hint);
-        let path_res = self
-            .rctx
-            .explore_path(gid.to_string(), service_id)
-            .ok_or(Err::Other)?;
-        let mut sidr_cm = SidrCM::new(&self.rctx, core::ptr::null_mut()).ok_or(Err::Other)?;
-        let endpoint = sidr_cm
-            .sidr_connect(path_res, service_id, qd_hint)
-            .map_err(|_| Err::Other)?;
-        Ok((endpoint, unsafe { self.rctx.get_lkey() }))
+impl From<ControlpathError> for UDMetaFactoryError {
+    fn from(e: ControlpathError) -> Self {
+        Self::ControlpathError(e)
     }
 }
 
+impl From<CMError> for UDMetaFactoryError {
+    fn from(e: CMError) -> Self {
+        Self::CMError(e)
+    }
+}
+
+impl crate::conn::MetaFactory for UDFactory {
+    type HyperMeta = UDHyperMeta;
+    type Meta = KRdmaKit::queue_pairs::DatagramEndpoint;
+    type MetaResult = UDMetaFactoryError;
+
+    /// Create endpoint meta data generated from given HyperMeta (gid, service_id, qd_hint, etc.)
+    ///
+    /// # Errors:
+    /// - `CMError`: This error means that there is something wrong when exploring the RDMA subnet admin path record
+    /// - `ControlpathError`: This error means that there is something wrong in communicating with target node
+    ///
+    fn create_meta(&self, meta: Self::HyperMeta) -> Result<Self::Meta, Self::MetaResult> {
+        let (gid, service_id, qd_hint, local_port) =
+            (meta.gid, meta.service_id, meta.qd_hint, meta.local_port);
+        let explorer = Explorer::new(self.get_context().get_dev_ref());
+        let path = unsafe { explorer.resolve_inner(service_id, local_port, gid) }?;
+        let querier = DatagramEndpointQuerier::create(&self.get_context(), local_port)?;
+        let endpoint = querier.query(service_id, qd_hint, path)?;
+        Ok(endpoint)
+    }
+}
 
 use core::fmt::{Debug, Formatter};
 
-impl Debug for UDHyperMeta
-{
+impl Debug for UDHyperMeta {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(
-            f, "UDHyperMeta {{ gid : {}, service_id : {}, qd : {} }}", 
-            self.gid.to_string(), self.service_id, self.qd_hint
+            f,
+            "UDHyperMeta {{ gid : {:?}, service_id : {}, qd : {} }}",
+            self.gid, self.service_id, self.qd_hint
         )
     }
 }

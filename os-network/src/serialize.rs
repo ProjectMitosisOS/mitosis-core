@@ -2,6 +2,8 @@
 use super::bytes::*;
 
 impl BytesMut {
+    /// Serialize a sized object through memory copy.
+    ///
     pub unsafe fn memcpy_serialize<T: Sized>(&mut self, v: &T) -> core::option::Option<usize> {
         if core::intrinsics::likely(core::mem::size_of::<T>() <= self.len()) {
             core::ptr::copy_nonoverlapping(v, self.ptr as _, 1);
@@ -10,6 +12,8 @@ impl BytesMut {
         None
     }
 
+    /// Serialize a sized object through memory copy at an offset
+    ///
     pub unsafe fn memcpy_serialize_at<T: Sized>(
         &mut self,
         off: usize,
@@ -21,6 +25,8 @@ impl BytesMut {
         }
     }
 
+    /// Deserialize a sized object through memory copy at an offset.
+    ///
     pub unsafe fn memcpy_deserialize_at<T: Sized>(
         &self,
         off: usize,
@@ -32,6 +38,8 @@ impl BytesMut {
         }
     }
 
+    /// Deserialize a sized object through memory copy.
+    ///
     pub unsafe fn memcpy_deserialize<T: Sized>(
         &self,
         target: &mut T,
