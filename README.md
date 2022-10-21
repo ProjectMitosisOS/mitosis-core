@@ -25,6 +25,7 @@ file mitosis-kms/fork.ko
 ```
 
 Mitosis has different configurations, including:
+
     - Prefetch: Read ahead some pages with RDMA
     - Page cache: Cache some pages locally instead of read through RDMA
     - COW: Use Copy-On-Write instead of directly copying page content
