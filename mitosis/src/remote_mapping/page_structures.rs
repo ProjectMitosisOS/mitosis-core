@@ -3,6 +3,7 @@
 //! Credits: <https://github.com/rust-osdev/x86_64/blob/master/src/structures/paging/page_table.rs>
 
 use alloc::boxed::Box;
+use rust_kernel_rdma_base::VmallocAllocator;
 use core::fmt;
 use core::ops::{Index, IndexMut};
 
@@ -50,7 +51,7 @@ impl Drop for PageTable {
                 for entry in self.iter() {
                     if *entry != 0 {
                         // this is a pointer
-                        unsafe { alloc::boxed::Box::from_raw(*entry as *mut PageTable) };
+                        unsafe { alloc::boxed::Box::from_raw_in(*entry as *mut PageTable, VmallocAllocator) };
                     }
                 }
             }
@@ -73,14 +74,14 @@ impl Drop for PageTable {
 }
 
 impl PageTable {
-    pub fn deep_copy(&self) -> Box<Self> {
+    pub fn deep_copy(&self) -> Box<Self, VmallocAllocator> {
         const EMPTY: PageTableEntry = 0;
-        let mut result = Box::new(Self {
+        let mut result = Box::new_in(Self {
             entries: [EMPTY; ENTRY_COUNT],
             level: self.level,
             upper_level: self.upper_level,
             upper_level_index: self.upper_level_index,
-        });
+        }, VmallocAllocator);
         let entity = &mut *result;
 
         for (idx, value) in self.entries.iter().enumerate() {
@@ -130,11 +131,11 @@ impl PageTable {
     #[inline]
     pub unsafe fn new_from_upper(src: *mut Self, idx: usize) -> *mut Self {
         let pt: &mut PageTable = &mut (*src);
-        Box::into_raw(Box::new(PageTable::new(
+        Box::into_raw(Box::new_in(PageTable::new(
             pt.get_level().next_lower_level().unwrap(),
             src,
             idx,
-        )))
+        ), VmallocAllocator))
     }
 
     /// Get the page table level
