@@ -4,7 +4,7 @@ Mitosis is a kernel module that provides a new system primitive of fast remote f
 
 ## Overview
 
-TODO: Describe the information for each rust crate here.
+TODO: Describe the information for each rust crate and overall architecture here.
 
 ## Getting Started Instructions
 
@@ -40,7 +40,68 @@ cp mitosis-kms/Kbuild-mitosis-prefetch mitosis-kms/Kbuild
 
 ### Example 
 
-We have provided a simple demo to use the kernel module.
+We have provided a simple demo on how to use the kernel module to remote fork a process.
+
+1. Choose two machines as the parent machine and the child machine. Get the gid of the parent machine.
+
+```bash
+show_gids
+# DEV     PORT    INDEX   GID                                     IPv4            VER     DEV
+# ---     ----    -----   ---                                     ------------    ---     ---
+# mlx5_0  1       0       fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c                 v1
+# mlx5_1  1       0       fe80:0000:0000:0000:ec0d:9a03:0078:6376                 v1
+# n_gids_found=2
+```
+
+Mitosis uses the first RDMA nic by default, so we will use the gid `fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c` here.
+
+2. Prepare the demo C++ programs on both machines.
+
+```bash
+cd samples/cpp
+cmake .
+make
+ls parent client -hl
+# -rwxrwxr-x child
+# -rwxrwxr-x parent
+```
+
+```bash
+cd exp
+cmake .
+make connector
+```
+
+3. Compile and insert the kernel module on both machines.
+
+```bash
+make km && make insmod
+file /dev/mitosis-syscalls
+# /dev/mitosis-syscalls: setuid, setgid, sticky, character special (238/0)
+```
+
+4. Run the connector on the child machine to let the child machine to connect to the parent machine.
+
+```bash
+cd exp
+./connector -gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" -mac_id=0 -nic_id=0
+```
+
+5. Run the parent program on the parent machine.
+
+```bash
+cd samples/cpp
+./parent # the parent program will print an increasing counter from 0 repeatedly
+```
+
+6. Run the client program on the client machine
+
+```bash
+cd samples/cpp
+./child # the child will start printing the counter from 0 as if it has forked the parent program from the point before it starts print the counter
+```
+
+7. Use Ctrl+C to kill the parent and child and use `make rmmod` to uninstall the kernel module.
 
 ## Tests and Benchmarks
 
