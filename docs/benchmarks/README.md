@@ -69,11 +69,15 @@ make build-mitosis-prefetch
 
 #### Run Micro Benchmark (C++)
 
+The micro benchmark measures the `fork_prepare` latency of a C++ program which consumes a memory area which varies from 1MB ~ 1GB.
+
 ```bash
 make micro-c-prepare
 ```
 
 Output:
+
+The column `trace` is the memory area size in byte. The `Prepare time` is the latency of the `fork_prepare` call.
 
 ```
      trace  data
@@ -170,13 +174,17 @@ Output:
             (u'@val01     ', u'Prepare time = 42.841 ms')
 ```
 
-#### Function Benchmark (Python)
+#### Run Function Benchmark (Python)
+
+The function benchmark measures the `fork_prepare` latency of a Python program which executes a custom function.
 
 ```bash
 make micro-c-prepare
 ```
 
 Output:
+
+The column `trace` is the function name, and the column `data` is the latency of the `fork_prepare` call.
 
 ```
 trace        data
@@ -270,8 +278,144 @@ recognition  (u'@val01     ', u'[recognition-prepare] duration: 21.55 ms')
 make clean
 ```
 
+### `fork_resume` Time Benchmark
+
+This benchmark measures the latency of `fork_resume` of some typical functions/microbenchmark programs.
+
+This benchmark requires 2 machines.
+
+Sample configuration:
+
+```
+PROJECT_PATH=/mnt/hdd/wtx/mitosis
+PARENT_GID=fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c
+PARENT_HOST=val01
+CHILD_HOSTS=val02
+STR_CHILD_HOSTS='val02'
+
+FILTER=latency
+```
+
+#### Preparation Before the Benchmark
+
+Build and insert the kernel module on the target machine.
+
+```bash
+make build-mitosis-prefetch
+```
+
+#### Run Micro Benchmark (C++)
+
+The micro benchmark measures the `fork_resume` latency of a C++ program which consumes a memory area which varies from 1MB ~ 1GB.
+
+```bash
+make micro-c-startup
+```
+
+Output:
+
+The column `trace` is the memory area size in byte. The `latency` is the latency of the `fork_resume` call.
+
+```
+     trace  data
+----------  ---------------------------------------------------------------------------------------------
+   1048576  (u'@val02     ', u'[fh884d2ZEw8] Throughput: 341.280315 containers/sec, latency 2.930143 ms')
+            (u'@val02     ', u'[fh884d2ZEw8] Throughput: 344.154927 containers/sec, latency 2.905668 ms')
+            (u'@val02     ', u'[fh884d2ZEw8] Throughput: 347.096808 containers/sec, latency 2.881041 ms')
+            (u'@val02     ', u'[fh884d2ZEw8] Throughput: 334.158129 containers/sec, latency 2.992595 ms')
+   4194304  (u'@val02     ', u'[5XAMlsuVgnp] Throughput: 340.930971 containers/sec, latency 2.933145 ms')
+            (u'@val02     ', u'[5XAMlsuVgnp] Throughput: 342.400114 containers/sec, latency 2.920560 ms')
+            (u'@val02     ', u'[5XAMlsuVgnp] Throughput: 339.038465 containers/sec, latency 2.949518 ms')
+            (u'@val02     ', u'[5XAMlsuVgnp] Throughput: 337.732546 containers/sec, latency 2.960923 ms')
+   8388608  (u'@val02     ', u'[u5hNuno582v] Throughput: 340.429225 containers/sec, latency 2.937468 ms')
+            (u'@val02     ', u'[u5hNuno582v] Throughput: 340.728250 containers/sec, latency 2.934890 ms')
+            (u'@val02     ', u'[u5hNuno582v] Throughput: 338.670175 containers/sec, latency 2.952725 ms')
+            (u'@val02     ', u'[u5hNuno582v] Throughput: 334.838941 containers/sec, latency 2.986510 ms')
+  16777216  (u'@val02     ', u'[7L8H56P2J2r] Throughput: 332.352214 containers/sec, latency 3.008856 ms')
+            (u'@val02     ', u'[7L8H56P2J2r] Throughput: 334.171131 containers/sec, latency 2.992479 ms')
+            (u'@val02     ', u'[7L8H56P2J2r] Throughput: 331.298836 containers/sec, latency 3.018423 ms')
+            (u'@val02     ', u'[7L8H56P2J2r] Throughput: 328.859266 containers/sec, latency 3.040814 ms')
+  33554432  (u'@val02     ', u'[Um9cY28l1rt] Throughput: 318.898928 containers/sec, latency 3.135790 ms')
+            (u'@val02     ', u'[Um9cY28l1rt] Throughput: 320.269402 containers/sec, latency 3.122371 ms')
+            (u'@val02     ', u'[Um9cY28l1rt] Throughput: 319.712038 containers/sec, latency 3.127815 ms')
+            (u'@val02     ', u'[Um9cY28l1rt] Throughput: 320.582276 containers/sec, latency 3.119324 ms')
+  67108864  (u'@val02     ', u'[3Pf9D6Q97WS] Throughput: 302.234070 containers/sec, latency 3.308694 ms')
+            (u'@val02     ', u'[3Pf9D6Q97WS] Throughput: 296.988601 containers/sec, latency 3.367133 ms')
+            (u'@val02     ', u'[3Pf9D6Q97WS] Throughput: 300.900570 containers/sec, latency 3.323357 ms')
+            (u'@val02     ', u'[3Pf9D6Q97WS] Throughput: 298.097264 containers/sec, latency 3.354610 ms')
+ 134217728  (u'@val02     ', u'[Vw3AJDw7yZS] Throughput: 265.479273 containers/sec, latency 3.766772 ms')
+            (u'@val02     ', u'[Vw3AJDw7yZS] Throughput: 263.464618 containers/sec, latency 3.795576 ms')
+            (u'@val02     ', u'[Vw3AJDw7yZS] Throughput: 266.038808 containers/sec, latency 3.758850 ms')
+            (u'@val02     ', u'[Vw3AJDw7yZS] Throughput: 266.075933 containers/sec, latency 3.758326 ms')
+ 268435456  (u'@val02     ', u'[weli88qPp1R] Throughput: 216.318531 containers/sec, latency 4.622812 ms')
+            (u'@val02     ', u'[weli88qPp1R] Throughput: 218.255370 containers/sec, latency 4.581789 ms')
+            (u'@val02     ', u'[weli88qPp1R] Throughput: 218.326008 containers/sec, latency 4.580306 ms')
+            (u'@val02     ', u'[weli88qPp1R] Throughput: 218.843217 containers/sec, latency 4.569481 ms')
+ 536870912  (u'@val02     ', u'[QJ7vgPnW36a] Throughput: 160.459570 containers/sec, latency 6.232099 ms')
+            (u'@val02     ', u'[QJ7vgPnW36a] Throughput: 160.589908 containers/sec, latency 6.227041 ms')
+            (u'@val02     ', u'[QJ7vgPnW36a] Throughput: 160.885611 containers/sec, latency 6.215596 ms')
+            (u'@val02     ', u'[QJ7vgPnW36a] Throughput: 160.344900 containers/sec, latency 6.236556 ms')
+1073741824  (u'@val02     ', u'[c8ZDg665G10] Throughput: 103.809670 containers/sec, latency 9.633014 ms')
+            (u'@val02     ', u'[c8ZDg665G10] Throughput: 104.267500 containers/sec, latency 9.590716 ms')
+            (u'@val02     ', u'[c8ZDg665G10] Throughput: 105.266238 containers/sec, latency 9.499722 ms')
+            (u'@val02     ', u'[c8ZDg665G10] Throughput: 104.181445 containers/sec, latency 9.598638 ms')
+```
+
+#### Run Function Benchmark (Python)
+
+The function benchmark measures the `fork_resume` latency of a Python program which executes a custom function.
+
+```bash
+make micro-function-prepare
+```
+
+Output:
+
+The column `trace` is the function name, and the column `data` is the latency of the `fork_prepare` call.
+
+```
+trace        data
+-----------  ---------------------------------------------------------------------------------------------
+chameleon    (u'@val02     ', u'[Ex7q5pz1j6S] Throughput: 317.647351 containers/sec, latency 3.148145 ms')
+             (u'@val02     ', u'[Ex7q5pz1j6S] Throughput: 320.392027 containers/sec, latency 3.121176 ms')
+             (u'@val02     ', u'[Ex7q5pz1j6S] Throughput: 320.766281 containers/sec, latency 3.117535 ms')
+             (u'@val02     ', u'[Ex7q5pz1j6S] Throughput: 319.364228 containers/sec, latency 3.131221 ms')
+compression  (u'@val02     ', u'[wmUG0kcBbNz] Throughput: 338.265514 containers/sec, latency 2.956258 ms')
+             (u'@val02     ', u'[wmUG0kcBbNz] Throughput: 337.389692 containers/sec, latency 2.963932 ms')
+             (u'@val02     ', u'[wmUG0kcBbNz] Throughput: 333.905563 containers/sec, latency 2.994859 ms')
+             (u'@val02     ', u'[wmUG0kcBbNz] Throughput: 334.926332 containers/sec, latency 2.985731 ms')
+helloworld   (u'@val02     ', u'[80NRNe71d7m] Throughput: 344.031392 containers/sec, latency 2.906711 ms')
+             (u'@val02     ', u'[80NRNe71d7m] Throughput: 342.058110 containers/sec, latency 2.923480 ms')
+             (u'@val02     ', u'[80NRNe71d7m] Throughput: 337.062474 containers/sec, latency 2.966809 ms')
+             (u'@val02     ', u'[80NRNe71d7m] Throughput: 339.960725 containers/sec, latency 2.941516 ms')
+image        (u'@val02     ', u'[B0B9GQ23wm0] Throughput: 299.223308 containers/sec, latency 3.341986 ms')
+             (u'@val02     ', u'[B0B9GQ23wm0] Throughput: 298.307521 containers/sec, latency 3.352245 ms')
+             (u'@val02     ', u'[B0B9GQ23wm0] Throughput: 300.330972 containers/sec, latency 3.329660 ms')
+             (u'@val02     ', u'[B0B9GQ23wm0] Throughput: 296.637589 containers/sec, latency 3.371117 ms')
+json         (u'@val02     ', u'[hsDAqCOPd8u] Throughput: 341.083650 containers/sec, latency 2.931832 ms')
+             (u'@val02     ', u'[hsDAqCOPd8u] Throughput: 340.812356 containers/sec, latency 2.934166 ms')
+             (u'@val02     ', u'[hsDAqCOPd8u] Throughput: 340.447765 containers/sec, latency 2.937308 ms')
+             (u'@val02     ', u'[hsDAqCOPd8u] Throughput: 334.993324 containers/sec, latency 2.985134 ms')
+micro        (u'@val02     ', u'[GXC0Y17QSUw] Throughput: 334.043328 containers/sec, latency 2.993624 ms')
+             (u'@val02     ', u'[GXC0Y17QSUw] Throughput: 331.892637 containers/sec, latency 3.013023 ms')
+             (u'@val02     ', u'[GXC0Y17QSUw] Throughput: 334.278805 containers/sec, latency 2.991515 ms')
+             (u'@val02     ', u'[GXC0Y17QSUw] Throughput: 333.642733 containers/sec, latency 2.997218 ms')
+pagerank     (u'@val02     ', u'[25vhkS9IDXq] Throughput: 261.317639 containers/sec, latency 3.826760 ms')
+             (u'@val02     ', u'[25vhkS9IDXq] Throughput: 262.682599 containers/sec, latency 3.806876 ms')
+             (u'@val02     ', u'[25vhkS9IDXq] Throughput: 261.931913 containers/sec, latency 3.817786 ms')
+             (u'@val02     ', u'[25vhkS9IDXq] Throughput: 262.427059 containers/sec, latency 3.810583 ms')
+pyaes        (u'@val02     ', u'[Z2S7pOJFGK6] Throughput: 335.626058 containers/sec, latency 2.979506 ms')
+             (u'@val02     ', u'[Z2S7pOJFGK6] Throughput: 334.392609 containers/sec, latency 2.990497 ms')
+             (u'@val02     ', u'[Z2S7pOJFGK6] Throughput: 334.541551 containers/sec, latency 2.989165 ms')
+             (u'@val02     ', u'[Z2S7pOJFGK6] Throughput: 331.589797 containers/sec, latency 3.015774 ms')
+recognition  (u'@val02     ', u'[O6M1jn4uBDQ] Throughput: 153.589322 containers/sec, latency 6.510869 ms')
+             (u'@val02     ', u'[O6M1jn4uBDQ] Throughput: 154.655940 containers/sec, latency 6.465966 ms')
+             (u'@val02     ', u'[O6M1jn4uBDQ] Throughput: 155.336815 containers/sec, latency 6.437624 ms')
+             (u'@val02     ', u'[O6M1jn4uBDQ] Throughput: 155.155182 containers/sec, latency 6.445160 ms')
+```
+
 ### Execution Time Benchmark
 
-### Startup Time Benchmark
+This benchmark measures the execution time of the application after calling `fork_prepare`.
 
 ### Peak Throughput Benchmark
