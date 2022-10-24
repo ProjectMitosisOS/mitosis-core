@@ -1,3 +1,4 @@
+use rust_kernel_rdma_base::VmallocAllocator;
 pub use x86_64::{
     structures::paging::{Page, Size4KiB},
     VirtAddr,
@@ -23,7 +24,7 @@ pub type RemotePageAddr = Page<Size4KiB>;
 pub struct RemotePageTable {
     // note: we use the box as the inner data type/
     // otherwise, this data structure can easily overflow the kernel stack
-    l4_page_table: Box<PageTable>,
+    l4_page_table: Box<PageTable, VmallocAllocator>,
 
     // number of mapped PTE in the page table
     cnt: usize,
@@ -41,7 +42,7 @@ impl RemotePageTable {
     /// Create an empty page table
     pub fn new() -> Self {
         Self {
-            l4_page_table: Box::new(Default::default()),
+            l4_page_table: Box::new_in(Default::default(), VmallocAllocator),
             cnt: 0,
         }
     }
