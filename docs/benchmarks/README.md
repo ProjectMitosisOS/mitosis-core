@@ -50,7 +50,6 @@ This benchmark requires 1 machine.
 Sample configuration:
 
 ```
-PROJECT_PATH=/mnt/hdd/wtx/mitosis
 PARENT_GID=fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c
 PARENT_HOST=val01
 CHILD_HOSTS=
@@ -272,7 +271,7 @@ recognition  (u'@val01     ', u'[recognition-prepare] duration: 21.55 ms')
              (u'@val01     ', u'[recognition-prepare] duration: 23.16 ms')
 ```
 
-#### After the benchmark
+#### After the Benchmark
 
 ```bash
 make clean
@@ -287,7 +286,6 @@ This benchmark requires 2 machines.
 Sample configuration:
 
 ```
-PROJECT_PATH=/mnt/hdd/wtx/mitosis
 PARENT_GID=fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c
 PARENT_HOST=val01
 CHILD_HOSTS=val02
@@ -414,8 +412,41 @@ recognition  (u'@val02     ', u'[O6M1jn4uBDQ] Throughput: 153.589322 containers/
              (u'@val02     ', u'[O6M1jn4uBDQ] Throughput: 155.155182 containers/sec, latency 6.445160 ms')
 ```
 
+#### After the Benchmark
+
+```bash
+make clean
+```
+
 ### Execution Time Benchmark
 
 This benchmark measures the execution time of the application after calling `fork_prepare`.
 
+This benchmark requires 1 machine.
+
+Sample configuration:
+
+```
+PARENT_GID=fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c
+PARENT_HOST=val01
+CHILD_HOSTS=
+STR_CHILD_HOSTS=
+
+FILTER=
+```
+
+#### Preparation Before the Benchmark
+
+#### Run Micro Benchmark (C++)
+
+#### Run Function Benchmark (Python)
+
+#### After the Benchmark
+
 ### Peak Throughput Benchmark
+
+#### Preparation Before the Benchmark
+
+#### Run Function Benchmark (Python)
+
+#### After the Benchmark
