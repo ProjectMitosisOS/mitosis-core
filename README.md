@@ -8,11 +8,11 @@ TODO: Describe the information for each rust crate and overall architecture here
 
 ## Getting Started Instructions
 
-### 
+### Prerequisite
 
 - OS: Ubuntu16.04 (throughly tested, in general is irrelevant to the OS)
 - Linux kernel: 4.15.0-46-generic (porting needed to fit other OSes)
-- MLNX_OFED driver: 4.9-3.1.5.0 (throughly, use our mPrerequisiteodified driver in case to support DCT)
+- MLNX_OFED driver: 4.9-3.1.5.0 (throughly, use our modified driver in case to support DCT)
 - Rustc: 1.60.0-nightly (71226d717 2022-02-04)
 - Clang-9
 
@@ -117,24 +117,7 @@ We have provided unit tests, stress tests, and benchmarks for mitosis.
 
 ### Unit Tests
 
-Each module crate is equipped with several unit tests, including `mitosis/unitests`, `os-network/unitests`, and `mitosis-macros/unitests`. For example, we can run the unit tests under `mitosis/unitests` with the commands below.
-
-```bash
-cd mitosis/unitests
-ls # show all the unit tests
-# dc_pool fork prefetch ...
-python run_tests.py # run all the unit tests
-python run_tests.py fork #  run one single unit test, do not include the '/' after the directory name
-```
-
-The successful unit tests will end with the following log lines.
-
-```
-running 1 test
-test test_basic ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.22s
-```
+We have provided several unit tests for each module crates. The documents for unit tests can be found [here](docs/unit-test/README.md).
 
 ### Stress Tests
 
