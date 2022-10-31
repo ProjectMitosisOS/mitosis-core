@@ -8,18 +8,22 @@ TODO: Describe the information for each rust crate and overall architecture here
 
 ## Getting Started Instructions
 
-### Prerequisite
+### 
 
-- OS: Ubuntu16.04
-- Linux kernel: 4.15.0-46-generic
-- MLNX_OFED driver: 4.9-3.1.5.0
+- OS: Ubuntu16.04 (throughly tested, in general is irrelevant to the OS)
+- Linux kernel: 4.15.0-46-generic (porting needed to fit other OSes)
+- MLNX_OFED driver: 4.9-3.1.5.0 (throughly, use our mPrerequisiteodified driver in case to support DCT)
 - Rustc: 1.60.0-nightly (71226d717 2022-02-04)
 - Clang-9
 
-### Compile the project
+For how to install these dependencies, please TODO goto. 
+
+### Compile the mitosis
+
+Assumptions: we have finished installing the dependencies described in the Prerequisite. 
 
 ```bash
-make km
+make km ## building the kernel module
 file mitosis-kms/fork.ko
 # mitosis-kms/fork.ko: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), BuildID[sha1]=xxx, not stripped
 ```
@@ -42,7 +46,7 @@ cp mitosis-kms/Kbuild-mitosis-prefetch mitosis-kms/Kbuild
 
 We have provided a simple demo on how to use the kernel module to remote fork a process.
 
-1. Choose two machines as the parent machine and the child machine. Get the gid of the parent machine.
+1. Choose two machines, one as the parent machine and one as the child machine. Get the gid (RDMA address) of the parent machine.
 
 ```bash
 show_gids
@@ -96,6 +100,8 @@ cd samples/cpp
 
 6. Run the client program on the client machine
 
+TODO: we need to pass the gid & key to the child. 
+
 ```bash
 cd samples/cpp
 ./child # the child will start printing the counter from 0 as if it has forked the parent program from the point before it starts print the counter
@@ -103,7 +109,9 @@ cd samples/cpp
 
 7. Use Ctrl+C to kill the parent and child and use `make rmmod` to uninstall the kernel module.
 
-## Tests and Benchmarks
+## Testing and Benchmarking
+
+TODO: separate to another file in ./docs
 
 We have provided unit tests, stress tests, and benchmarks for mitosis.
 
