@@ -16,7 +16,7 @@ TODO: Describe the information for each rust crate and overall architecture here
 - Rustc: 1.60.0-nightly (71226d717 2022-02-04)
 - Clang-9
 
-For how to install these dependencies, please TODO goto. 
+Please refer to the document [here](./docs/setup.md) for how to configure these environments.
 
 ### Compile the mitosis
 
@@ -96,15 +96,14 @@ cd exp
 ```bash
 cd samples/cpp
 ./parent # the parent program will print an increasing counter from 0 repeatedly
+# the default identification for the parent program is 73
 ```
 
 6. Run the client program on the client machine
 
-TODO: we need to pass the gid & key to the child. 
-
 ```bash
 cd samples/cpp
-./child -mac_id=0 # the child will start printing the counter from 0 as if it has forked the parent program on machine 0 (val01) from the point before it starts print the counter
+./child -mac_id=0 -handler_id=73 # the child will start printing the counter from 0 as if it has forked the parent program on machine 0 (val01) with id 73 from the point before it starts print the counter
 ```
 
 7. Use Ctrl+C to kill the parent and child and use `make rmmod` to uninstall the kernel module.
