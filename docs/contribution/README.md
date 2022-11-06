@@ -19,3 +19,7 @@ We need to handle the errors in RPC session creation (e.g.: Timeout).
 ### Doorbell optimization in Prefetcher
 
 Prefetcher fetches several pages from remote machine in a round. Currently it reads the pages in a loop in a "read-and-poll" manner, which means that it will poll the completion after each read. This can be optimized with doorbell optimization.
+
+### DC vs RC vs TCP vs ...
+
+Mitosis should support reading remote memory with DC/RC/TCP or other methonds.

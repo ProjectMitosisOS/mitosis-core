@@ -123,11 +123,9 @@ MITOSIS is still under development and code refactory, which current codebase ha
 
 Detailed roadmap: 
 
-- [ ] Supporting languates with GC and multi-threading
-- [ ] Fallback handler to support unmmaped page 
-- [ ] Add Reliable connection, RPC and TCP as an alternative to RDMA DCT-based network communications 
-
-
+- [ ] Supporting languages with GC and multi-threading
+- [ ] Fallback handler to support unmapped page 
+- [ ] Add Reliable connection, RPC and TCP as an alternative to RDMA DCT-based network communications
 
 ## Contribution
 
