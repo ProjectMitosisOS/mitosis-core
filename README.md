@@ -2,10 +2,6 @@
 
 Mitosis is a kernel module that provides a new system primitive of fast remote fork based on RDMA.
 
-## Overview
-
-TODO: Describe the information for each rust crate and overall architecture here.
-
 ## Getting Started Instructions
 
 ### Prerequisite
