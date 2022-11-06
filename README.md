@@ -108,28 +108,13 @@ cd samples/cpp
 
 7. Use Ctrl+C to kill the parent and child and use `make rmmod` to uninstall the kernel module.
 
+An animated example is shown below.
+
+![example](./docs/example.gif)
+
 ## Testing and Benchmarking
 
-TODO: separate to another file in ./docs
-
-We have provided unit tests, stress tests, and benchmarks for mitosis.
-
-### Unit Tests
-
-We have provided several unit tests for each module crates. The documents for unit tests can be found [here](docs/unit-test/README.md).
-
-### Stress Tests
-
-We have provided stress tests for the following functionalities in mitosis.
-
-- RPC
-- Remote Fork
-
-To run the stress tests, you should refer to the [README](stress-test/README.md) under stress-test directory.
-
-### Benchmarks
-
-The documents of benchmarks of mitosis can be found [here](docs/benchmarks/README.md).
+We have provided unit tests, stress tests, and benchmarks for mitosis. Please refer to the documents [here](./docs/tests-and-benchmarks.md).
 
 ## Contribution
 
