@@ -1,4 +1,4 @@
-# MITOSIS: A system primitive of fast remote fork
+# MITOSIS: An OS primitive of fast remote fork
 
 Mitosis is a kernel module that provides a new system primitive of fast remote fork based on RDMA.
 
@@ -112,17 +112,39 @@ An animated example is shown below.
 
 We have provided unit tests, stress tests, and benchmarks for mitosis. Please refer to the documents [here](./docs/tests-and-benchmarks.md).
 
+## Shortcoming and Roadmap 
+
+MITOSIS is still under development and code refactory, which current codebase has the following limitations:
+
+1. We don't support multi-threading program. 
+2. We only support child communicating with the server via RDMA DCT.
+3. We don't support fallback handler,which is still under refactor. 
+4. We assume the swap is disabled on the parent machine. 
+
+Detailed roadmap: 
+
+- [ ] Supporting languates with GC and multi-threading
+- [ ] Fallback handler to support unmmaped page 
+- [ ] Add Reliable connection, RPC and TCP as an alternative to RDMA DCT-based network communications 
+
+
+
 ## Contribution
 
 Want to contribute to mitosis? We have some unfinished designs and implementations. Please refer to the documents [here](docs/contribution/README.md).
 
 ## Related Projects
 
-- [KRCORE](https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/kernel-rdma/rust-kernel-rdma/-/tree/master/) is a kenrel-space RDMA library.
+- [KRCORE](https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/kernel-rdma/rust-kernel-rdma/-/tree/master/) is a rust RDMA library for user-space and kernel-space applications. 
 
 ## License
 This project is licensed under the XXX license.
 
+
+
 ## Credits 
+
+Some codes may come from: 
+
 - [nix](https://docs.rs/nix/latest/nix/)
 - [tokio](https://tokio.rs)
