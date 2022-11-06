@@ -13,7 +13,7 @@ We have provided stress tests for the following functionalities in mitosis.
 - RPC
 - Remote Fork
 
-To run the stress tests, you should refer to the [README](stress-test/README.md) under stress-test directory.
+To run the stress tests, you should refer to the [README](../stress-test/README.md) under stress-test directory.
 
 ## Benchmarks
 
