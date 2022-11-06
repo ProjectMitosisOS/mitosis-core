@@ -118,7 +118,7 @@ We have provided unit tests, stress tests, and benchmarks for mitosis. Please re
 
 ## Contribution
 
-Want to contribute to mitosis? We have some unfinished designs and implementations. Please refer to the document [here](docs/contribution/README.md).
+Want to contribute to mitosis? We have some unfinished designs and implementations. Please refer to the documents [here](docs/contribution/README.md).
 
 ## Related Projects
 
@@ -126,7 +126,6 @@ Want to contribute to mitosis? We have some unfinished designs and implementatio
 
 ## License
 This project is licensed under the XXX license.
-
 
 ## Credits 
 - [nix](https://docs.rs/nix/latest/nix/)
