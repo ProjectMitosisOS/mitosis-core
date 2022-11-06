@@ -432,21 +432,311 @@ PARENT_HOST=val01
 CHILD_HOSTS=
 STR_CHILD_HOSTS=
 
+FILTER=random cow start
+```
+
+#### Preparation Before the Benchmark
+
+Build and insert the kernel module on the target machine.
+
+```bash
+make build-mitosis-prefetch
+```
+
+#### Run Micro Benchmark (C++)
+
+The micro benchmark measures the `fork_resume` latency of a C++ program which consumes a memory area which varies from 1MB ~ 1GB.
+
+```bash
+make micro-c-execution
+```
+
+Output:
+
+The column `trace` is the memory area size in byte. The second line and the later lines in the data column are the latency of the execution.
+
+```
+     trace  data
+----------  ----------------------------------------------------------------------
+   1048576  (u'@val01     ', u'[random cow start] Run time = 0.526254 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1.19935 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1.20131 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1.18681 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1.03883 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1.0469 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1.07368 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1.0662 ms; sum: 0')
+   4194304  (u'@val01     ', u'[random cow start] Run time = 2.40797 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 4.29709 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 4.38548 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 4.3474 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 4.05795 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 4.51893 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 3.94545 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 4.389 ms; sum: 0')
+   8388608  (u'@val01     ', u'[random cow start] Run time = 4.91115 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 8.52716 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 7.84739 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 7.77895 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 7.88303 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 7.51477 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 7.53651 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 7.53226 ms; sum: 0')
+  16777216  (u'@val01     ', u'[random cow start] Run time = 10.0762 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 19.004 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 17.6774 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 17.7046 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 17.8227 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 17.8297 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 18.4808 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 18.3944 ms; sum: 0')
+  33554432  (u'@val01     ', u'[random cow start] Run time = 21.4988 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 39.4386 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 36.6 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 34.1655 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 35.2827 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 35.948 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 36.0694 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 37.4482 ms; sum: 0')
+  67108864  (u'@val01     ', u'[random cow start] Run time = 43.5432 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 74.4571 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 74.8275 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 75.079 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 75.3758 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 75.4214 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 76.8813 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 76.2094 ms; sum: 0')
+ 134217728  (u'@val01     ', u'[random cow start] Run time = 86.8877 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 146.727 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 154.593 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 146.689 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 151.635 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 153.023 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 152.838 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 152.506 ms; sum: 0')
+ 268435456  (u'@val01     ', u'[random cow start] Run time = 168.14 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 311.594 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 316.427 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 296.752 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 299.508 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 316.35 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 309.967 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 309.955 ms; sum: 0')
+ 536870912  (u'@val01     ', u'[random cow start] Run time = 372.234 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 631.434 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 635.692 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 630.66 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 629.894 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 634.907 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 629.145 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 629.39 ms; sum: 0')
+1073741824  (u'@val01     ', u'[random cow start] Run time = 669.374 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1240.59 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1246.94 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1240.67 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1241.4 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1262.72 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1251.56 ms; sum: 0')
+            (u'@val01     ', u'[random cow start] Run time = 1250.36 ms; sum: 0')
+```
+
+#### Run Function Benchmark (Python)
+
+Change the `FILTER` variable in `makefile` before the benchmark.
+
+```
+FILTER=execution
+```
+
+The function benchmark measures the execution latency of a Python program which executes a custom function with remote fork.
+
+```bash
+make micro-function-execution
+```
+
+Output:
+
+The column `trace` is the memory area size in byte. The 4th line and the later lines in the data column are the latency of the execution.
+
+```
+trace        data
+-----------  ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+chameleon    ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd chameleon && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="chameleon"  ', '@', u'val01')
+             (u'@val01     ', u'[chameleon-execution] duration: 236.85 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 230.09 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 242.56 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 249.21 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 257.55 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 234.65 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 226.76 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 230.29 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 240.30 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 241.04 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 252.63 ms')
+             (u'@val01     ', u'[chameleon-execution] duration: 237.23 ms')
+compression  ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd compression && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="compression"  ', '@', u'val01')
+             (u'@val01     ', u'[compression-execution] duration: 27.35 ms')
+             (u'@val01     ', u'[compression-execution] duration: 5.63 ms')
+             (u'@val01     ', u'[compression-execution] duration: 12.22 ms')
+             (u'@val01     ', u'[compression-execution] duration: 20.69 ms')
+             (u'@val01     ', u'[compression-execution] duration: 4.95 ms')
+             (u'@val01     ', u'[compression-execution] duration: 9.24 ms')
+             (u'@val01     ', u'[compression-execution] duration: 7.32 ms')
+             (u'@val01     ', u'[compression-execution] duration: 4.84 ms')
+             (u'@val01     ', u'[compression-execution] duration: 4.92 ms')
+             (u'@val01     ', u'[compression-execution] duration: 4.89 ms')
+             (u'@val01     ', u'[compression-execution] duration: 4.93 ms')
+             (u'@val01     ', u'[compression-execution] duration: 4.86 ms')
+helloworld   ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd helloworld && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="helloworld"  ', '@', u'val01')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.02 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.01 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.03 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.03 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.03 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.03 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.04 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.03 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.03 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.03 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.03 ms')
+             (u'@val01     ', u'[helloworld-execution] duration: 0.06 ms')
+image        ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd image && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="image"  ', '@', u'val01')
+             (u'@val01     ', u'[image-execution] duration: 194.76 ms')
+             (u'@val01     ', u'[image-execution] duration: 148.11 ms')
+             (u'@val01     ', u'[image-execution] duration: 142.89 ms')
+             (u'@val01     ', u'[image-execution] duration: 150.50 ms')
+             (u'@val01     ', u'[image-execution] duration: 151.11 ms')
+             (u'@val01     ', u'[image-execution] duration: 146.46 ms')
+             (u'@val01     ', u'[image-execution] duration: 149.02 ms')
+             (u'@val01     ', u'[image-execution] duration: 168.86 ms')
+             (u'@val01     ', u'[image-execution] duration: 146.99 ms')
+             (u'@val01     ', u'[image-execution] duration: 153.04 ms')
+             (u'@val01     ', u'[image-execution] duration: 149.69 ms')
+             (u'@val01     ', u'[image-execution] duration: 147.01 ms')
+json         ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd json && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="json"  ', '@', u'val01')
+             (u'@val01     ', u'[json-execution] duration: 13.00 ms')
+             (u'@val01     ', u'[json-execution] duration: 12.85 ms')
+             (u'@val01     ', u'[json-execution] duration: 14.42 ms')
+             (u'@val01     ', u'[json-execution] duration: 16.60 ms')
+             (u'@val01     ', u'[json-execution] duration: 16.75 ms')
+             (u'@val01     ', u'[json-execution] duration: 17.66 ms')
+             (u'@val01     ', u'[json-execution] duration: 17.77 ms')
+             (u'@val01     ', u'[json-execution] duration: 17.90 ms')
+             (u'@val01     ', u'[json-execution] duration: 17.55 ms')
+             (u'@val01     ', u'[json-execution] duration: 17.50 ms')
+             (u'@val01     ', u'[json-execution] duration: 17.47 ms')
+             (u'@val01     ', u'[json-execution] duration: 17.60 ms')
+micro        ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd micro && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="micro"  ', '@', u'val01')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 21.81 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 11.28 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 22.74 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 23.03 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 23.03 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 22.93 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 22.95 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 23.30 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 23.04 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 23.28 ms')
+             (u'@val01     ', u'[micro-execution with workingset 16.000000MB] duration: 23.46 ms')
+pagerank     ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd pagerank && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="pagerank"  ', '@', u'val01')
+             (u'@val01     ', u'[pagerank-execution] duration: 580.53 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 614.75 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 574.77 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 593.69 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 627.94 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 603.59 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 622.81 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 663.81 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 635.75 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 628.07 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 599.29 ms')
+             (u'@val01     ', u'[pagerank-execution] duration: 621.31 ms')
+pyaes        ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd pyaes && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="pyaes"  ', '@', u'val01')
+             (u'@val01     ', u'[pyaes-execution] duration: 136.75 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 130.21 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 141.38 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 138.27 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 145.73 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 140.44 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 141.40 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 143.30 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 132.10 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 145.90 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 133.01 ms')
+             (u'@val01     ', u'[pyaes-execution] duration: 138.77 ms')
+recognition  ('emit 1', u'cd /mnt/hdd/wtx/mitosis/exp/fork-functions;cd recognition && python function.py -exclude_execution=0 -handler_id=73 -pin=1 -profile=1 -app_name="recognition"  ', '@', u'val01')
+             (u'@val01     ', u'[recognition-execution] duration: 689.27 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 223.52 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 330.54 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 510.50 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 519.91 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 503.65 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 517.53 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 529.88 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 535.16 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 507.30 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 518.74 ms')
+             (u'@val01     ', u'[recognition-execution] duration: 505.44 ms')
+```
+
+#### After the Benchmark
+
+```
+make clean
+```
+
+### Peak Throughput Benchmark
+
+This benchmark measures the throughput of the application using remote fork.
+
+This benchmark requires 9 machines.
+
+Sample configuration:
+
+```makefile
+PARENT_GID=fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c
+PARENT_HOST=val01
+CHILD_HOSTS=val02,val03,val04,val05,val06,val07,val09
+STR_CHILD_HOSTS='val02','val03','val04','val05','val06','val07','val09'
+
 FILTER=
 ```
 
 #### Preparation Before the Benchmark
 
-#### Run Micro Benchmark (C++)
+Build and insert the kernel module on all target machines.
+
+```bash
+make build-mitosis-prefetch
+```
 
 #### Run Function Benchmark (Python)
 
+```bash
+make peak-func-lean-container
+```
+
+Output:
+
+We should manually pick the stable interval in the log file.
+
+Below is an example of the helloworld function.
+
+```
+(u'@val03     ', u'[9D6Nb61f6XG] Throughput: 50.553506 containers/sec, latency 19.781022 ms')
+(u'@val03     ', u'[7bj29w839Gs] Throughput: 50.428335 containers/sec, latency 19.830121 ms')
+(u'@val14     ', u'[9T0H0guhi99] Throughput: 50.282758 containers/sec, latency 19.887533 ms')
+(u'@val12     ', u'[AcRsv902AvG] Throughput: 49.487192 containers/sec, latency 20.207249 ms')
+(u'@val14     ', u'[jmbR888RTBT] Throughput: 53.210890 containers/sec, latency 18.793145 ms')
+(u'@val12     ', u'[sldCLfQg4n9] Throughput: 48.452439 containers/sec, latency 20.638796 ms')
+(u'@val02     ', u'[F4ksq0QWu1X] Throughput: 48.605147 containers/sec, latency 20.573953 ms')
+(u'@val09     ', u'[40ho99K38Ph] Throughput: 53.730923 containers/sec, latency 18.611257 ms')
+(u'@val09     ', u'[mXIUDa4q7sb] Throughput: 51.856735 containers/sec, latency 19.283898 ms')
+(u'@val03     ', u'[9Oo08na827X] Throughput: 53.550836 containers/sec, latency 18.673845 ms')
+```
+
 #### After the Benchmark
 
-### Peak Throughput Benchmark
-
-#### Preparation Before the Benchmark
-
-#### Run Function Benchmark (Python)
-
-#### After the Benchmark
+```bash
+make clean
+```
