@@ -58,18 +58,9 @@ Mitosis uses the first RDMA nic by default, so we will use the gid `fe80:0000:00
 2. Prepare the demo C++ programs on both machines.
 
 ```bash
-cd samples/cpp
-cmake .
-make
-ls parent client -hl
-# -rwxrwxr-x child
-# -rwxrwxr-x parent
-```
-
-```bash
 cd exp
 cmake .
-make connector
+make connector simple_parent simple_child
 ```
 
 3. Compile and insert the kernel module on both machines.
@@ -84,22 +75,22 @@ file /dev/mitosis-syscalls
 
 ```bash
 cd exp
-./connector -gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" -mac_id=0 -nic_id=0
+./connector -gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" -mac_id=0 -nic_id=0 # the gid is the nic 0 on the machine 0
 ```
 
 5. Run the parent program on the parent machine.
 
 ```bash
-cd samples/cpp
-./parent # the parent program will print an increasing counter from 0 repeatedly
-# the default identification for the parent program is 73
+cd exp
+./simple_parent -pin=false -handler_id=73 # the parent program will print an increasing counter from 0 repeatedly
+# the remote fork identification for the parent program is 73 and we choose to leave the program in the foreground and do not pin it in the kernel
 ```
 
 6. Run the client program on the client machine
 
 ```bash
-cd samples/cpp
-./child -mac_id=0 -handler_id=73 # the child will start printing the counter from 0 as if it has forked the parent program on machine 0 (val01) with id 73 from the point before it starts print the counter
+cd exp
+./simple_child -mac_id=0 -handler_id=73 # the child will start printing the counter from 1 as if it has forked the parent program on machine 0 (val01) with id 73 from the point before it starts print the counter 1
 ```
 
 7. Use Ctrl+C to kill the parent and child and use `make rmmod` to uninstall the kernel module.
@@ -107,6 +98,75 @@ cd samples/cpp
 An animated example is shown below.
 
 ![example](./docs/example.gif)
+
+The code of the 2 demo programs is listed below.
+
+```c++
+/*
+ * Parent Program
+ */
+#include <assert.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <gflags/gflags.h>
+
+#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
+
+DEFINE_int64(handler_id, 73, "rfork handler id");
+DEFINE_bool(pin, false, "whether pin in kernel");
+
+int
+main(int argc, char *argv[]) {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+    int sd = sopen();
+    int cnt = 0;
+    assert(sd != 0);
+
+    if (FLAGS_pin) {
+        fork_prepare_ping(sd, FLAGS_handler_id);
+        return 0;
+    } else {
+        // the parent program will enter this branch as we set -pin=false
+        sleep(1);
+        printf("time %d\n", cnt++);
+        // the parent program will call the fork_prepare with the id here
+        // the child program will resume the execution from this point
+        fork_prepare(sd, FLAGS_handler_id);
+    }
+
+    // the parent program will enter dead loop and print counter here
+    while (1) {
+        printf("time %d\n", cnt++);
+        sleep(1);
+    }
+}
+
+/*
+ * Child Program
+ */
+#include <assert.h>
+#include <gflags/gflags.h>
+#include <unistd.h>
+#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
+
+DEFINE_int64(mac_id, 0, "machine id");
+DEFINE_int64(handler_id, 73, "rfork handler id");
+DEFINE_int64(wait_finish_sec, 0, "waiting for parent finish prepare");
+
+
+int
+main(int argc, char *argv[]) {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
+    sleep(FLAGS_wait_finish_sec);
+    int sd = sopen();
+    assert(sd != 0);
+    // the child program call the fork_resume to resume the execution from the parent program with `handler_id` on machine `mac_id`
+    fork_resume_remote(sd, FLAGS_mac_id, FLAGS_handler_id);
+    assert(false);
+    return 0;
+}
+```
 
 ## Testing and Benchmarking
 
@@ -136,9 +196,7 @@ Want to contribute to mitosis? We have some unfinished designs and implementatio
 - [KRCORE](https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/kernel-rdma/rust-kernel-rdma/-/tree/master/) is a rust RDMA library for user-space and kernel-space applications. 
 
 ## License
-This project is licensed under the XXX license.
-
-
+This project is licensed under the MIT license.
 
 ## Credits 
 
