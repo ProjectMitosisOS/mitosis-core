@@ -34,24 +34,24 @@ class RunPrinter:
         if self.c.recv_ready():
             res = self.c.recv(8192).decode().splitlines()
             for l in res:
-                print("@%-10s" % self.name, l.strip())
+                print("@%-10s %s" % (self.name, l.strip()))
 
         if self.c.recv_stderr_ready():
             res = self.c.recv_stderr(8192).decode().splitlines()
             for l in res:
-                print("@%-10s" % self.name, l.strip())
+                print("@%-10s %s" % (self.name, l.strip()))
 
         if self.c.exit_status_ready():
             #            print("exit status ready: ",self.c.recv_exit_status(), self.c.recv_ready())
             while self.c.recv_ready():
                 res = self.c.recv(8192).decode().splitlines()
                 for l in res:
-                    print("@%-10s" % self.name, l.strip())
+                    print("@%-10s %s" % (self.name, l.strip()))
             while self.c.recv_stderr_ready():
                 res = self.c.recv_stderr(8192).decode().splitlines()
                 for l in res:
-                    print("@%-10s" % self.name, l.strip())
-            print("exit ", self.name)
+                    print("@%-10s %s" % (self.name, l.strip()))
+            print("exit %s" % self.name)
             return False
 
         return True
@@ -129,7 +129,7 @@ class ConnectProxy:
     def connect(self, pwd, passp=None, timeout=30):
         user_config = config.lookup(self.mac)
         if user_config and use_ssh_config:
-            print("connect", self.mac, user_config)
+            print("connect %s %s" % (self.mac, user_config))
             # print(user_config)
             # cfg = {'hostname': self.mac, 'username': self.user}
             # cfg['sock'] = paramiko.ProxyCommand(user_config['proxycommand'])
@@ -154,13 +154,13 @@ class ConnectProxy:
         if not background:
             return self.ssh.exec_command(cmd, get_pty=pty, timeout=timeout)
         else:
-            print("exe", cmd, "in background")
+            print("exe %s in background" % cmd)
             transport = self.ssh.get_transport()
             channel = transport.open_session()
             return channel.exec_command(cmd)
 
     def execute_w_channel(self, cmd, order=0):
-        print("emit %d" % order, cmd, "@", self.mac)
+        print("emit %d %s @ %s" % (order, cmd, self.mac))
 
         transport = self.ssh.get_transport()
         channel = transport.open_session()
@@ -247,13 +247,13 @@ class Courier2:
             else:
                 p.connect(self.pwd, timeout=timeout)
         except Exception as e:
-            print("[get_file] connect to %s error: " % host, e)
+            print("[get_file] connect to %s error: %s" % (host, e))
             p.close()
             return False, None
         try:
             p.get_file(dst_dir, f)
         except Exception as e:
-            print("[get_file] get %s @%s error " % (f, host), e)
+            print("[get_file] get %s @%s error %s" % (f, host, e))
             p.close()
             return False, None
         if p:
@@ -269,13 +269,13 @@ class Courier2:
             else:
                 p.connect(self.pwd, timeout=timeout)
         except Exception as e:
-            print("[copy_file] connect to %s error: " % host, e)
+            print("[copy_file] connect to %s error: %s" % (host, e))
             p.close()
             return False, None
         try:
             p.copy_file(f, dst_dir)
         except Exception as e:
-            print("[copy_file] copy %s error " % host, e)
+            print("[copy_file] copy %s error %s" % (host, e))
             p.close()
             return False, None
         if p:
@@ -291,7 +291,7 @@ class Courier2:
             else:
                 p.connect(self.pwd, self.passp, timeout=timeout)
         except Exception as e:
-            print("connect to %s error: " % host, e)
+            print("connect to %s error: %s" % (host, e))
             p.close()
             return None, e
 
@@ -312,7 +312,7 @@ class Courier2:
             else:
                 p.connect(self.pwd, timeout=timeout)
         except Exception as e:
-            print("[pre execute] connect to %s error: " % host, e)
+            print("[pre execute] connect to %s error: %s" % (host, e))
             p.close()
             return None, e
 
@@ -325,7 +325,7 @@ class Courier2:
                 c = p.execute(ccmd, pty, timeout, background=True)
                 return p, c
         except Exception as e:
-            print("[pre execute] execute cmd @ %s error: " % host, e)
+            print("[pre execute] execute cmd @ %s error: %s" % (host, e))
             p.close()
             if retry_count > 0:
                 if timeout:
@@ -349,7 +349,7 @@ class Courier2:
                     except Exception as e:
                         break
             except Exception as e:
-                print("[%s] execute with execption:" % host, e)
+                print("[%s] execute with execption: %s" % (host, e))
         if p and (not background):
             p.close()
         #            ret[1] = stdout
@@ -406,7 +406,7 @@ def main():
 
     num = args.num
     use_ssh_config = args.proxy_command
-    print('use proxy command', args.proxy_command)
+    print('use proxy command %s' % args.proxy_command)
 
     black_list = {}
     if args.black:
@@ -418,9 +418,9 @@ def main():
 
     for c in args.config:
         config = toml.load(c)
-        user = config.get("user", args.user)
+        user = config.get("user", "")
 
-        pwd = config.get("pwd", args.pwd)
+        pwd = config.get("pwd", "")
         passp = config.get("passphrase", None)
         global_configs = config.get("global_configs", "")
 
