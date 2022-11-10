@@ -63,7 +63,7 @@ def trigger_bootstrap(dictory):
                     print("trace {}".format(trace))
 
                     print_process = Popen(("cat {}".format(os.path.join(root,f + ".txt")).split()), stdout=subprocess.PIPE)
-                    grep_process = Popen(["grep", filter], stdin=print_process.stdout, stdout=PIPE)
+                    grep_process = Popen(["grep", "-i", filter], stdin=print_process.stdout, stdout=PIPE)
                     print_process.stdout.close()  # Allow ps_process to receive a SIGPIPE if grep_process exits.
                     output = grep_process.communicate()[0]       
 
