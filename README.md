@@ -75,7 +75,7 @@ file /dev/mitosis-syscalls
 
 ```bash
 cd exp
-./connector -gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" -mac_id=0 -nic_id=0 # the gid is the nic 0 on the machine 0
+./connector -gid="fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c" -mac_id=0 -nic_id=0 # this gid is marked as the nic 0 on the machine 0 on the child machine, and we will send connect request to it
 ```
 
 5. Run the parent program on the parent machine.
