@@ -54,24 +54,24 @@ A sample output is shown below.
 
 ```plain
 ...
-(u'@val02     ', u'[  +0.000002] src/lib.rs@182: [INFO ] - starting rpc client')
-(u'@val02     ', u'[  +0.000096] src/lib.rs@55: [INFO ] - start stress test client 0')
-(u'@val02     ', u'[  +0.000002] src/lib.rs@56: [INFO ] - gid: fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c')
+@val02     [  +0.000002] src/lib.rs@182: [INFO ] - starting rpc client
+@val02     [  +0.000096] src/lib.rs@55: [INFO ] - start stress test client 0
+@val02     [  +0.000002] src/lib.rs@56: [INFO ] - gid: fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c
 ...
 # peak throughput starts
-(u'@val09     ', u'[  +1.023995] src/lib.rs@221: [INFO ] - passed: 1024001us, thpt: 131063 requests/s')
-(u'@val05     ', u'[  +1.023970] src/lib.rs@221: [INFO ] - passed: 1023982us, thpt: 131024 requests/s')
-(u'@val02     ', u'[  +1.023989] src/lib.rs@221: [INFO ] - passed: 1023995us, thpt: 130888 requests/s')
-(u'@val12     ', u'[  +1.023987] src/lib.rs@221: [INFO ] - passed: 1023997us, thpt: 130727 requests/s')
-(u'@val06     ', u'[  +1.023993] src/lib.rs@221: [INFO ] - passed: 1023999us, thpt: 130887 requests/s')
-(u'@val03     ', u'[  +1.023990] src/lib.rs@221: [INFO ] - passed: 1024001us, thpt: 130877 requests/s')
-(u'@val07     ', u'[  +1.024015] src/lib.rs@221: [INFO ] - passed: 1024025us, thpt: 130834 requests/s')
-(u'@val14     ', u'[  +1.023983] src/lib.rs@221: [INFO ] - passed: 1023994us, thpt: 130741 requests/s')
-(u'@val04     ', u'[  +1.023974] src/lib.rs@221: [INFO ] - passed: 1023983us, thpt: 131091 requests/s')
-(u'@val08     ', u'[  +1.023988] src/lib.rs@221: [INFO ] - passed: 1023998us, thpt: 131082 requests/s')
-(u'@val09     ', u'[  +1.023998] src/lib.rs@221: [INFO ] - passed: 1024004us, thpt: 130936 requests/s')
+@val09     [  +1.023995] src/lib.rs@221: [INFO ] - passed: 1024001us, thpt: 131063 requests/s
+@val05     [  +1.023970] src/lib.rs@221: [INFO ] - passed: 1023982us, thpt: 131024 requests/s
+@val02     [  +1.023989] src/lib.rs@221: [INFO ] - passed: 1023995us, thpt: 130888 requests/s
+@val12     [  +1.023987] src/lib.rs@221: [INFO ] - passed: 1023997us, thpt: 130727 requests/s
+@val06     [  +1.023993] src/lib.rs@221: [INFO ] - passed: 1023999us, thpt: 130887 requests/s
+@val03     [  +1.023990] src/lib.rs@221: [INFO ] - passed: 1024001us, thpt: 130877 requests/s
+@val07     [  +1.024015] src/lib.rs@221: [INFO ] - passed: 1024025us, thpt: 130834 requests/s
+@val14     [  +1.023983] src/lib.rs@221: [INFO ] - passed: 1023994us, thpt: 130741 requests/s
+@val04     [  +1.023974] src/lib.rs@221: [INFO ] - passed: 1023983us, thpt: 131091 requests/s
+@val08     [  +1.023988] src/lib.rs@221: [INFO ] - passed: 1023998us, thpt: 131082 requests/s
+@val09     [  +1.023998] src/lib.rs@221: [INFO ] - passed: 1024004us, thpt: 130936 requests/s
 ...
-(u'@val02     ', u'[  +0.000003] krdma test framework dropped')
+@val02     [  +0.000003] krdma test framework dropped
 ```
 
 The log prints the total throughput of one machine. For example, the average throughput per machine is **130922** requests/s and
@@ -128,9 +128,9 @@ A sample output is shown below.
 
 ```plain
 ...
-(u'@val07     ', u'[  +1.004007] src/lib.rs@245: [INFO ] - passed: 1033670us, thpt: 12086 requests/s')
-(u'@val02     ', u'[  +1.023991] src/lib.rs@245: [INFO ] - passed: 1024000us, thpt: 12346 requests/s')
-(u'@val08     ', u'[  +0.998663] src/lib.rs@245: [INFO ] - passed: 1024045us, thpt: 10817 requests/s')
+@val07     [  +1.004007] src/lib.rs@245: [INFO ] - passed: 1033670us, thpt: 12086 requests/s
+@val02     [  +1.023991] src/lib.rs@245: [INFO ] - passed: 1024000us, thpt: 12346 requests/s
+@val08     [  +0.998663] src/lib.rs@245: [INFO ] - passed: 1024045us, thpt: 10817 requests/s
 ...
 ```
 
@@ -163,18 +163,18 @@ Remark:
 A sample **correct** output is shown below.
 
 ```
-(u'@val07     ', u'[660K5BZDgBs] Throughput: 120.045924 containers/sec, latency 8.330145 ms')
-(u'@val07     ', u'[660K5BZDgBs] Throughput: 121.862228 containers/sec, latency 8.205988 ms')
-(u'@val07     ', u'[660K5BZDgBs] Throughput: 120.813350 containers/sec, latency 8.277231 ms')
-(u'@val07     ', u'[660K5BZDgBs] Throughput: 120.046682 containers/sec, latency 8.330093 ms')
+@val07     [660K5BZDgBs] Throughput: 120.045924 containers/sec, latency 8.330145 ms
+@val07     [660K5BZDgBs] Throughput: 121.862228 containers/sec, latency 8.205988 ms
+@val07     [660K5BZDgBs] Throughput: 120.813350 containers/sec, latency 8.277231 ms
+@val07     [660K5BZDgBs] Throughput: 120.046682 containers/sec, latency 8.330093 ms
 ```
 
 A typical **error** output is shown below,
 and the `dmesg` will print error like `[ERROR] failed to create ah` or `RPC handler meets an error Error(Fatal)`.
 
 ```
-(u'@val07     ', u'[660K5BZDgBs] Throughput: 0.090090 containers/sec, latency xxxxxx ms')
-(u'@val07     ', u'[660K5BZDgBs] Throughput: 0.090090 containers/sec, latency xxxxxx ms')
+@val07     [660K5BZDgBs] Throughput: 0.090090 containers/sec, latency xxxxxx ms
+@val07     [660K5BZDgBs] Throughput: 0.090090 containers/sec, latency xxxxxx ms
 ```
 
 #### Python application stress test
@@ -204,8 +204,8 @@ Remark:
 A sample output is shown below.
 
 ```
-(u'@val14     ', u'[T6U0WuFz614] Throughput: 2.276335 containers/sec, latency 439.302601 ms')
-(u'@val14     ', u'[z367u4QL3gh] Throughput: 2.583709 containers/sec, latency 387.040498 ms')
-(u'@val14     ', u'[0VXd9kuG12t] Throughput: 2.243970 containers/sec, latency 445.638739 ms')
-(u'@val14     ', u'[5DbE54y7v49] Throughput: 1.919630 containers/sec, latency 520.933842 ms')
+@val14     [T6U0WuFz614] Throughput: 2.276335 containers/sec, latency 439.302601 ms
+@val14     [z367u4QL3gh] Throughput: 2.583709 containers/sec, latency 387.040498 ms
+@val14     [0VXd9kuG12t] Throughput: 2.243970 containers/sec, latency 445.638739 ms
+@val14     [5DbE54y7v49] Throughput: 1.919630 containers/sec, latency 520.933842 ms
 ```
