@@ -194,6 +194,16 @@ declare_global!(
     alloc::vec::Vec<crate::KRdmaKit::services::DatagramMeta>
 );
 
+declare_global!(
+    rc_service,
+    alloc::vec::Vec<alloc::sync::Arc<crate::KRdmaKit::services::ReliableConnectionServer>>
+);
+
+declare_global!(
+    rc_cm_service,
+    alloc::vec::Vec<crate::KRdmaKit::comm_manager::CMServer<crate::KRdmaKit::services::ReliableConnectionServer>>
+);
+
 #[inline]
 pub unsafe fn get_rdma_cm_server_ref(
     nic_idx: usize,
@@ -237,6 +247,18 @@ pub unsafe fn get_ud_factory_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static os_network::datagram::ud::UDFactory> {
     Some(crate::ud_factories::get_ref().get(nic_idx)?.as_ref())
+}
+
+declare_global!(
+    rc_factories,
+    alloc::vec::Vec<os_network::rdma::rc::RCFactory>
+);
+
+#[inline]
+pub unsafe fn get_rc_factory_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static os_network::rdma::rc::RCFactory> {
+    crate::rc_factories::get_ref().get(nic_idx)
 }
 
 declare_global!(

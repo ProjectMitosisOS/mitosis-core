@@ -35,6 +35,10 @@ pub(crate) struct DescriptorLookupReply {
     pub(crate) gid: rust_kernel_rdma_base::ib_gid,
     pub(crate) dct_num: u32,
     pub(crate) dc_key: u64,
+
+    // for rc connection
+    pub(crate) rc_gid: rust_kernel_rdma_base::ib_gid,
+    pub(crate) rc_listen_id: u64,
 }
 
 impl os_network::serialize::Serialize for DescriptorLookupReply {}
@@ -59,6 +63,11 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     let meta = unsafe { crate::dc_target_meta::get_ref().get(dc_target_idx).unwrap() };
     let (lid, gid) = (meta.lid, meta.gid);
 
+    let rc_server_idx = unsafe{ crate::bindings::pmem_get_current_cpu()  as usize % (crate::rc_cm_service::get_ref().len()) };
+    let rc_cm_server = unsafe{ crate::rc_cm_service::get_ref().get(rc_server_idx).unwrap() };   
+    let rc_service = unsafe { crate::rc_service::get_ref().get(rc_server_idx).unwrap() };
+    let rc_service_gid = {rc_service.ctx().get_dev_ref().query_gid(rc_service.port_num(), 0).unwrap() };
+
     let reply = match buf {
         Some((addr, len)) => {
             DescriptorLookupReply {
@@ -71,6 +80,9 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
                 gid,
                 dct_num: dc_target.dct_num(),
                 dc_key: dc_target.dc_key(),
+
+                rc_gid: rc_service_gid,
+                rc_listen_id: rc_cm_server.listen_id(),
             }
         }
         None => {
@@ -85,6 +97,9 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
                 gid: Default::default(),
                 dct_num: 0,
                 dc_key: 0,
+
+                rc_gid: Default::default(),
+                rc_listen_id: 0,
             }
         }
     };
