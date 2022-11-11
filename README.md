@@ -187,7 +187,7 @@ main(int argc, char *argv[]) {
 
 We have provided unit tests, stress tests, and benchmarks for mitosis. Please refer to the documents [here](./docs/tests-and-benchmarks.md).
 
-## Shortcoming and Roadmap 
+## Roadmap 
 
 MITOSIS is still under development and code refactory, which current codebase has the following limitations:
 
@@ -215,7 +215,9 @@ This project is licensed under the MIT license.
 
 ## Credits 
 
-Some codes may come from: 
+Some code is insipired by (or directly borrowed) from
 
 - [nix](https://docs.rs/nix/latest/nix/)
 - [tokio](https://tokio.rs)
+
+We have to borrow some code because they don't support kernel space. 
