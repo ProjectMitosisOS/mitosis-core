@@ -6,7 +6,7 @@ We will further refine our workflow of contribution in the future.
 
 ## Conduct
 
-The Tokio project adheres to the [Rust Code of Conduct](https://github.com/rust-lang/rust/blob/master/CODE_OF_CONDUCT.md).
+The mitosis project adheres to the [Rust Code of Conduct](https://github.com/rust-lang/rust/blob/master/CODE_OF_CONDUCT.md).
 
 ## Contributing in Issues
 
