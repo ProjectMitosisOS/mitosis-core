@@ -14,8 +14,6 @@ Mitosis is a kernel module that provides a new system primitive of fast remote f
 - Rustc: 1.60.0-nightly (71226d717 2022-02-04)
 - Clang-9
 
-
-
 #### 2. Hardware 
 
 - A machine with Mellanox RDMA-capable IB NIC (later than or equal to ConnectX-4). 
@@ -72,9 +70,42 @@ Mitosis uses the first RDMA nic by default, so we will use the gid `fe80:0000:00
 ```bash
 cd exp
 cmake .
-make connector \ ## the utilities to connect mitosis kernels, source code: xxx
-     simple_parent  \ ## 
-     simple_child
+make connector `## the utility program to connect mitosis kernel-space rpc, source code: exp/common/connector.cc` \
+     simple_parent `## a simple parent program, which prints a number every second, source code: exp/common/simple_parent.cc` \
+     simple_child `## a simple child program, which is to fork the parent program from a remote machine, source code: exp/common/simple_child.cc`
+```
+
+```c++
+// an excerpt of exp/common/simple_parent.cc
+int
+main(int argc, char *argv[]) {
+    // omitted
+    int sd = sopen(); // open the mitosis device in /dev
+    int cnt = 0;
+    assert(sd != 0);
+
+    sleep(1);
+    printf("time %d\n", cnt++);
+    fork_prepare(sd, FLAGS_handler_id); // call the fork_prepare with id here
+    // the child program will resume the execution from this point
+
+    while (1) {
+        printf("time %d\n", cnt++);
+        sleep(1);
+    }
+}
+
+// an excerpt of exp/common/simple_child.cc
+int
+main(int argc, char *argv[]) {
+    // omitted
+    int sd = sopen();
+    assert(sd != 0);
+    // the child program call the fork_resume to resume the execution from the parent program with `handler_id` on machine `mac_id`
+    fork_resume_remote(sd, FLAGS_mac_id, FLAGS_handler_id);
+    assert(false); // we should never reach this point
+    return 0;
+}
 ```
 
 3. Compile and insert the kernel module on **both** machines.
@@ -110,78 +141,11 @@ cd exp
 
 7. Use Ctrl+C to kill the parent and child and use `make rmmod` to uninstall the kernel module.
 
-##### An animated example is shown below to illustrate how to fork the parent at machine val01 to machine val02. 
+#### An animated example is shown below to illustrate how to fork the parent at machine val01 to machine val02.
+
+Note: We will try to remove the kernel module before we insert it, so as to avoid double insertion of the module. This will cause error like "Module is not loaded" when the module is not inserted before. This error is OK.
 
 ![example](./docs/example.gif)
-
-The code of the 2 demo programs is listed below.
-
-```c++
-/*
- * Parent Program
- */
-#include <assert.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <gflags/gflags.h>
-
-#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
-
-DEFINE_int64(handler_id, 73, "rfork handler id");
-DEFINE_bool(pin, false, "whether pin in kernel");
-
-int
-main(int argc, char *argv[]) {
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
-
-    int sd = sopen();
-    int cnt = 0;
-    assert(sd != 0);
-
-    if (FLAGS_pin) {
-        fork_prepare_ping(sd, FLAGS_handler_id);
-        return 0;
-    } else {
-        // the parent program will enter this branch as we set -pin=false
-        sleep(1);
-        printf("time %d\n", cnt++);
-        // the parent program will call the fork_prepare with the id here
-        // the child program will resume the execution from this point
-        fork_prepare(sd, FLAGS_handler_id);
-    }
-
-    // the parent program will enter dead loop and print counter here
-    while (1) {
-        printf("time %d\n", cnt++);
-        sleep(1);
-    }
-}
-
-/*
- * Child Program
- */
-#include <assert.h>
-#include <gflags/gflags.h>
-#include <unistd.h>
-#include "../../mitosis-user-libs/mitosis-c-client/include/syscall.h"
-
-DEFINE_int64(mac_id, 0, "machine id");
-DEFINE_int64(handler_id, 73, "rfork handler id");
-DEFINE_int64(wait_finish_sec, 0, "waiting for parent finish prepare");
-
-
-int
-main(int argc, char *argv[]) {
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
-    sleep(FLAGS_wait_finish_sec);
-    int sd = sopen();
-    assert(sd != 0);
-    // the child program call the fork_resume to resume the execution from the parent program with `handler_id` on machine `mac_id`
-    fork_resume_remote(sd, FLAGS_mac_id, FLAGS_handler_id);
-    assert(false);
-    return 0;
-}
-```
 
 ## Testing and Benchmarking
 
@@ -201,6 +165,9 @@ Detailed roadmap:
 - [ ] Supporting languages with GC and multi-threading
 - [ ] Fallback handler to support unmapped page 
 - [ ] Add Reliable connection, RPC and TCP as an alternative to RDMA DCT-based network communications
+- [ ] Other unfinished features/code refinement
+    - [ ] RPC disconnection and elegant error handling in session creation
+    - [ ] Doorbell optimization in prefetcher module
 
 ## Contribution
 
