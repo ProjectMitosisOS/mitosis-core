@@ -141,9 +141,11 @@ cd exp
 
 7. Use Ctrl+C to kill the parent and child and use `make rmmod` to uninstall the kernel module.
 
-#### An animated example is shown below to illustrate how to fork the parent at machine val01 to machine val02.
+#### Animated Example of Remote Fork
 
-Note: We will try to remove the kernel module before we insert it, so as to avoid double insertion of the module. This will cause error like "Module is not loaded" when the module is not inserted before. This error is OK.
+The example below is to illustrate how to fork the parent process at machine `val01` to machine `val02`.
+
+**Note**: We will try to remove the kernel module before we insert it, so as to avoid double insertion of the module. This will cause error like "Module is not loaded" when the module is not inserted before. This error is OK.
 
 ![example](./docs/example.gif)
 
