@@ -19,7 +19,7 @@ Mitosis is a kernel module that provides a new system primitive of fast remote f
 #### 2. Hardware 
 
 - A machine with Mellanox RDMA-capable IB NIC (later than or equal to ConnectX-4). 
-  - In principle there is no difficult in supporting RoCE, but we have lack such NIC for testing. 
+  - In principle there is no difficult in supporting RoCE, but we have lack such NIC for testing.  We welcome testing and porting on other RNICs. 
 - X86-64 servers 
 
 Please refer to the document [here](./docs/setup.md) for how to configure software environments.
