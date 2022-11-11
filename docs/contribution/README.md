@@ -28,6 +28,3 @@ Even tiny pull requests (e.g., one character pull request fixing a typo in API d
 
 If the change being proposed alters code (as opposed to only documentation for example), it is either adding new functionality to mitosis or it is fixing existing, broken functionality. In both of these cases, the pull request should include one or more tests to ensure the correctness of the implementation. For example, one or more unit test cases are required to demonstrate the code change. See the document [here](../tests-and-benchmarks.md) for more details of the tests of mitosis.
 
-## Credits
-
-The contribution guide of mitosis is inspired by that of [tokio](https://github.com/tokio-rs/tokio/blob/master/CONTRIBUTING.md).
