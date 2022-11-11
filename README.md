@@ -72,7 +72,9 @@ Mitosis uses the first RDMA nic by default, so we will use the gid `fe80:0000:00
 ```bash
 cd exp
 cmake .
-make connector simple_parent simple_child
+make connector \ ## the utilities to connect mitosis kernels, source code: xxx
+     simple_parent  \ ## 
+     simple_child
 ```
 
 3. Compile and insert the kernel module on **both** machines.
