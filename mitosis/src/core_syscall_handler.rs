@@ -14,6 +14,7 @@ use crate::syscalls::FileOperations;
 use os_network::bytes::ToBytes;
 use os_network::timeout::TimeoutWRef;
 use os_network::{block_on, Factory};
+use os_network::rdma::rc::RCConn;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
@@ -21,6 +22,7 @@ use crate::rpc_service::HandlerConnectInfo;
 use crate::startup::probe_remote_rpc_end;
 
 const TIMEOUT_USEC: i64 = 1000_000; // 1s
+const USE_RC: bool = true; 
 
 #[allow(dead_code)]
 struct ResumeDataStruct {
@@ -69,6 +71,8 @@ pub struct MitosisSysCallHandler {
     my_file: *mut crate::bindings::file,
 
     resume_counter: AtomicUsize,
+
+    rc: Option<RCConn>,
 }
 
 impl Drop for MitosisSysCallHandler {
@@ -147,6 +151,7 @@ impl FileOperations for MitosisSysCallHandler {
             my_file: file as *mut _,
             caller_status: Default::default(),
             resume_counter: AtomicUsize::new(0),
+            rc: None,
         })
     }
 
@@ -411,11 +416,32 @@ impl MitosisSysCallHandler {
                         crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
 
                         // fetch the descriptor with one-sided RDMA
-                        let desc_buf = RemotePagingService::remote_descriptor_fetch(
-                            d,
-                            caller,
-                            remote_session_id,
-                        );
+                        let desc_buf = if USE_RC {
+                            // crate::log::info!("use rc to get desc!!!");
+                            let server_service_id = d.rc_listen_id;
+                            let client_factory = unsafe { crate::get_rc_factory_ref(0).expect("Failed to get RC factory") };
+                            let conn_meta = os_network::rdma::ConnMeta {
+                                gid: d.rc_gid,
+                                service_id: server_service_id,
+                                port: 1, // default_nic_port
+                            };
+                            self.rc = match client_factory.create(conn_meta) {
+                                Ok(rcconn) => Some(rcconn), 
+                                Err(e) =>{
+                                    // crate::log::error!("failed to create rc connection!");
+                                    None
+                                }
+                            };
+                            RemotePagingService::remote_descriptor_fetch_rc(
+                                d,
+                                caller,
+                                remote_session_id,
+                                self.rc.clone().unwrap(),
+                            ) } else {
+                            RemotePagingService::remote_descriptor_fetch(
+                                d,
+                                caller,
+                                remote_session_id,)};
                         // {
                         //     let server_service_id = SERVICE_ID_BASE;
                         //     let ctx = unsafe { crate::get_rdma_context_ref(0).unwrap() };
@@ -665,7 +691,7 @@ impl MitosisSysCallHandler {
                     //     .read_remote_page(fault_addr, &resume_related.access_info);
                     resume_related
                         .descriptor
-                        .read_remote_page(fault_addr, &resume_related.access_info)
+                        .read_remote_page(fault_addr, &resume_related.access_info, self.rc.clone(), USE_RC)
                 }
             }
         };

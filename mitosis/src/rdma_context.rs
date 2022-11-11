@@ -1,9 +1,10 @@
 use alloc::vec::Vec;
 
-use os_network::{KRdmaKit::{self, services::UnreliableDatagramAddressService, comm_manager::CMServer, services::dc::DCTargetService}, rdma::dc::DCFactory};
+use os_network::{KRdmaKit::{self, services::UnreliableDatagramAddressService, comm_manager::CMServer, services::dc::DCTargetService, services::rc::ReliableConnectionServer}, rdma::dc::DCFactory};
 
 pub const SERVICE_ID_BASE: u64 = 73; // not using 0 to prevent error
 pub const GLOBAL_DC_KEY: u64 = 73;
+pub const RC_SERVICE_ID_BASE: u64 = 33;
 
 /// Note: need to call `end_rdma` before destroying the kernel module
 /// Return
@@ -68,12 +69,31 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
         crate::rdma_cm_service::init(servers);
     };
 
+    unsafe{
+        let mut rc_servers = Vec::new();
+        let mut rc_cm_servers = Vec::new();
+        for i in 0..config.num_nics_used{
+            let rc_server = ReliableConnectionServer::create(crate::get_rdma_context_ref(i).unwrap(), config.default_nic_port);
+            let server_cm = CMServer::new(
+                RC_SERVICE_ID_BASE + i as u64,
+                &rc_server,
+                crate::get_rdma_context_ref(i).expect("fatal: cannot get the created context").get_dev_ref(),
+            ).expect("fail to create rc cm server on NIC");
+            rc_servers.push(rc_server);
+            rc_cm_servers.push(server_cm);
+        }
+        crate::rc_service::init(rc_servers);
+        crate::rc_cm_service::init(rc_cm_servers);
+    };
+
     Some(())
 }
 
 pub fn end_rdma() {
     // Note: the **order** of drop is very important here
     unsafe {
+        crate::rc_cm_service::drop();
+        crate::rc_service::drop();
         crate::rdma_cm_service::drop();
         crate::ud_service::drop();
         crate::dc_target_meta::drop();

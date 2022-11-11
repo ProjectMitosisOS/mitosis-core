@@ -1,7 +1,8 @@
 use alloc::sync::Arc;
 use os_network::KRdmaKit::{DatagramEndpoint, DatapathError};
 use os_network::remote_memory::Device;
-use os_network::remote_memory::rdma::{DCRemoteDevice, DCKeys};
+use os_network::remote_memory::rdma::{DCRemoteDevice, DCKeys, RCRemoteDevice, RCKeys};
+use os_network::rdma::rc::RCConn;
 use os_network::timeout::Timeout;
 use os_network::{block_on, Future};
 
@@ -161,6 +162,66 @@ impl RemotePagingService {
                     // The fallback path? DC cannot distinguish from failures
                     // unimplemented!();
                     crate::log::error!("fatal, timeout on reading the DC QP");
+                    Err(os_network::rdma::Err::DatapathError(DatapathError::TimeoutError))
+                } else {
+                    Err(e.into_inner().unwrap())
+                }
+            }
+        }
+    }
+
+    #[inline]
+    pub(crate) fn remote_descriptor_fetch_rc(
+        d: crate::rpc_handlers::DescriptorLookupReply,
+        caller: &mut crate::rpc_caller_pool::UDCaller,
+        session_id: usize,
+        rc: RCConn
+    ) -> Result<RMemory, <RCRemoteDevice as Future>::Error> {
+        let descriptor_buf = RMemory::new(d.sz, 0, rc.get_qp().ctx().clone());
+        let mut remote_device = RCRemoteDevice::new(rc);
+        unsafe {
+            remote_device.read(
+                &(),
+                &d.pa,
+                &RCKeys::new(d.rkey),
+                &mut descriptor_buf.get_pa(),
+                &d.sz)
+        }?;
+
+        let mut timeout_device = Timeout::new(remote_device, 10 * TIMEOUT_USEC);
+        match block_on(&mut timeout_device) {
+            Ok(_) => Ok(descriptor_buf),
+            Err(e) => {
+                Err(e.into_inner().unwrap())
+            }
+        }
+    }
+
+    #[inline]
+    pub fn remote_read_rc(
+        mut dst: PhyAddrType,
+        src: PhyAddrType,
+        sz: usize,
+        access_info: &AccessInfo,
+        rc: RCConn,
+    ) -> Result<(), <DCRemoteDevice as Future>::Error> {
+        let mut remote_device = RCRemoteDevice::new(rc);
+        unsafe {
+            remote_device.read(
+                &(),
+                &PhysAddr::decode(src), // copy from src into dst
+                &RCKeys::new(access_info.rkey),
+                &mut dst,
+                &sz,
+            )
+        }?;
+        // wait for the request to complete
+        let mut timeout_device = Timeout::new(remote_device, TIMEOUT_USEC);
+        match block_on(&mut timeout_device) {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                if e.is_elapsed() {
+                    crate::log::error!("fatal, timeout on reading the RC QP");
                     Err(os_network::rdma::Err::DatapathError(DatapathError::TimeoutError))
                 } else {
                     Err(e.into_inner().unwrap())

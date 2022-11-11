@@ -12,7 +12,7 @@ pub struct RCFactory {
 }
 
 impl RCFactory {
-    pub fn new(ctx: Arc<Context>) -> Self {
+    pub fn new(ctx: &Arc<Context>) -> Self {
         Self { rctx: ctx.clone() }
     }
 

@@ -6,6 +6,7 @@ use alloc::vec::Vec;
 use os_network::KRdmaKit::{MemoryRegion, DatapathError};
 use os_network::rdma::payload::RDMAOp;
 use os_network::rdma::payload::dc::DCReqPayload;
+use os_network::rdma::rc::RCConn;
 use os_network::timeout::TimeoutWRef;
 #[allow(unused_imports)]
 use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
@@ -265,6 +266,8 @@ impl ChildDescriptor {
         &mut self,
         remote_va: PhyAddrType,
         access_info: &AccessInfo,
+        rc: Option<RCConn>,
+        use_rc: bool,
     ) -> Option<*mut crate::bindings::page> {
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
@@ -273,12 +276,19 @@ impl ChildDescriptor {
         let remote_pa = remote_pa.unwrap();
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
-        let res = crate::remote_paging::RemotePagingService::remote_read(
+        let res = if use_rc { let rc = rc.unwrap();
+            // crate::log::info!("use rc to get page!!!");
+            crate::remote_paging::RemotePagingService::remote_read_rc(
+            new_page_pa, 
+            remote_pa, 
+            4096, 
+            access_info, 
+            rc) } else { 
+            crate::remote_paging::RemotePagingService::remote_read(
             new_page_pa,
             remote_pa,
             4096,
-            access_info,
-        );
+            access_info) };
         #[cfg(feature = "resume-profile")]
         self.incr_fetched_remote_count(1);
         return match res {

@@ -80,6 +80,17 @@ pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
         crate::access_info_service::init(crate::dc_pool::AccessInfoPool::new(config.max_core_cnt));
     };
 
+    // RC factory
+    unsafe {
+        use os_network::rdma::rc::*;
+
+        let mut rc_factories = Vec::new();
+        for c in crate::rdma_contexts::get_ref() {
+            rc_factories.push(RCFactory::new(c));
+        }
+        crate::rc_factories::init(rc_factories);
+    }
+
     // global lock
     {
         let mut locks = Vec::new();
