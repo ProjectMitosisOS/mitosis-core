@@ -4,10 +4,6 @@ Mitosis still has some unfinished designs and implementations, or you may also h
 
 We will further refine our workflow of contribution in the future.
 
-## Conduct
-
-The mitosis project adheres to the [Rust Code of Conduct](https://github.com/rust-lang/rust/blob/master/CODE_OF_CONDUCT.md).
-
 ## Contributing in Issues
 
 For any contribution, you can follow the following steps:
