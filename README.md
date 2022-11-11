@@ -108,7 +108,7 @@ cd exp
 
 7. Use Ctrl+C to kill the parent and child and use `make rmmod` to uninstall the kernel module.
 
-An animated example is shown below.
+##### An animated example is shown below to illustrate how to fork the parent at machine val01 to machine val02. 
 
 ![example](./docs/example.gif)
 
