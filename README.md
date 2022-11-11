@@ -6,17 +6,29 @@ Mitosis is a kernel module that provides a new system primitive of fast remote f
 
 ### Prerequisite
 
+### 1. Software 
+
 - OS: Ubuntu16.04 (throughly tested, in general is irrelevant to the OS)
 - Linux kernel: 4.15.0-46-generic (porting needed to fit other OSes)
 - MLNX_OFED driver: 4.9-3.1.5.0 (throughly, use our modified driver in case to support DCT)
 - Rustc: 1.60.0-nightly (71226d717 2022-02-04)
 - Clang-9
 
-Please refer to the document [here](./docs/setup.md) for how to configure these environments.
+
+
+#### 2. Hardware 
+
+- A machine with Mellanox RDMA-capable IB NIC (later than or equal to ConnectX-4). 
+  - In principle there is no difficult in supporting RoCE, but we have lack such NIC for testing. 
+- X86-64 servers 
+
+Please refer to the document [here](./docs/setup.md) for how to configure software environments.
+
+---
 
 ### Compile the mitosis
 
-Assumptions: we have finished installing the dependencies described in the Prerequisite. 
+Assumptions: we have finished installing the software dependencies described in the Prerequisite. 
 
 ```bash
 make km ## building the kernel module
@@ -63,9 +75,10 @@ cmake .
 make connector simple_parent simple_child
 ```
 
-3. Compile and insert the kernel module on both machines.
+3. Compile and insert the kernel module on **both** machines.
 
 ```bash
+# at each machine, run the following command: 
 make km && make insmod
 file /dev/mitosis-syscalls
 # /dev/mitosis-syscalls: setuid, setgid, sticky, character special (238/0)
