@@ -22,7 +22,6 @@ use crate::rpc_service::HandlerConnectInfo;
 use crate::startup::probe_remote_rpc_end;
 
 const TIMEOUT_USEC: i64 = 1000_000; // 1s
-const USE_RC: bool = true; 
 
 #[allow(dead_code)]
 struct ResumeDataStruct {
@@ -416,18 +415,18 @@ impl MitosisSysCallHandler {
                         crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
 
                         // fetch the descriptor with one-sided RDMA
-                        let desc_buf = if USE_RC {
+                        let desc_buf = if cfg!(feature = "use_rc") {
                             // crate::log::info!("use rc to get desc!!!");
-                            let server_service_id = d.rc_listen_id;
+                            let rc_listen_id = d.rc_listen_id;
                             let client_factory = unsafe { crate::get_rc_factory_ref(0).expect("Failed to get RC factory") };
                             let conn_meta = os_network::rdma::ConnMeta {
                                 gid: d.rc_gid,
-                                service_id: server_service_id,
+                                service_id: rc_listen_id,
                                 port: 1, // default_nic_port
                             };
                             self.rc = match client_factory.create(conn_meta) {
                                 Ok(rcconn) => Some(rcconn), 
-                                Err(e) =>{
+                                Err(_e) =>{
                                     // crate::log::error!("failed to create rc connection!");
                                     None
                                 }
@@ -681,17 +680,17 @@ impl MitosisSysCallHandler {
                         miss_page_cache = true;
                         resume_related
                             .descriptor
-                            .read_remote_page(fault_addr, &resume_related.access_info)
+                            .read_remote_page(fault_addr, &resume_related.access_info, self.rc.clone() )
                     }
                 }
                 #[cfg(not(feature = "page-cache"))]
                 {
                     // resume_related
                     //     .descriptor
-                    //     .read_remote_page(fault_addr, &resume_related.access_info);
+                    //     .read_remote_page(fault_addr, &resume_related.access_info, self.rc.clone());
                     resume_related
                         .descriptor
-                        .read_remote_page(fault_addr, &resume_related.access_info, self.rc.clone(), USE_RC)
+                        .read_remote_page(fault_addr, &resume_related.access_info, self.rc.clone() )
                 }
             }
         };

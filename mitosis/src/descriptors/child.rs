@@ -261,13 +261,13 @@ impl ChildDescriptor {
     ///
     /// @param remote_va: remote virt-addr
     /// @param access_info: remote network meta info
+    /// @param rc: RC connection or None
     #[inline]
     pub unsafe fn read_remote_page(
         &mut self,
         remote_va: PhyAddrType,
         access_info: &AccessInfo,
         rc: Option<RCConn>,
-        use_rc: bool,
     ) -> Option<*mut crate::bindings::page> {
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
@@ -276,7 +276,7 @@ impl ChildDescriptor {
         let remote_pa = remote_pa.unwrap();
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
-        let res = if use_rc { let rc = rc.unwrap();
+        let res = if  cfg!(feature = "use_rc") { let rc = rc.unwrap();
             // crate::log::info!("use rc to get page!!!");
             crate::remote_paging::RemotePagingService::remote_read_rc(
             new_page_pa, 
@@ -346,11 +346,13 @@ impl ChildDescriptor {
     ///
     /// @param remote_va: remote virt-addr
     /// @param access_info: remote network meta info
+    /// @param rc: RC connection or None
     #[inline]
     pub unsafe fn read_remote_page(
         &mut self,
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
+        rc: Option<RCConn>,
     ) -> Option<*mut crate::bindings::page> {
         let (pt, idx) = self.page_table.find_l1_page_idx(VirtAddr::new(remote_va))?;
         let l1_page = &mut (*pt);
