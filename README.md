@@ -177,7 +177,7 @@ Want to contribute to mitosis? We have some unfinished designs and implementatio
 
 ## Related Projects
 
-- [KRCORE](https://ipads.se.sjtu.edu.cn:1312/distributed-rdma-serverless/kernel-rdma/rust-kernel-rdma/-/tree/master/) is a rust RDMA library for user-space and kernel-space applications. 
+- [KRCORE](https://github.com/SJTU-IPADS/krcore-artifacts) is a rust RDMA library for user-space and kernel-space applications. 
 
 ## License
 This project is licensed under the MIT license.
