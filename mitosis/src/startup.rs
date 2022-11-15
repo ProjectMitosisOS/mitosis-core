@@ -36,6 +36,12 @@ pub fn check_global_configurations() {
         crate::log::info!("[check]: Not cache remote page table.")
     }
 
+    if cfg!(feature = "use_rc") {
+        crate::log::info!("[check]: RC is used.")
+    } else {
+        crate::log::info!("[check]: DCT is used.")
+    }
+
     crate::log::info!("********* All configuration check passes !*********");
 }
 

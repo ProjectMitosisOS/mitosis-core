@@ -204,7 +204,7 @@ impl RemotePagingService {
         sz: usize,
         access_info: &AccessInfo,
         rc: RCConn,
-    ) -> Result<(), <DCRemoteDevice as Future>::Error> {
+    ) -> Result<(), <RCRemoteDevice as Future>::Error> {
         let mut remote_device = RCRemoteDevice::new(rc);
         unsafe {
             remote_device.read(
