@@ -116,7 +116,8 @@ impl crate::Conn for RCConn {
                     req.get_local_mr_range(),
                     req.is_signaled(),
                     req.get_raddr(),
-                    req.get_rkey())
+                    req.get_rkey(),
+                    req.get_local_mr().get_virt_addr())
             },
             RDMAOp::WRITE => {
                 self.get_qp().post_send_write(
@@ -124,7 +125,8 @@ impl crate::Conn for RCConn {
                     req.get_local_mr_range(),
                     req.is_signaled(),
                     req.get_raddr(),
-                    req.get_rkey())
+                    req.get_rkey(),
+                    req.get_local_mr().get_virt_addr())
             },
         }
     }
