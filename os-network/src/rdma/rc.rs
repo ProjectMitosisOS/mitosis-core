@@ -117,7 +117,7 @@ impl crate::Conn for RCConn {
                     req.is_signaled(),
                     req.get_raddr(),
                     req.get_rkey(),
-                    req.get_local_mr().get_virt_addr())
+                    req.get_local_mr().get_virt_addr())  // set MR`s virtual address as the wr_id
             },
             RDMAOp::WRITE => {
                 self.get_qp().post_send_write(
@@ -126,7 +126,7 @@ impl crate::Conn for RCConn {
                     req.is_signaled(),
                     req.get_raddr(),
                     req.get_rkey(),
-                    req.get_local_mr().get_virt_addr())
+                    req.get_local_mr().get_virt_addr())  // set MR`s virtual address as the wr_id
             },
         }
     }
