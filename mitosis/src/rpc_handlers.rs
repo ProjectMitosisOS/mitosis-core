@@ -63,10 +63,18 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     let meta = unsafe { crate::dc_target_meta::get_ref().get(dc_target_idx).unwrap() };
     let (lid, gid) = (meta.lid, meta.gid);
 
-    let rc_server_idx = unsafe{ crate::bindings::pmem_get_current_cpu()  as usize % (crate::rc_cm_service::get_ref().len()) };
-    let rc_cm_server = unsafe{ crate::rc_cm_service::get_ref().get(rc_server_idx).unwrap() };   
-    let rc_service = unsafe { crate::rc_service::get_ref().get(rc_server_idx).unwrap() };
-    let rc_service_gid = {rc_service.ctx().get_dev_ref().query_gid(rc_service.port_num(), 0).unwrap() };
+    let mut rc_service_gid = Default::default();
+    let mut rc_lid = 0;
+
+    #[cfg(feature = "use_rc")]
+    {
+        let rc_server_idx = unsafe { crate::bindings::pmem_get_current_cpu()  as usize % (crate::rc_cm_service::get_ref().len()) };
+        let rc_cm_server = unsafe { crate::rc_cm_service::get_ref().get(rc_server_idx).unwrap() };   
+        let rc_service = unsafe { crate::rc_service::get_ref().get(rc_server_idx).unwrap() };
+        rc_service_gid = rc_service.ctx().get_dev_ref().query_gid(rc_service.port_num(), 0).unwrap();
+        rc_lid = rc_cm_server.listen_id();
+    }
+    
 
     let reply = match buf {
         Some((addr, len)) => {
@@ -82,7 +90,7 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
                 dc_key: dc_target.dc_key(),
 
                 rc_gid: rc_service_gid,
-                rc_listen_id: rc_cm_server.listen_id(),
+                rc_listen_id: rc_lid,
             }
         }
         None => {

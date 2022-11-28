@@ -194,11 +194,13 @@ declare_global!(
     alloc::vec::Vec<crate::KRdmaKit::services::DatagramMeta>
 );
 
+#[cfg(feature = "use_rc")]
 declare_global!(
     rc_service,
     alloc::vec::Vec<alloc::sync::Arc<crate::KRdmaKit::services::ReliableConnectionServer>>
 );
 
+#[cfg(feature = "use_rc")]
 declare_global!(
     rc_cm_service,
     alloc::vec::Vec<crate::KRdmaKit::comm_manager::CMServer<crate::KRdmaKit::services::ReliableConnectionServer>>
@@ -249,11 +251,13 @@ pub unsafe fn get_ud_factory_ref(
     Some(crate::ud_factories::get_ref().get(nic_idx)?.as_ref())
 }
 
+#[cfg(feature = "use_rc")]
 declare_global!(
     rc_factories,
     alloc::vec::Vec<os_network::rdma::rc::RCFactory>
 );
 
+#[cfg(feature = "use_rc")]
 #[inline]
 pub unsafe fn get_rc_factory_ref(
     nic_idx: usize,

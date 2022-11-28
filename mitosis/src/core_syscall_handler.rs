@@ -414,9 +414,9 @@ impl MitosisSysCallHandler {
                         #[cfg(feature = "resume-profile")]
                         crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
 
-                        // fetch the descriptor with one-sided RDMA
-                        let desc_buf = if cfg!(feature = "use_rc") {
-                            // crate::log::info!("use rc to get desc!!!");
+                        #[cfg(feature = "use_rc")]
+                        // establish rc connection
+                        {
                             let rc_listen_id = d.rc_listen_id;
                             let client_factory = unsafe { crate::get_rc_factory_ref(0).expect("Failed to get RC factory") };
                             let conn_meta = os_network::rdma::ConnMeta {
@@ -431,16 +431,15 @@ impl MitosisSysCallHandler {
                                     None
                                 }
                             };
-                            RemotePagingService::remote_descriptor_fetch_rc(
+                        }
+
+                        // fetch the descriptor with one-sided RDMA
+                        let desc_buf = RemotePagingService::remote_descriptor_fetch(
                                 d,
                                 caller,
                                 remote_session_id,
-                                self.rc.clone().unwrap(),
-                            ) } else {
-                            RemotePagingService::remote_descriptor_fetch(
-                                d,
-                                caller,
-                                remote_session_id,)};
+                                self.rc.clone(),
+                            );
                         // {
                         //     let server_service_id = SERVICE_ID_BASE;
                         //     let ctx = unsafe { crate::get_rdma_context_ref(0).unwrap() };
