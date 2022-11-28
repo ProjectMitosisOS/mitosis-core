@@ -276,19 +276,13 @@ impl ChildDescriptor {
         let remote_pa = remote_pa.unwrap();
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
-        let res = if  cfg!(feature = "use_rc") { let rc = rc.unwrap();
-            // crate::log::info!("use rc to get page!!!");
-            crate::remote_paging::RemotePagingService::remote_read_rc(
+        let res = crate::remote_paging::RemotePagingService::remote_read(
             new_page_pa, 
             remote_pa, 
             4096, 
             access_info, 
-            rc) } else { 
-            crate::remote_paging::RemotePagingService::remote_read(
-            new_page_pa,
-            remote_pa,
-            4096,
-            access_info) };
+            rc.clone(), 
+        );
         #[cfg(feature = "resume-profile")]
         self.incr_fetched_remote_count(1);
         return match res {
@@ -311,6 +305,7 @@ impl ChildDescriptor {
         &mut self,
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
+        rc: Option<RCConn>,
     ) -> Option<*mut crate::bindings::page> {
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
@@ -324,6 +319,7 @@ impl ChildDescriptor {
             remote_pa.unwrap(),
             4096,
             access_info,
+            rc.clone(),
         );
         #[cfg(feature = "resume-profile")]
         self.incr_fetched_remote_count(1);

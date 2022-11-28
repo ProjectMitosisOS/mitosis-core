@@ -69,6 +69,7 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
         crate::rdma_cm_service::init(servers);
     };
 
+    #[cfg(feature = "use_rc")]
     unsafe{
         let mut rc_servers = Vec::new();
         let mut rc_cm_servers = Vec::new();
@@ -92,7 +93,9 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
 pub fn end_rdma() {
     // Note: the **order** of drop is very important here
     unsafe {
+        #[cfg(feature = "use_rc")]
         crate::rc_cm_service::drop();
+        #[cfg(feature = "use_rc")]
         crate::rc_service::drop();
         crate::rdma_cm_service::drop();
         crate::ud_service::drop();

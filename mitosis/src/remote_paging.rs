@@ -82,11 +82,13 @@ use crate::remote_mapping::PhysAddr;
 use os_network::msg::UDMsg as RMemory;
 
 impl RemotePagingService {
+    #[cfg(not(feature = "use_rc"))]
     #[inline]
     pub(crate) fn remote_descriptor_fetch(
         d: crate::rpc_handlers::DescriptorLookupReply,
         caller: &mut crate::rpc_caller_pool::UDCaller,
         session_id: usize,
+        _rc: Option<RCConn>,
     ) -> Result<RMemory, <DCRemoteDevice as Future>::Error> {
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
         let dc_qp = unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
@@ -129,6 +131,7 @@ impl RemotePagingService {
         }
     }
 
+    #[cfg(not(feature = "use_rc"))]
     /// read the remote physical addr `dst` to `src`, both expressed in physical address
     #[inline]
     pub fn remote_read(
@@ -136,6 +139,7 @@ impl RemotePagingService {
         src: PhyAddrType,
         sz: usize,
         access_info: &AccessInfo,
+        _rc: Option<RCConn>,
     ) -> Result<(), <DCRemoteDevice as Future>::Error> {
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
         let dc_qp = unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
@@ -170,13 +174,15 @@ impl RemotePagingService {
         }
     }
 
+    #[cfg(feature = "use_rc")]
     #[inline]
-    pub(crate) fn remote_descriptor_fetch_rc(
+    pub(crate) fn remote_descriptor_fetch(
         d: crate::rpc_handlers::DescriptorLookupReply,
         caller: &mut crate::rpc_caller_pool::UDCaller,
         session_id: usize,
-        rc: RCConn
+        rc: Option<RCConn>,
     ) -> Result<RMemory, <RCRemoteDevice as Future>::Error> {
+        let rc = rc.unwrap();
         let descriptor_buf = RMemory::new(d.sz, 0, rc.get_qp().ctx().clone());
         let mut remote_device = RCRemoteDevice::new(rc);
         unsafe {
@@ -197,14 +203,16 @@ impl RemotePagingService {
         }
     }
 
+    #[cfg(feature = "use_rc")]
     #[inline]
-    pub fn remote_read_rc(
+    pub fn remote_read(
         mut dst: PhyAddrType,
         src: PhyAddrType,
         sz: usize,
         access_info: &AccessInfo,
-        rc: RCConn,
+        rc: Option<RCConn>,
     ) -> Result<(), <RCRemoteDevice as Future>::Error> {
+        let rc = rc.unwrap();
         let mut remote_device = RCRemoteDevice::new(rc);
         unsafe {
             remote_device.read(

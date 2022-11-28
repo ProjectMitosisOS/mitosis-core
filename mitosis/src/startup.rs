@@ -86,6 +86,7 @@ pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
         crate::access_info_service::init(crate::dc_pool::AccessInfoPool::new(config.max_core_cnt));
     };
 
+    #[cfg(feature = "use_rc")]
     // RC factory
     unsafe {
         use os_network::rdma::rc::*;
@@ -208,6 +209,8 @@ pub fn end_instance() {
     unsafe {
         crate::ud_factories::drop();
         crate::dc_factories::drop();
+        #[cfg(feature = "use_rc")]
+        crate::rc_factories::drop();
 
         crate::service_rpc::drop();
         crate::access_info_service::drop();
