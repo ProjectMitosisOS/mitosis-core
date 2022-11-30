@@ -41,6 +41,7 @@ Mitosis has different configurations, including:
     - COW: Use Copy-On-Write instead of directly copying page content
     - Eager resume: Read all the pages during the startup
     - Profile: Print performance profile during the execution
+    - Use rc: Use RC to get remote pages instead of using DCT
 These configurations are specified in the `mitosis-kms/Kbuild` file with Rust features. Without further explanation, we will use the default configuration "COW+Prefetch". If you want to use other configurations, you can copy the Kbuild file before the compilation.
 
 ```bash
