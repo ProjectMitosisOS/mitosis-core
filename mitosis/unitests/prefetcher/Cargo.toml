@@ -19,7 +19,7 @@ krdma-test = {path="../../../deps/krcore/rust-kernel-rdma/krdma-test",optional =
 mitosis = {path = "../../../mitosis", version="0.1.0", optional = true, features = ["prefetch"]}
 
 [dev-dependencies]
-kernel-module-testlib = { path = "../../../deps/krcore/rust-kernel-rdma/testlib" }
+kernel-module-testlib = { path = "../../../deps/krcore/testlib" }
 mitosis-rust-client = { path = "../../../mitosis-user-libs/mitosis-rust-client" }
 
 [profile.dev]

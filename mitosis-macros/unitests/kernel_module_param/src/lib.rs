@@ -9,8 +9,8 @@ declare_module_param!(sample_long, u64);
 declare_module_param!(sample_int, u32);
 declare_module_param!(sample_str, *mut u8);
 
-use rust_kernel_linux_util::linux_kernel_module;
-use rust_kernel_linux_util as log;
+use mitosis::linux_kernel_module;
+use mitosis::log;
 
 #[krdma_main]
 fn ctx_init() {
