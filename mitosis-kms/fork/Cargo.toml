@@ -31,7 +31,7 @@ mitosis-macros = {path = "../../mitosis-macros"}
 
 [dev-dependencies]
 mitosis-rust-client = { path = "../../mitosis-user-libs/mitosis-rust-client" }
-kernel-module-testlib = { path = "../../deps/krcore/rust-kernel-rdma/testlib" }
+kernel-module-testlib = { path = "../../deps/krcore/testlib" }
 
 [profile.dev]
 opt-level = 2
