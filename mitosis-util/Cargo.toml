@@ -8,7 +8,7 @@ edition = "2018"
 default = ["rust-kernel-linux-util"]
 
 [dependencies]
-rust-kernel-linux-util = {path = "../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
+rust-kernel-linux-util = {path = "../deps/krcore/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
 
 [dependencies.lazy_static]
 version = "1.0"
