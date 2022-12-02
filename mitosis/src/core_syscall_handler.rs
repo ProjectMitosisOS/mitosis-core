@@ -71,6 +71,7 @@ pub struct MitosisSysCallHandler {
 
     resume_counter: AtomicUsize,
 
+    #[cfg(feature = "use_rc")]
     rc: Option<RCConn>,
 }
 
@@ -150,8 +151,9 @@ impl FileOperations for MitosisSysCallHandler {
             my_file: file as *mut _,
             caller_status: Default::default(),
             resume_counter: AtomicUsize::new(0),
+            #[cfg(feature = "use_rc")]
             rc: None,
-        })
+        }) 
     }
 
     #[allow(non_snake_case)]
@@ -417,17 +419,16 @@ impl MitosisSysCallHandler {
                         #[cfg(feature = "use_rc")]
                         // establish rc connection
                         {
-                            let rc_listen_id = d.rc_listen_id;
-                            let client_factory = unsafe { crate::get_rc_factory_ref(0).expect("Failed to get RC factory") };
+                            let rc_factory = unsafe { crate::get_rc_factory_ref(0).expect("Failed to get RC factory") };
                             let conn_meta = os_network::rdma::ConnMeta {
                                 gid: d.rc_gid,
-                                service_id: rc_listen_id,
+                                service_id: d.rc_lid,
                                 port: 1, // default_nic_port
                             };
-                            self.rc = match client_factory.create(conn_meta) {
+                            self.rc = match rc_factory.create(conn_meta) {
                                 Ok(rcconn) => Some(rcconn), 
                                 Err(_e) =>{
-                                    // crate::log::error!("failed to create rc connection!");
+                                    crate::log::error!("failed to create rc connection!");
                                     None
                                 }
                             };
@@ -435,11 +436,13 @@ impl MitosisSysCallHandler {
 
                         // fetch the descriptor with one-sided RDMA
                         let desc_buf = RemotePagingService::remote_descriptor_fetch(
-                                d,
-                                caller,
-                                remote_session_id,
-                                self.rc.clone(),
-                            );
+                            d,
+                            caller,
+                            remote_session_id,
+                            #[cfg(feature = "use_rc")]
+                            self.rc.clone().unwrap(),
+                        );
+
                         // {
                         //     let server_service_id = SERVICE_ID_BASE;
                         //     let ctx = unsafe { crate::get_rdma_context_ref(0).unwrap() };
@@ -679,17 +682,22 @@ impl MitosisSysCallHandler {
                         miss_page_cache = true;
                         resume_related
                             .descriptor
-                            .read_remote_page(fault_addr, &resume_related.access_info, self.rc.clone() )
+                            .read_remote_page(fault_addr, 
+                                &resume_related.access_info, 
+                                #[cfg(feature = "use_rc")]
+                                self.rc.clone().unwrap(),
+                            )
                     }
                 }
                 #[cfg(not(feature = "page-cache"))]
                 {
-                    // resume_related
-                    //     .descriptor
-                    //     .read_remote_page(fault_addr, &resume_related.access_info, self.rc.clone());
                     resume_related
                         .descriptor
-                        .read_remote_page(fault_addr, &resume_related.access_info, self.rc.clone() )
+                        .read_remote_page(fault_addr, 
+                            &resume_related.access_info,
+                            #[cfg(feature = "use_rc")]
+                            self.rc.clone().unwrap(),
+                        )
                 }
             }
         };

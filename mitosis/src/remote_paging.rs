@@ -88,7 +88,6 @@ impl RemotePagingService {
         d: crate::rpc_handlers::DescriptorLookupReply,
         caller: &mut crate::rpc_caller_pool::UDCaller,
         session_id: usize,
-        _rc: Option<RCConn>,
     ) -> Result<RMemory, <DCRemoteDevice as Future>::Error> {
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
         let dc_qp = unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
@@ -139,7 +138,6 @@ impl RemotePagingService {
         src: PhyAddrType,
         sz: usize,
         access_info: &AccessInfo,
-        _rc: Option<RCConn>,
     ) -> Result<(), <DCRemoteDevice as Future>::Error> {
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
         let dc_qp = unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
@@ -180,16 +178,15 @@ impl RemotePagingService {
         d: crate::rpc_handlers::DescriptorLookupReply,
         caller: &mut crate::rpc_caller_pool::UDCaller,
         session_id: usize,
-        rc: Option<RCConn>,
+        rc: RCConn,
     ) -> Result<RMemory, <RCRemoteDevice as Future>::Error> {
-        let rc = rc.unwrap();
         let descriptor_buf = RMemory::new(d.sz, 0, rc.get_qp().ctx().clone());
         let mut remote_device = RCRemoteDevice::new(rc);
         unsafe {
             remote_device.read(
                 &(),
                 &d.pa,
-                &RCKeys::new(d.rkey),
+                &RCKeys::new(d.rc_rkey),
                 &mut descriptor_buf.get_pa(),
                 &d.sz)
         }?;
@@ -210,9 +207,8 @@ impl RemotePagingService {
         src: PhyAddrType,
         sz: usize,
         access_info: &AccessInfo,
-        rc: Option<RCConn>,
+        rc: RCConn,
     ) -> Result<(), <RCRemoteDevice as Future>::Error> {
-        let rc = rc.unwrap();
         let mut remote_device = RCRemoteDevice::new(rc);
         unsafe {
             remote_device.read(
