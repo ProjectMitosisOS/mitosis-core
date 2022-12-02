@@ -6,7 +6,6 @@ use alloc::vec::Vec;
 use os_network::KRdmaKit::{MemoryRegion, DatapathError};
 use os_network::rdma::payload::RDMAOp;
 use os_network::rdma::payload::dc::DCReqPayload;
-use os_network::rdma::rc::RCConn;
 use os_network::timeout::TimeoutWRef;
 #[allow(unused_imports)]
 use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
@@ -35,6 +34,9 @@ use crate::remote_paging::AccessInfo;
 
 #[cfg(feature = "prefetch")]
 use crate::prefetcher::{DCAsyncPrefetcher, StepPrefetcher};
+
+#[cfg(feature = "use_rc")]
+use os_network::rdma::rc::RCConn;
 
 /// The kernel-space process descriptor of MITOSIS
 /// The descriptors should be generate by the task
@@ -261,13 +263,14 @@ impl ChildDescriptor {
     ///
     /// @param remote_va: remote virt-addr
     /// @param access_info: remote network meta info
-    /// @param rc: RC connection or None
+    /// @param rc: RC connection
     #[inline]
     pub unsafe fn read_remote_page(
         &mut self,
         remote_va: PhyAddrType,
         access_info: &AccessInfo,
-        rc: Option<RCConn>,
+        #[cfg(feature = "use_rc")]
+        rc: RCConn,
     ) -> Option<*mut crate::bindings::page> {
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
@@ -280,8 +283,9 @@ impl ChildDescriptor {
             new_page_pa, 
             remote_pa, 
             4096, 
-            access_info, 
-            rc.clone(), 
+            access_info,
+            #[cfg(feature = "use_rc")]
+            rc.clone(),
         );
         #[cfg(feature = "resume-profile")]
         self.incr_fetched_remote_count(1);
@@ -305,7 +309,6 @@ impl ChildDescriptor {
         &mut self,
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
-        rc: Option<RCConn>,
     ) -> Option<*mut crate::bindings::page> {
         let remote_pa = self.lookup_pg_table(remote_va);
         if remote_pa.is_none() {
@@ -319,7 +322,6 @@ impl ChildDescriptor {
             remote_pa.unwrap(),
             4096,
             access_info,
-            rc.clone(),
         );
         #[cfg(feature = "resume-profile")]
         self.incr_fetched_remote_count(1);
@@ -342,13 +344,11 @@ impl ChildDescriptor {
     ///
     /// @param remote_va: remote virt-addr
     /// @param access_info: remote network meta info
-    /// @param rc: RC connection or None
     #[inline]
     pub unsafe fn read_remote_page(
         &mut self,
         remote_va: VirtAddrType,
         access_info: &AccessInfo,
-        rc: Option<RCConn>,
     ) -> Option<*mut crate::bindings::page> {
         let (pt, idx) = self.page_table.find_l1_page_idx(VirtAddr::new(remote_va))?;
         let l1_page = &mut (*pt);
