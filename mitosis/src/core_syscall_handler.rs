@@ -419,7 +419,8 @@ impl MitosisSysCallHandler {
                         #[cfg(feature = "use_rc")]
                         // establish rc connection
                         {
-                            let rc_factory = unsafe { crate::get_rc_factory_ref(0).expect("Failed to get RC factory") };
+                            let nic_idx = unsafe { crate::get_calling_cpu_id() % crate::max_nics_used::get_ref() };
+                            let rc_factory = unsafe { crate::get_rc_factory_ref(nic_idx).expect("Failed to get RC factory") };
                             let conn_meta = os_network::rdma::ConnMeta {
                                 gid: d.rc_gid,
                                 service_id: d.rc_lid,
