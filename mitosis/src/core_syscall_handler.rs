@@ -214,15 +214,7 @@ impl FileOperations for MitosisSysCallHandler {
                 
                 #[cfg(feature = "use_rc")]
                 {
-                    let ret = self.syscall_connect_session(machine_id as _, &gid, nic_id as _);
-                    match self.syscall_connect_rc(&gid, nic_id as _) {
-                        -1 => { 
-                            -1
-                        }
-                        _ => {
-                            ret
-                        }
-                    }
+                    self.syscall_connect_rc(&gid, nic_id as _) | self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
                 }
             }
             LibMITOSISCmd::PreparePing => self.syscall_prepare(arg, true),
@@ -585,7 +577,6 @@ impl MitosisSysCallHandler {
                 -1
             }
         }
-
     }
 
     #[inline]
