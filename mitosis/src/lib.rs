@@ -318,6 +318,25 @@ pub unsafe fn set_rpc_caller_pool(arg: crate::rpc_caller_pool::CallerPool<'stati
     crate::service_caller_pool::init(arg);
 }
 
+#[cfg(feature = "use_rc")]
+/// A pool of rc connection
+pub mod rc_conn_pool;
+
+#[cfg(feature = "use_rc")]
+declare_global!(rc_pool, crate::rc_conn_pool::RCPool<'static>);
+
+#[cfg(feature = "use_rc")]
+#[inline]
+pub unsafe fn get_rc_conn_pool_ref() -> &'static crate::rc_conn_pool::RCPool<'static> {
+    crate::rc_pool::get_ref()
+}
+
+#[cfg(feature = "use_rc")]
+#[inline]
+pub unsafe fn get_rc_conn_pool_mut() -> &'static mut crate::rc_conn_pool::RCPool<'static>
+{
+    crate::rc_pool::get_mut()
+}
 
 /// A pool of DCQPs
 pub mod dc_pool;

@@ -19,6 +19,8 @@ use os_network::rdma::rc::RCConn;
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 use crate::rpc_service::HandlerConnectInfo;
+#[cfg(feature = "use_rc")]
+use crate::rc_conn_pool::RCConnectInfo;
 use crate::startup::probe_remote_rpc_end;
 
 const TIMEOUT_USEC: i64 = 1000_000; // 1s
@@ -70,9 +72,6 @@ pub struct MitosisSysCallHandler {
     my_file: *mut crate::bindings::file,
 
     resume_counter: AtomicUsize,
-
-    #[cfg(feature = "use_rc")]
-    rc: Option<RCConn>,
 }
 
 impl Drop for MitosisSysCallHandler {
@@ -151,8 +150,6 @@ impl FileOperations for MitosisSysCallHandler {
             my_file: file as *mut _,
             caller_status: Default::default(),
             resume_counter: AtomicUsize::new(0),
-            #[cfg(feature = "use_rc")]
-            rc: None,
         }) 
     }
 
@@ -209,7 +206,24 @@ impl FileOperations for MitosisSysCallHandler {
                     core::str::from_utf8(&addr_buf).unwrap()
                 };
                 let (machine_id, gid, nic_id) = (req.machine_id, String::from(addr), req.nic_id);
-                self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
+
+                #[cfg(not(feature = "use_rc"))]
+                {
+                    self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
+                }
+                
+                #[cfg(feature = "use_rc")]
+                {
+                    let ret = self.syscall_connect_session(machine_id as _, &gid, nic_id as _);
+                    match self.syscall_connect_rc(&gid, nic_id as _) {
+                        -1 => { 
+                            -1
+                        }
+                        _ => {
+                            ret
+                        }
+                    }
+                }
             }
             LibMITOSISCmd::PreparePing => self.syscall_prepare(arg, true),
             LibMITOSISCmd::NilRPC => {
@@ -416,32 +430,30 @@ impl MitosisSysCallHandler {
                         #[cfg(feature = "resume-profile")]
                         crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
 
-                        #[cfg(feature = "use_rc")]
-                        // establish rc connection
-                        {
-                            let nic_idx = unsafe { crate::get_calling_cpu_id() % crate::max_nics_used::get_ref() };
-                            let rc_factory = unsafe { crate::get_rc_factory_ref(nic_idx).expect("Failed to get RC factory") };
-                            let conn_meta = os_network::rdma::ConnMeta {
-                                gid: d.rc_gid,
-                                service_id: d.rc_lid,
-                                port: 1, // default_nic_port
-                            };
-                            self.rc = match rc_factory.create(conn_meta) {
-                                Ok(rcconn) => Some(rcconn), 
-                                Err(_e) =>{
-                                    crate::log::error!("failed to create rc connection!");
-                                    None
-                                }
-                            };
-                        }
+                        // #[cfg(feature = "use_rc")]
+                        // // establish rc connection
+                        // {
+                        //     let nic_idx = unsafe { crate::get_calling_cpu_id() % crate::max_nics_used::get_ref() };
+                        //     let rc_factory = unsafe { crate::get_rc_factory_ref(nic_idx).expect("Failed to get RC factory") };
+                        //     let conn_meta = os_network::rdma::ConnMeta {
+                        //         gid: d.rc_gid,
+                        //         service_id: d.rc_lid,
+                        //         port: 1, // default_nic_port
+                        //     };
+                        //     self.rc = match rc_factory.create(conn_meta) {
+                        //         Ok(rcconn) => Some(rcconn), 
+                        //         Err(_e) =>{
+                        //             crate::log::error!("failed to create rc connection!");
+                        //             None
+                        //         }
+                        //     };
+                        // }
 
                         // fetch the descriptor with one-sided RDMA
                         let desc_buf = RemotePagingService::remote_descriptor_fetch(
                             d,
                             caller,
                             remote_session_id,
-                            #[cfg(feature = "use_rc")]
-                            self.rc.clone().unwrap(),
                         );
 
                         // {
@@ -552,6 +564,28 @@ impl MitosisSysCallHandler {
                 -1
             }
         }
+    }
+
+    #[cfg(feature = "use_rc")]
+    #[inline]
+    fn syscall_connect_rc(
+        &mut self,
+        gid: &alloc::string::String,
+        nic_idx: usize,
+    ) -> c_long {
+        let info = RCConnectInfo::create(gid, nic_idx as _ );
+        let rc_pool = unsafe { crate::get_rc_conn_pool_mut() };
+        match rc_pool.create_rc_connection(info) {
+            Some(_) => {
+                crate::log::debug!("create rc connection success");
+                0
+            }
+            _ => {
+                crate::log::error!("failed create rc connection");
+                -1
+            }
+        }
+
     }
 
     #[inline]
@@ -684,9 +718,7 @@ impl MitosisSysCallHandler {
                         resume_related
                             .descriptor
                             .read_remote_page(fault_addr, 
-                                &resume_related.access_info, 
-                                #[cfg(feature = "use_rc")]
-                                self.rc.clone().unwrap(),
+                                &resume_related.access_info,
                             )
                     }
                 }
@@ -696,8 +728,6 @@ impl MitosisSysCallHandler {
                         .descriptor
                         .read_remote_page(fault_addr, 
                             &resume_related.access_info,
-                            #[cfg(feature = "use_rc")]
-                            self.rc.clone().unwrap(),
                         )
                 }
             }

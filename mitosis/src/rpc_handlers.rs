@@ -39,10 +39,6 @@ pub(crate) struct DescriptorLookupReply {
     #[cfg(feature = "use_rc")]
     // for rc connection
     pub(crate) rc_rkey: u32,
-    #[cfg(feature = "use_rc")]
-    pub(crate) rc_gid: rust_kernel_rdma_base::ib_gid,
-    #[cfg(feature = "use_rc")]
-    pub(crate) rc_lid: u64,
 }
 
 impl os_network::serialize::Serialize for DescriptorLookupReply {}
@@ -70,11 +66,7 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     #[cfg(feature = "use_rc")]
     let rc_server_idx = unsafe { crate::bindings::pmem_get_current_cpu()  as usize % (crate::rc_cm_service::get_ref().len()) };
     #[cfg(feature = "use_rc")]
-    let rc_cm_server = unsafe { crate::rc_cm_service::get_ref().get(rc_server_idx).unwrap() };   
-    #[cfg(feature = "use_rc")]
     let rc_server = unsafe { crate::rc_service::get_ref().get(rc_server_idx).unwrap() };
-    #[cfg(feature = "use_rc")]
-    let rc_gid = rc_server.ctx().get_dev_ref().query_gid(rc_server.port_num(), 0).unwrap();
     
     let reply = match buf {
         Some((addr, len)) => {
@@ -91,10 +83,6 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
 
                 #[cfg(feature = "use_rc")]
                 rc_rkey: rc_server.ctx().rkey(),
-                #[cfg(feature = "use_rc")]
-                rc_gid: rc_gid,
-                #[cfg(feature = "use_rc")]
-                rc_lid: rc_cm_server.listen_id(),
             }
         }
         None => {
@@ -112,10 +100,6 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
                 
                 #[cfg(feature = "use_rc")]
                 rc_rkey: 0,
-                #[cfg(feature = "use_rc")]
-                rc_gid: Default::default(),
-                #[cfg(feature = "use_rc")]
-                rc_lid: 0,
             }
         }
     };

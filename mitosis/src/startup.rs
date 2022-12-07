@@ -184,6 +184,14 @@ pub fn init_rpc(config: &crate::Config,
         )
     };
 
+    #[cfg(feature = "use_rc")]
+    unsafe {
+        crate::rc_pool::init(
+            crate::rc_conn_pool::RCPool::new(config)
+                .expect("Failed to create the RC connection pool"),
+        )
+    };
+
     crate::log::info!("Start waiting for the RPC servers to start...");
     crate::rpc_service::wait_handlers_ready_barrier(config.rpc_threads_num);
     crate::log::info!("All RPC thread handlers initialized!");
@@ -225,6 +233,9 @@ pub fn end_instance() {
         crate::dc_pool_service_async::drop();
 
         crate::service_caller_pool::drop();
+
+        #[cfg(feature = "use_rc")]
+        crate::rc_pool::drop();
 
         crate::log::debug!("drop shadow process service");
         crate::sp_service::drop();
