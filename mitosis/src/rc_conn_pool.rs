@@ -114,16 +114,15 @@ impl<'a> RCPool<'a> {
                 service_id: info.service_id,
                 port: 1, // default_nic_port
             };
-            let rc = match rc_factory.create(conn_meta) {
+            match rc_factory.create(conn_meta) {
                 Ok(rcconn) => {
-                    Some(rcconn)
+                    self.pool.push(rcconn);
                 }
                 Err(_e) =>{
                     crate::log::error!("failed to create rc connection!");
-                    None
+                    return None;
                 }
             };
-            self.pool.push(rc.unwrap());
         }
         crate::log::info!("create rc connection success");
         Some(())
