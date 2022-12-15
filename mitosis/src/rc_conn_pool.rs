@@ -102,6 +102,7 @@ impl<'a> RCPool<'a> {
         &'a mut self,
         info: RCConnectInfo,
     ) -> core::option::Option<()> {
+        let mut pool = Vec::new();
         let len = self.factories.len();
         for i in 0..len {
             let rc_factory = self
@@ -116,7 +117,7 @@ impl<'a> RCPool<'a> {
             };
             match rc_factory.create(conn_meta) {
                 Ok(rcconn) => {
-                    self.pool.push(rcconn);
+                    pool.push(rcconn);
                 }
                 Err(_e) =>{
                     crate::log::error!("failed to create rc connection!");
@@ -124,6 +125,7 @@ impl<'a> RCPool<'a> {
                 }
             };
         }
+        self.pool = pool;
         crate::log::info!("create rc connection success");
         Some(())
     }
