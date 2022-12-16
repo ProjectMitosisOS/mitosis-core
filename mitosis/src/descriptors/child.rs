@@ -260,7 +260,6 @@ impl ChildDescriptor {
     ///
     /// @param remote_va: remote virt-addr
     /// @param access_info: remote network meta info
-    /// @param rc: RC connection
     #[inline]
     pub unsafe fn read_remote_page(
         &mut self,

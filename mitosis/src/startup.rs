@@ -98,6 +98,14 @@ pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
         crate::rc_factories::init(rc_factories);
     }
 
+    #[cfg(feature = "use_rc")]
+    unsafe {
+        crate::rc_pool::init(
+            crate::rc_conn_pool::RCPool::new(config)
+                .expect("Failed to create the RC connection pool"),
+        )
+    };
+
     // global lock
     {
         let mut locks = Vec::new();
@@ -184,13 +192,6 @@ pub fn init_rpc(config: &crate::Config,
         )
     };
 
-    #[cfg(feature = "use_rc")]
-    unsafe {
-        crate::rc_pool::init(
-            crate::rc_conn_pool::RCPool::new(config)
-                .expect("Failed to create the RC connection pool"),
-        )
-    };
 
     crate::log::info!("Start waiting for the RPC servers to start...");
     crate::rpc_service::wait_handlers_ready_barrier(config.rpc_threads_num);
@@ -220,6 +221,9 @@ pub fn end_instance() {
         #[cfg(feature = "use_rc")]
         crate::rc_factories::drop();
 
+        #[cfg(feature = "use_rc")]
+        crate::rc_pool::drop();
+
         crate::service_rpc::drop();
         crate::access_info_service::drop();
 
@@ -234,8 +238,6 @@ pub fn end_instance() {
 
         crate::service_caller_pool::drop();
 
-        #[cfg(feature = "use_rc")]
-        crate::rc_pool::drop();
 
         crate::log::debug!("drop shadow process service");
         crate::sp_service::drop();

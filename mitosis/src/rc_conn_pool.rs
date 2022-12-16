@@ -6,6 +6,7 @@ use crate::KRdmaKit::comm_manager::Explorer;
 use os_network::Factory;
 use os_network::KRdmaKit::context::Context;
 
+use hashbrown::HashMap;
 
 pub struct RCConnectInfo {
     pub gid: alloc::string::String,
@@ -45,7 +46,7 @@ impl Clone for RCConnectInfo {
 
 #[derive(Default)]
 pub struct RCPool<'a>{
-    pool: Vec<RCConn>,
+    pool: HashMap<usize, RCConn>,
 
     factories: Vec<&'a RCFactory>,
 
@@ -55,7 +56,7 @@ pub struct RCPool<'a>{
 
 impl<'a> RCPool<'a> {
     pub fn new(config: &crate::Config) -> core::option::Option<Self>{
-        let pool = Vec::new();
+        let pool = HashMap::new();
         let mut factories = Vec::new();
         let mut contexts = Vec::new();
 
@@ -83,14 +84,17 @@ impl<'a> RCPool<'a> {
 impl<'a> RCPool<'a> {
     #[inline(always)]
     pub unsafe fn get_global_rc_conn(
-        idx: usize,
+        session_id: usize,
     ) -> core::option::Option<&'static mut RCConn> {
-        crate::rc_pool::get_mut().get_rc_conn(idx)
+        crate::rc_pool::get_mut().get_rc_conn(session_id)
     }
 
     #[inline(always)]
-    pub fn get_rc_conn(&'a mut self, idx: usize) -> core::option::Option<&'a mut RCConn> {
-        self.pool.get_mut(idx)
+    pub fn get_rc_conn(
+        &'a mut self, 
+        session_id: usize, 
+    ) -> core::option::Option<&'a mut RCConn> {
+        self.pool.get_mut(&session_id)
     }
 
     #[inline(always)]
@@ -100,11 +104,17 @@ impl<'a> RCPool<'a> {
 
     pub fn create_rc_connection(
         &'a mut self,
+        machine_id: usize,
         info: RCConnectInfo,
     ) -> core::option::Option<()> {
-        let mut pool = Vec::new();
         let len = self.factories.len();
         for i in 0..len {
+            let session_id = crate::startup::calculate_session_id(machine_id, i, len);
+            if(self.pool.contains_key(&session_id)){
+                crate::log::warn!("The session {} has already connected.", session_id);
+                return None;
+            }
+            
             let rc_factory = self
                 .factories
                 .get(i)
@@ -117,16 +127,15 @@ impl<'a> RCPool<'a> {
             };
             match rc_factory.create(conn_meta) {
                 Ok(rcconn) => {
-                    pool.push(rcconn);
+                    self.pool.insert(session_id, rcconn);
                 }
                 Err(_e) =>{
-                    crate::log::error!("failed to create rc connection!");
+                    crate::log::error!("Failed to create rc connection to gid {}", &info.gid);
                     return None;
                 }
             };
         }
-        self.pool = pool;
-        crate::log::info!("create rc connection success");
+        crate::log::info!("Create rc connection success");
         Some(())
     }
 }
