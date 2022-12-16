@@ -214,7 +214,7 @@ impl FileOperations for MitosisSysCallHandler {
                 
                 #[cfg(feature = "use_rc")]
                 {
-                    self.syscall_connect_rc(&gid, nic_id as _) | self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
+                    self.syscall_connect_rc(machine_id as _, &gid, nic_id as _) | self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
                 }
             }
             LibMITOSISCmd::PreparePing => self.syscall_prepare(arg, true),
@@ -562,12 +562,13 @@ impl MitosisSysCallHandler {
     #[inline]
     fn syscall_connect_rc(
         &mut self,
+        machine_id: usize,
         gid: &alloc::string::String,
         nic_idx: usize,
     ) -> c_long {
         let info = RCConnectInfo::create(gid, nic_idx as _ );
         let rc_pool = unsafe { crate::get_rc_conn_pool_mut() };
-        match rc_pool.create_rc_connection(info) {
+        match rc_pool.create_rc_connection(machine_id, info) {
             Some(_) => {
                 crate::log::debug!("create rc connection success");
                 0
