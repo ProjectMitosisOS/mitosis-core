@@ -1,5 +1,7 @@
 # Mitosis Benchmarks
 
+[toc]
+
 ## Overview
 
 The benchmarks are run with one coordinator machine and several runner machines. You can run the benchmarks with one-click operation on the coordinator machine.
