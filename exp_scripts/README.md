@@ -1,5 +1,7 @@
 ## Experiments on MITOSIS
 
+[toc]
+
 ### Building project
 
 - All of the building process including the `rootfs` configuration (on child hosts)
