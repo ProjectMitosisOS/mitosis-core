@@ -8,6 +8,8 @@ use os_network::KRdmaKit::context::Context;
 
 use hashbrown::HashMap;
 
+use crate::linux_kernel_module::bindings::mutex;
+
 pub struct RCConnectInfo {
     pub gid: alloc::string::String,
     pub service_id: u64,
@@ -42,23 +44,19 @@ impl Clone for RCConnectInfo {
     }
 }
 
-
-
 #[derive(Default)]
 pub struct RCPool<'a>{
     pool: HashMap<usize, RCConn>,
 
     factories: Vec<&'a RCFactory>,
 
-    contexts: Vec<&'a Arc<Context>>,
+    mutex: mutex,
 }
-
 
 impl<'a> RCPool<'a> {
     pub fn new(config: &crate::Config) -> core::option::Option<Self>{
         let pool = HashMap::new();
         let mut factories = Vec::new();
-        let mut contexts = Vec::new();
 
         for i in 0..config.max_core_cnt {
             let nic_idx = i % config.num_nics_used;
@@ -70,13 +68,15 @@ impl<'a> RCPool<'a> {
             let factory = unsafe { crate::get_rc_factory_ref(nic_idx).unwrap() };
 
             factories.push(factory);
-            contexts.push(context);
         }
+
+        let m: mutex = Default::default();
+        m.init();
 
         Some(Self {
             pool: pool,
             factories: factories,
-            contexts: contexts,
+            mutex: m,
         })
     }
 }
@@ -94,7 +94,10 @@ impl<'a> RCPool<'a> {
         &'a mut self, 
         session_id: usize, 
     ) -> core::option::Option<&'a mut RCConn> {
-        self.pool.get_mut(&session_id)
+        self.mutex.lock();
+        let ret = self.pool.get_mut(&session_id);
+        self.mutex.unlock();
+        ret
     }
 
     #[inline(always)]
@@ -110,27 +113,34 @@ impl<'a> RCPool<'a> {
         let len = self.factories.len();
         for i in 0..len {
             let session_id = crate::startup::calculate_session_id(machine_id, i, len);
-            if(self.pool.contains_key(&session_id)){
-                crate::log::warn!("The session {} has already connected.", session_id);
-                return None;
-            }
-            
+
             let rc_factory = self
-                .factories
-                .get(i)
-                .expect("Failed to get rc factory");
+            .factories
+            .get(i)
+            .expect("Failed to get rc factory");
             let gid = Explorer::string_to_gid(&info.gid).expect("Failed to convert string to ib_gid");
+
             let conn_meta = os_network::rdma::ConnMeta {
                 gid: gid,
                 service_id: info.service_id,
                 port: 1, // default_nic_port
             };
+
+            self.mutex.lock();
+            if self.pool.contains_key(&session_id) {
+                crate::log::warn!("The session {} has already connected.", session_id);
+                self.mutex.unlock();
+                return None;
+            } 
+
             match rc_factory.create(conn_meta) {
                 Ok(rcconn) => {
                     self.pool.insert(session_id, rcconn);
+                    self.mutex.unlock();
                 }
                 Err(_e) =>{
                     crate::log::error!("Failed to create rc connection to gid {}", &info.gid);
+                    self.mutex.unlock();
                     return None;
                 }
             };
