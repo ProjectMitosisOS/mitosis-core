@@ -574,7 +574,7 @@ impl MitosisSysCallHandler {
                 0
             }
             _ => {
-                crate::log::error!("failed create rc connection");
+                crate::log::debug!("failed create rc connection");
                 -1
             }
         }

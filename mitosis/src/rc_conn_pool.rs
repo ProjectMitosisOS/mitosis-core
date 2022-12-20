@@ -65,7 +65,7 @@ impl<'a> RCPool<'a> {
                 crate::get_rdma_context_ref(nic_idx)
                     .expect("get rdma context failed.")
             };
-            let factory = unsafe { crate::get_rc_factory_ref(nic_idx).unwrap() };
+            let factory = unsafe { crate::get_rc_factory_ref(nic_idx).expect("get rc factory failed.") };
 
             factories.push(factory);
         }
