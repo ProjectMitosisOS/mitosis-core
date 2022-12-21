@@ -164,6 +164,7 @@ Remark:
 1. The stress test should run without error with 1 server machine and 10 client machines.
 2. The output throughput should be steady without sudden drop (drop to <0.1 containers/sec).
 3. The `dmesg` on each machine should not contain error. (should be checked manually).
+4. You can adjust the Kbuild in `templates-build/template-build-mitosis.toml` to run mitosis with other configurations.
 
 A sample **correct** output is shown below.
 
