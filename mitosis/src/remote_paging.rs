@@ -192,8 +192,6 @@ impl RemotePagingService {
         let rc_pool = unsafe { crate::get_rc_conn_pool_ref(cpu_id).expect("failed get rc conn pool") };
         let rc = rc_pool.get_rc_conn(session_id).expect("failed get rc conn").clone();
 
-        crate::log::info!("in remote_descriptor_fetch, use session_id:{}", session_id);
-
         let descriptor_buf = RMemory::new(d.sz, 0, rc.get_qp().ctx().clone());
         let mut remote_device = RCRemoteDevice::new(rc);
         unsafe {
@@ -234,7 +232,6 @@ impl RemotePagingService {
         let rc_pool = unsafe { crate::get_rc_conn_pool_ref(cpu_id).expect("failed get rc conn pool") };
         let rc = rc_pool.get_rc_conn(session_id).expect("failed get rc conn").clone();
 
-        crate::log::info!("in remote_page, use session_id:{}", session_id);
         let mut remote_device = RCRemoteDevice::new(rc);
         unsafe {
             remote_device.read(
