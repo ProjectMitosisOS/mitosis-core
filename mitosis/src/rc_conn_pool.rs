@@ -118,7 +118,6 @@ impl<'a> RCPool {
                 return None;
             }
         };
-        crate::log::info!("Create rc connection success");
         Some(())
     }
 }
