@@ -445,7 +445,7 @@ impl MitosisSysCallHandler {
                         let desc_buf = RemotePagingService::remote_descriptor_fetch(
                             d,
                             caller,
-                            remote_session_id,
+                            machine_id,
                         );
 
                         // {
@@ -567,17 +567,20 @@ impl MitosisSysCallHandler {
         nic_idx: usize,
     ) -> c_long {
         let info = RCConnectInfo::create(gid, nic_idx as _ );
-        let rc_pool = unsafe { crate::get_rc_conn_pool_mut() };
-        match rc_pool.create_rc_connection(machine_id, info) {
-            Some(_) => {
-                crate::log::debug!("create rc connection success");
-                0
-            }
-            _ => {
-                crate::log::debug!("failed create rc connection");
-                -1
+        let len = unsafe { *crate::max_caller_num::get_ref() };
+        for i in 0..len {
+            let rc_pool = unsafe { crate::get_rc_conn_pool_mut(i).expect("failed get rc conn pool") };
+            match rc_pool.create_rc_connection(i, machine_id, info.clone()) {
+                Some(_) => {
+                    crate::log::debug!("create rc connection success");
+                }
+                _ => {
+                    crate::log::debug!("failed create rc connection");
+                    return -1
+                }
             }
         }
+        0
     }
 
     #[inline]

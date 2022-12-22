@@ -8,6 +8,7 @@ use os_network::{block_on, Future};
 
 use crate::kern_wrappers::mm::PhyAddrType;
 use rust_kernel_rdma_base::bindings::*;
+use crate::linux_kernel_module::c_types::c_ulong;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
@@ -86,8 +87,8 @@ impl RemotePagingService {
     #[inline]
     pub(crate) fn remote_descriptor_fetch(
         d: crate::rpc_handlers::DescriptorLookupReply,
-        caller: &mut crate::rpc_caller_pool::UDCaller,
-        session_id: usize,
+        _caller: &mut crate::rpc_caller_pool::UDCaller,
+        _machine_id: c_ulong,
     ) -> Result<RMemory, <DCRemoteDevice as Future>::Error> {
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
         let dc_qp = unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
@@ -177,9 +178,21 @@ impl RemotePagingService {
     pub(crate) fn remote_descriptor_fetch(
         d: crate::rpc_handlers::DescriptorLookupReply,
         _caller: &mut crate::rpc_caller_pool::UDCaller,
-        session_id: usize,
+        machine_id: c_ulong,
     ) -> Result<RMemory, <RCRemoteDevice as Future>::Error> {
-        let rc = unsafe { crate::get_rc_conn_pool_mut().get_rc_conn(session_id).cloned().unwrap() };
+        let cpu_id = crate::get_calling_cpu_id();
+        let session_id = unsafe {
+            crate::startup::calculate_session_id(
+                machine_id as _,
+                cpu_id,
+                *crate::max_caller_num::get_ref(),
+            )
+        };
+
+        let rc_pool = unsafe { crate::get_rc_conn_pool_ref(cpu_id).expect("failed get rc conn pool") };
+        let rc = rc_pool.get_rc_conn(session_id).expect("failed get rc conn").clone();
+
+        crate::log::info!("in remote_descriptor_fetch, use session_id:{}", session_id);
 
         let descriptor_buf = RMemory::new(d.sz, 0, rc.get_qp().ctx().clone());
         let mut remote_device = RCRemoteDevice::new(rc);
@@ -217,8 +230,11 @@ impl RemotePagingService {
                 *crate::max_caller_num::get_ref(),
             )
         };
-        let rc = unsafe { crate::get_rc_conn_pool_mut().get_rc_conn(session_id).cloned().unwrap() };
 
+        let rc_pool = unsafe { crate::get_rc_conn_pool_ref(cpu_id).expect("failed get rc conn pool") };
+        let rc = rc_pool.get_rc_conn(session_id).expect("failed get rc conn").clone();
+
+        crate::log::info!("in remote_page, use session_id:{}", session_id);
         let mut remote_device = RCRemoteDevice::new(rc);
         unsafe {
             remote_device.read(
