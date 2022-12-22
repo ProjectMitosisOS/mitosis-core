@@ -310,7 +310,7 @@ impl MitosisSysCallHandler {
         return 0;
     }
 
-    /// # Warning: Deperacted
+    /// Deperacted
     /// This function is only used for testing
     /// will be removed in the future
     #[inline]
@@ -422,25 +422,6 @@ impl MitosisSysCallHandler {
                         #[cfg(feature = "resume-profile")]
                         crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
 
-                        // #[cfg(feature = "use_rc")]
-                        // // establish rc connection
-                        // {
-                        //     let nic_idx = unsafe { crate::get_calling_cpu_id() % crate::max_nics_used::get_ref() };
-                        //     let rc_factory = unsafe { crate::get_rc_factory_ref(nic_idx).expect("Failed to get RC factory") };
-                        //     let conn_meta = os_network::rdma::ConnMeta {
-                        //         gid: d.rc_gid,
-                        //         service_id: d.rc_lid,
-                        //         port: 1, // default_nic_port
-                        //     };
-                        //     self.rc = match rc_factory.create(conn_meta) {
-                        //         Ok(rcconn) => Some(rcconn), 
-                        //         Err(_e) =>{
-                        //             crate::log::error!("failed to create rc connection!");
-                        //             None
-                        //         }
-                        //     };
-                        // }
-
                         // fetch the descriptor with one-sided RDMA
                         let desc_buf = RemotePagingService::remote_descriptor_fetch(
                             d,
@@ -448,17 +429,6 @@ impl MitosisSysCallHandler {
                             remote_session_id,
                         );
 
-                        // {
-                        //     let server_service_id = SERVICE_ID_BASE;
-                        //     let ctx = unsafe { crate::get_rdma_context_ref(0).unwrap() };
-                        //     let client_factory = os_network::rdma::rc::RCFactory::new(ctx);
-                        //     let conn_meta = os_network::rdma::ConnMeta {
-                        //         gid: ctx.get_gid_as_string(),
-                        //         service_id: server_service_id,
-                        //         qd_hint: 0,
-                        //     };
-                        //     let mut rc = client_factory.create(conn_meta);
-                        // }
                         crate::log::debug!("sanity check fetched desc_buf {:?}", desc_buf.is_ok());
                         if desc_buf.is_err() {
                             crate::log::error!("failed to fetch descriptor {:?}", desc_buf.err());
@@ -467,15 +437,6 @@ impl MitosisSysCallHandler {
 
                         // deserialize
                         let des = {
-                            // legacy version
-                            // let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
-                            // if des.is_none() {
-                            //     crate::log::error!("failed to deserialize descriptor");
-                            //     None
-                            // } else {
-                            //     Some(des.unwrap().to_descriptor())
-                            // }
-
                             // optimized version
                             ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
                         };

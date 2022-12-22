@@ -46,7 +46,7 @@ report_interval = 1 # report throughput every 1 second
 
 Remark:
 
-1. We use $RANDOM to generate a base of session id for each machine to avoid session id collision.
+1. We use $RANDOM$ to generate a base of session id for each machine to avoid session id collision.
 2. We use 1 server thread to receive and response to the rpc requests.
 3. The rpc requests are sent synchronously.
 
@@ -156,7 +156,7 @@ Related tomls:
 
 Remark:
 
-1. The stress test should run with error with 1 server machine and 10 client machines.
+1. The stress test should run without error with 1 server machine and 10 client machines.
 2. The output throughput should be steady without sudden drop (drop to <0.1 containers/sec).
 3. The `dmesg` on each machine should not contain error. (should be checked manually).
 

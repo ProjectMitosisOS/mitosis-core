@@ -79,6 +79,8 @@ impl ChildDescriptor {
         let mut task = Task::new();
         // 1. Unmap origin vma regions
         task.unmap_self();
+
+        #[allow(unused_variables)]
         let access_info = AccessInfo::new(&self.machine_info).unwrap();
         // let access_info = AccessInfo::new_from_cache(self.machine_info.mac_id, &self.machine_info).unwrap();
 
