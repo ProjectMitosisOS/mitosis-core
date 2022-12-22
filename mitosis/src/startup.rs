@@ -100,10 +100,12 @@ pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
 
     #[cfg(feature = "use_rc")]
     unsafe {
-        crate::rc_pool::init(
-            crate::rc_conn_pool::RCPool::new(config)
-                .expect("Failed to create the RC connection pool"),
-        )
+        let mut rc_pool = Vec::new();
+        for i in 0..config.max_core_cnt {
+            let rc_conn_pool = crate::rc_conn_pool::RCPool::new().expect("Failed to create the RC connection pool");
+            rc_pool.push(rc_conn_pool);
+        }
+        crate::rc_pool::init(rc_pool);
     };
 
     // global lock
@@ -221,6 +223,8 @@ pub fn end_instance() {
         #[cfg(feature = "use_rc")]
         crate::rc_factories::drop();
 
+        #[cfg(feature = "use_rc")]
+        crate::log::info!("drop rc pool");
         #[cfg(feature = "use_rc")]
         crate::rc_pool::drop();
 
