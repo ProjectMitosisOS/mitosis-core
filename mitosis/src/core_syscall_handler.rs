@@ -579,6 +579,7 @@ impl MitosisSysCallHandler {
                     return -1
                 }
             }
+            crate::log::info!("create rc connection success");
         }
         0
     }
