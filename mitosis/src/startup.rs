@@ -224,7 +224,7 @@ pub fn end_instance() {
         crate::rc_factories::drop();
 
         #[cfg(feature = "use_rc")]
-        crate::log::info!("drop rc pool");
+        crate::log::debug!("drop rc pool");
         #[cfg(feature = "use_rc")]
         crate::rc_pool::drop();
 
