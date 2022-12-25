@@ -39,7 +39,7 @@ pub fn check_global_configurations() {
     if cfg!(feature = "use_rc") {
         crate::log::info!("[check]: Use RDMA's reliable connection for communications.")
     } else {
-        crate::log::info!("[check]: Use RDMA's dynamic connected transport for communications.")y
+        crate::log::info!("[check]: Use RDMA's dynamic connected transport for communications.")
     }
 
     crate::log::info!("********* All configuration check passes !*********");
