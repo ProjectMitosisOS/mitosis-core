@@ -66,7 +66,7 @@ pub(crate) fn handle_descriptor_addr_lookup(input: &BytesMut, output: &mut Bytes
     #[cfg(feature = "use_rc")]
     let rc_server_idx = unsafe { crate::bindings::pmem_get_current_cpu()  as usize % (crate::rc_cm_service::get_ref().len()) };
     #[cfg(feature = "use_rc")]
-    let rc_server = unsafe { crate::rc_service::get_ref().get(rc_server_idx).unwrap() };
+    let rc_server = unsafe { crate::get_rc_service_ref(rc_server_idx).expect("fatal: cannot get the created rc service") };
     
     let reply = match buf {
         Some((addr, len)) => {

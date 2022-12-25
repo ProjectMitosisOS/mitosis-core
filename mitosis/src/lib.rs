@@ -201,6 +201,14 @@ declare_global!(
 );
 
 #[cfg(feature = "use_rc")]
+#[inline]
+pub unsafe fn get_rc_service_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static alloc::sync::Arc<crate::KRdmaKit::services::ReliableConnectionServer>> {
+    crate::rc_service::get_ref().get(nic_idx)
+}
+
+#[cfg(feature = "use_rc")]
 declare_global!(
     rc_cm_service,
     alloc::vec::Vec<crate::KRdmaKit::comm_manager::CMServer<crate::KRdmaKit::services::ReliableConnectionServer>>
