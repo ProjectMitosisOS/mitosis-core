@@ -4,7 +4,7 @@
 [[template.pass]]
 role = 'builder'
 path = ''
-cmd = 'source $HOME/.profile; source $HOME/.cargo/env; make km;'
+cmd = 'source $HOME/.profile; source $HOME/.cargo/env; cp mitosis-kms/${Kbuild} mitosis-kms/Kbuild && make km;'
 
 [template.placeholder]
 name = ["build"]
