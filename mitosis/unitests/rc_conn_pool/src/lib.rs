@@ -33,11 +33,15 @@ fn kmain() {
 
     let info = RCConnectInfo::create(&gid, 0);
 
-    unsafe { mitosis::get_rc_conn_pool_mut().create_rc_connection(config.machine_id, info) };
+    for i in 0..config.max_core_cnt {
+        let rc_pool = unsafe { mitosis::get_rc_conn_pool_mut(i).expect("failed get rc conn pool") };
+        rc_pool.create_rc_connection(i, config.machine_id, info.clone());
+    }
 
-    // default mac_id is 0, so the range of session id is [0, 11]
-    unsafe { assert!(mitosis::get_rc_conn_pool_mut().get_rc_conn(0).is_some()) }; 
-    unsafe { assert!(mitosis::get_rc_conn_pool_mut().get_rc_conn(12).is_none()) };
+    unsafe { assert!(mitosis::get_rc_conn_pool_ref(0).is_some()) };
+    unsafe { assert!(mitosis::get_rc_conn_pool_ref(12).is_none()) };
+    unsafe { assert!(mitosis::get_rc_conn_pool_ref(0).unwrap().get_rc_conn(0).is_some()) }; 
+    unsafe { assert!(mitosis::get_rc_conn_pool_ref(0).unwrap().get_rc_conn(1).is_none()) };
 }
 
 #[krdma_drop]

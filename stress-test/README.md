@@ -15,8 +15,13 @@ make build-rpc-bench && make peak-rpc-kernel-module
 ```
 
 Note that the experiments require one server (e.g.: val01) and multiple clients (e.g.: val02,val03, etc.). Fill it in the `makefile`.
+You should first start from the `makefile_template`.
 
-The `PARENT_GID` is the gid of the server.
+```bash
+cp makefile_template makefile
+```
+
+Then you should fill in these parameters in the `makefile`. The `USER` and `PWD` is the username and the password on all the machines. The `PROJECT_PATH` is the absolute path of mitosis project on each machine. The `PARENT_GID` is the gid of the server. A sample configuration is shown below.
 
 ```
 PARENT_GID=fe80:0000:0000:0000:ec0d:9a03:00ca:2f4c
@@ -159,6 +164,7 @@ Remark:
 1. The stress test should run without error with 1 server machine and 10 client machines.
 2. The output throughput should be steady without sudden drop (drop to <0.1 containers/sec).
 3. The `dmesg` on each machine should not contain error. (should be checked manually).
+4. You can adjust the Kbuild in `templates-build/template-build-mitosis.toml` to run mitosis with other configurations.
 
 A sample **correct** output is shown below.
 
@@ -198,8 +204,9 @@ Related tomls (under `exp_scripts`):
 
 Remark:
 
-1. Comment out some function names in `micro_func_name` in `templates-run/many-to-one-func/template-lean-container.toml` if you do not want to run them. The full version of stress test will last for at least 15 minutes.
-2. Same remarks with the C++ program stress test.
+1. You can adjust the `run_sec` variable in `templates-run/many-to-one-func/template-lean-container.toml` to control the running time of the stress test. The `run_sec` is the stress test time in seconds for each function. The startup and cleanup time of the stress test is not included in this time, so it will take longer time to run the stress test of each function.
+2. Comment out some function names in `micro_func_name` in `templates-run/many-to-one-func/template-lean-container.toml` if you do not want to run them. The full version of stress test will last for at least 15 minutes (for all the 9 functions and `run_sec` is 60 seconds).
+3. Same remarks with the C++ program stress test.
 
 A sample output is shown below.
 
