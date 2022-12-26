@@ -7,9 +7,14 @@ path = ''
 cmd = 'make clean_fs LEAN_APP_NAME=simple_child'
 
 [[template.pass]]
-role = 'builder'
+role = 'child'
 path = ''
 cmd = 'source $HOME/.cargo/env; rm -rf mitosis-kms/target ; make rmmod'
+
+[[template.pass]]
+role = 'parent'
+path = ''
+cmd = 'source $HOME/.cargo/env; rm -rf mitosis-kms/target ; sleep 10 && make rmmod'
 
 [template.placeholder]
 name = ["build"]
