@@ -194,6 +194,26 @@ declare_global!(
     alloc::vec::Vec<crate::KRdmaKit::services::DatagramMeta>
 );
 
+#[cfg(feature = "use_rc")]
+declare_global!(
+    rc_service,
+    alloc::vec::Vec<alloc::sync::Arc<crate::KRdmaKit::services::ReliableConnectionServer>>
+);
+
+#[cfg(feature = "use_rc")]
+#[inline]
+pub unsafe fn get_rc_service_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static alloc::sync::Arc<crate::KRdmaKit::services::ReliableConnectionServer>> {
+    crate::rc_service::get_ref().get(nic_idx)
+}
+
+#[cfg(feature = "use_rc")]
+declare_global!(
+    rc_cm_service,
+    alloc::vec::Vec<crate::KRdmaKit::comm_manager::CMServer<crate::KRdmaKit::services::ReliableConnectionServer>>
+);
+
 #[inline]
 pub unsafe fn get_rdma_cm_server_ref(
     nic_idx: usize,
@@ -237,6 +257,20 @@ pub unsafe fn get_ud_factory_ref(
     nic_idx: usize,
 ) -> core::option::Option<&'static os_network::datagram::ud::UDFactory> {
     Some(crate::ud_factories::get_ref().get(nic_idx)?.as_ref())
+}
+
+#[cfg(feature = "use_rc")]
+declare_global!(
+    rc_factories,
+    alloc::vec::Vec<os_network::rdma::rc::RCFactory>
+);
+
+#[cfg(feature = "use_rc")]
+#[inline]
+pub unsafe fn get_rc_factory_ref(
+    nic_idx: usize,
+) -> core::option::Option<&'static os_network::rdma::rc::RCFactory> {
+    crate::rc_factories::get_ref().get(nic_idx)
 }
 
 declare_global!(
@@ -292,6 +326,31 @@ pub unsafe fn set_rpc_caller_pool(arg: crate::rpc_caller_pool::CallerPool<'stati
     crate::service_caller_pool::init(arg);
 }
 
+#[cfg(feature = "use_rc")]
+/// A pool of rc connection
+pub mod rc_conn_pool;
+
+#[cfg(feature = "use_rc")]
+declare_global!(
+    rc_pool, 
+    alloc::vec::Vec<crate::rc_conn_pool::RCPool>
+);
+
+#[cfg(feature = "use_rc")]
+#[inline]
+pub unsafe fn get_rc_conn_pool_ref(
+    idx: usize,
+) -> Option<&'static crate::rc_conn_pool::RCPool> {
+    crate::rc_pool::get_ref().get(idx)
+}
+
+#[cfg(feature = "use_rc")]
+#[inline]
+pub unsafe fn get_rc_conn_pool_mut(
+    idx: usize,
+) -> Option<&'static mut crate::rc_conn_pool::RCPool> {
+    crate::rc_pool::get_mut().get_mut(idx)
+}
 
 /// A pool of DCQPs
 pub mod dc_pool;

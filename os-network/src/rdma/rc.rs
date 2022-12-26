@@ -12,7 +12,7 @@ pub struct RCFactory {
 }
 
 impl RCFactory {
-    pub fn new(ctx: Arc<Context>) -> Self {
+    pub fn new(ctx: &Arc<Context>) -> Self {
         Self { rctx: ctx.clone() }
     }
 
@@ -116,7 +116,8 @@ impl crate::Conn for RCConn {
                     req.get_local_mr_range(),
                     req.is_signaled(),
                     req.get_raddr(),
-                    req.get_rkey())
+                    req.get_rkey(),
+                    req.get_local_mr().get_virt_addr())  // set MR`s virtual address as the wr_id
             },
             RDMAOp::WRITE => {
                 self.get_qp().post_send_write(
@@ -124,7 +125,8 @@ impl crate::Conn for RCConn {
                     req.get_local_mr_range(),
                     req.is_signaled(),
                     req.get_raddr(),
-                    req.get_rkey())
+                    req.get_rkey(),
+                    req.get_local_mr().get_virt_addr())  // set MR`s virtual address as the wr_id
             },
         }
     }

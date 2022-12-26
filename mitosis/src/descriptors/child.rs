@@ -79,6 +79,8 @@ impl ChildDescriptor {
         let mut task = Task::new();
         // 1. Unmap origin vma regions
         task.unmap_self();
+
+        #[allow(unused_variables)]
         let access_info = AccessInfo::new(&self.machine_info).unwrap();
         // let access_info = AccessInfo::new_from_cache(self.machine_info.mac_id, &self.machine_info).unwrap();
 
@@ -274,9 +276,9 @@ impl ChildDescriptor {
         let new_page_p = crate::bindings::pmem_alloc_page(crate::bindings::PMEM_GFP_HIGHUSER);
         let new_page_pa = crate::bindings::pmem_page_to_phy(new_page_p) as u64;
         let res = crate::remote_paging::RemotePagingService::remote_read(
-            new_page_pa,
-            remote_pa,
-            4096,
+            new_page_pa, 
+            remote_pa, 
+            4096, 
             access_info,
         );
         #[cfg(feature = "resume-profile")]
