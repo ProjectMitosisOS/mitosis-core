@@ -5,8 +5,8 @@ extern crate alloc;
 use krdma_test::krdma_main;
 use mitosis_macros::declare_global;
 
-use rust_kernel_linux_util::linux_kernel_module;
-use rust_kernel_linux_util as log;
+use mitosis::linux_kernel_module;
+use mitosis::log;
 
 declare_global!(test_var,u64);
 

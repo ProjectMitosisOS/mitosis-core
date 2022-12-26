@@ -17,13 +17,13 @@ checksum-payload = []
 
 [dependencies]
 os-network = {path = "../../../os-network", optional = true, features = ["dct"]}
-krdma-test = {path="../../../deps/rust-kernel-rdma/krdma-test",optional = true}
+krdma-test = {path="../../../deps/krcore/rust-kernel-rdma/krdma-test",optional = true}
 mitosis-macros = {path = "../../../mitosis-macros"}
 hashbrown = {features=["raw"], path="../../../deps/hashbrown"}
 rpc_common = {path = "../rpc_common"}
 
 [dev-dependencies]
-kernel-module-testlib = { path = "../../../deps/krcore/rust-kernel-rdma/testlib" }
+kernel-module-testlib = { path = "../../../deps/krcore/testlib" }
 
 [profile.dev]
 opt-level = 2

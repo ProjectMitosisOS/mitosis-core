@@ -36,6 +36,12 @@ pub fn check_global_configurations() {
         crate::log::info!("[check]: Not cache remote page table.")
     }
 
+    if cfg!(feature = "use_rc") {
+        crate::log::info!("[check]: Use RDMA's reliable connection for communications.")
+    } else {
+        crate::log::info!("[check]: Use RDMA's dynamic connected transport for communications.")
+    }
+
     crate::log::info!("********* All configuration check passes !*********");
 }
 
@@ -78,6 +84,28 @@ pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
         crate::dc_factories::init(dc_factories);
 
         crate::access_info_service::init(crate::dc_pool::AccessInfoPool::new(config.max_core_cnt));
+    };
+
+    #[cfg(feature = "use_rc")]
+    // RC factory
+    unsafe {
+        use os_network::rdma::rc::*;
+
+        let mut rc_factories = Vec::new();
+        for c in crate::rdma_contexts::get_ref() {
+            rc_factories.push(RCFactory::new(c));
+        }
+        crate::rc_factories::init(rc_factories);
+    }
+
+    #[cfg(feature = "use_rc")]
+    unsafe {
+        let mut rc_pool = Vec::new();
+        for i in 0..config.max_core_cnt {
+            let rc_conn_pool = crate::rc_conn_pool::RCPool::new().expect("Failed to create the RC connection pool");
+            rc_pool.push(rc_conn_pool);
+        }
+        crate::rc_pool::init(rc_pool);
     };
 
     // global lock
@@ -166,6 +194,7 @@ pub fn init_rpc(config: &crate::Config,
         )
     };
 
+
     crate::log::info!("Start waiting for the RPC servers to start...");
     crate::rpc_service::wait_handlers_ready_barrier(config.rpc_threads_num);
     crate::log::info!("All RPC thread handlers initialized!");
@@ -191,6 +220,13 @@ pub fn end_instance() {
     unsafe {
         crate::ud_factories::drop();
         crate::dc_factories::drop();
+        #[cfg(feature = "use_rc")]
+        crate::rc_factories::drop();
+
+        #[cfg(feature = "use_rc")]
+        crate::log::debug!("drop rc pool");
+        #[cfg(feature = "use_rc")]
+        crate::rc_pool::drop();
 
         crate::service_rpc::drop();
         crate::access_info_service::drop();
@@ -205,6 +241,7 @@ pub fn end_instance() {
         crate::dc_pool_service_async::drop();
 
         crate::service_caller_pool::drop();
+
 
         crate::log::debug!("drop shadow process service");
         crate::sp_service::drop();
