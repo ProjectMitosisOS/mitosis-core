@@ -20,6 +20,7 @@ eager-resume = [] # use eager page-fetching strategy instead of fetching while p
 resume-profile = [] # peak resume running profile
 prefetch = [] # whether to open prefetch
 page-cache=[]
+use_rc = []
 
 [dependencies]
 mitosis-protocol = { path = "../mitosis-user-libs/mitosis-protocol" }

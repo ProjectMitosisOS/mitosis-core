@@ -272,7 +272,7 @@ fn test_rc_remote() -> Result<(), TestError> {
         service_id: server_service_id,
     };
 
-    let client_factory = RCFactory::new(client_ctx.clone());
+    let client_factory = RCFactory::new(&client_ctx);
     let rc = client_factory.create(conn_meta).map_err(|_| {
         log::error!("Error creating rc qp.");
         TestError::Error("Create rc qp error.")
