@@ -12,16 +12,15 @@ crate-type = ["staticlib"]
 test = false
 
 [features]
-default = ["rust-kernel-linux-util","krdma-test","KRdmaKit"]
+default = ["mitosis","krdma-test"]
 
 [dependencies]
-rust-kernel-linux-util = {path = "../../../deps/rust-kernel-rdma/rust-kernel-linux-util", optional = true, features=["static_log_check","max_level_trace"]}
-krdma-test = {path="../../../deps/rust-kernel-rdma/krdma-test",optional = true}
-KRdmaKit = {path = "../../../deps/rust-kernel-rdma/KRdmaKit", optional = true, features = ["dct"]}
+krdma-test = {path="../../../deps/krcore/rust-kernel-rdma/krdma-test",optional = true}
+mitosis = {path="../../../mitosis", optional = true}
 mitosis-macros = {path = "../../../mitosis-macros"}
 
 [dev-dependencies]
-kernel-module-testlib = { path = "../../../deps/rust-kernel-rdma/testlib" }
+kernel-module-testlib = { path = "../../../deps/krcore/testlib" }
 
 [profile.dev]
 opt-level = 2

@@ -1,9 +1,10 @@
 use alloc::vec::Vec;
 
-use os_network::{KRdmaKit::{self, services::UnreliableDatagramAddressService, comm_manager::CMServer, services::dc::DCTargetService}, rdma::dc::DCFactory};
+use os_network::{KRdmaKit::{self, services::UnreliableDatagramAddressService, comm_manager::CMServer, services::dc::DCTargetService, services::rc::ReliableConnectionServer}, rdma::dc::DCFactory};
 
 pub const SERVICE_ID_BASE: u64 = 73; // not using 0 to prevent error
 pub const GLOBAL_DC_KEY: u64 = 73;
+pub const RC_SERVICE_ID_BASE: u64 = 33;
 
 /// Note: need to call `end_rdma` before destroying the kernel module
 /// Return
@@ -68,12 +69,45 @@ pub fn start_rdma(config: &crate::Config) -> core::option::Option<()> {
         crate::rdma_cm_service::init(servers);
     };
 
+    #[cfg(feature = "use_rc")]
+    unsafe {
+        let mut rc_services = Vec::new();
+        for i in 0..config.num_nics_used {
+            rc_services.push(
+                ReliableConnectionServer::create(
+                    crate::get_rdma_context_ref(i).expect("fatal: cannot get the created context"), 
+                    config.default_nic_port
+                )
+            );
+        }
+        crate::rc_service::init(rc_services);
+    };
+
+    #[cfg(feature = "use_rc")]
+    unsafe {
+        let mut servers = Vec::new();
+        for i in 0..config.num_nics_used {
+            servers.push(
+                CMServer::new(
+                    RC_SERVICE_ID_BASE + i as u64,
+                    crate::get_rc_service_ref(i).expect("fatal: cannot get the created rc service"),
+                    crate::get_rdma_context_ref(i).expect("fatal: cannot get the created context").get_dev_ref(),
+                ).expect("fail to create rc cm server on NIC")
+            )
+        }
+        crate::rc_cm_service::init(servers);
+    };
+
     Some(())
 }
 
 pub fn end_rdma() {
     // Note: the **order** of drop is very important here
     unsafe {
+        #[cfg(feature = "use_rc")]
+        crate::rc_cm_service::drop();
+        #[cfg(feature = "use_rc")]
+        crate::rc_service::drop();
         crate::rdma_cm_service::drop();
         crate::ud_service::drop();
         crate::dc_target_meta::drop();

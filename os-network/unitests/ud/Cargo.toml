@@ -21,7 +21,7 @@ krdma-test = {path="../../../deps/krcore/rust-kernel-rdma/krdma-test",optional =
 thiserror-no-std = "2.0.2"
 
 [dev-dependencies]
-kernel-module-testlib = { path = "../../../deps/krcore/rust-kernel-rdma/testlib" }
+kernel-module-testlib = { path = "../../../deps/krcore/testlib" }
 
 [profile.dev]
 opt-level = 2

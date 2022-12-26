@@ -78,7 +78,7 @@ fn test_rc_factory() -> Result<(), TestError> {
         service_id: server_service_id,
     };
 
-    let client_factory = rdma::rc::RCFactory::new(client_ctx.clone());
+    let client_factory = rdma::rc::RCFactory::new(&client_ctx);
     let client_qp = client_factory.create(conn_meta).map_err(|_| {
         log::error!("Error creating rc qp.");
         TestError::Error("Create rc qp error.")
@@ -146,7 +146,7 @@ fn test_rc_post_poll() -> Result<(), TestError> {
         service_id: server_service_id,
     };
 
-    let client_factory = rdma::rc::RCFactory::new(client_ctx.clone());
+    let client_factory = rdma::rc::RCFactory::new(&client_ctx);
     let mut rc = client_factory.create(conn_meta).map_err(|_| {
         log::error!("Error creating rc qp.");
         TestError::Error("Create rc qp error.")

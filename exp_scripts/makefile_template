@@ -47,6 +47,7 @@ template-build-mitosis-cow=templates-build/template-build-mitosis-cow.toml
 template-build-mitosis-cow-profile=templates-build/template-build-mitosis-cow-profile.toml
 template-build-mitosis-cache=templates-build/template-build-mitosis-cache.toml
 template-build-mitosis-eager-resume=templates-build/template-build-mitosis-eager-resume.toml
+template-build-mitosis-use-rc=templates-build/template-build-mitosis-use-rc.toml
 template-build-lean-container=templates-build/template-build-lean-container.toml
 template-build-pause-runner=templates-build/template-build-pause-runner.toml
 
@@ -212,6 +213,10 @@ build-mitosis-cow-profile: build-cpp
 	sleep 1
 	$(call builder, $(template-build-lean-container))
 
+build-mitosis-use-rc: build-cpp
+	$(call builder, $(template-build-mitosis-use-rc))
+	sleep 1
+	$(call builder, $(template-build-lean-container))
 
 build-mitosis-cache: build-cpp
 	$(call builder, $(template-build-mitosis-cache))
