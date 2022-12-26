@@ -14,10 +14,13 @@ use crate::syscalls::FileOperations;
 use os_network::bytes::ToBytes;
 use os_network::timeout::TimeoutWRef;
 use os_network::{block_on, Factory};
+use os_network::rdma::rc::RCConn;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
 use crate::rpc_service::HandlerConnectInfo;
+#[cfg(feature = "use_rc")]
+use crate::rc_conn_pool::RCConnectInfo;
 use crate::startup::probe_remote_rpc_end;
 
 const TIMEOUT_USEC: i64 = 1000_000; // 1s
@@ -147,7 +150,7 @@ impl FileOperations for MitosisSysCallHandler {
             my_file: file as *mut _,
             caller_status: Default::default(),
             resume_counter: AtomicUsize::new(0),
-        })
+        }) 
     }
 
     #[allow(non_snake_case)]
@@ -203,7 +206,16 @@ impl FileOperations for MitosisSysCallHandler {
                     core::str::from_utf8(&addr_buf).unwrap()
                 };
                 let (machine_id, gid, nic_id) = (req.machine_id, String::from(addr), req.nic_id);
-                self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
+
+                #[cfg(not(feature = "use_rc"))]
+                {
+                    self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
+                }
+                
+                #[cfg(feature = "use_rc")]
+                {
+                    self.syscall_connect_rc(machine_id as _, &gid, nic_id as _) | self.syscall_connect_session(machine_id as _, &gid, nic_id as _)
+                }
             }
             LibMITOSISCmd::PreparePing => self.syscall_prepare(arg, true),
             LibMITOSISCmd::NilRPC => {
@@ -298,7 +310,7 @@ impl MitosisSysCallHandler {
         return 0;
     }
 
-    /// # Warning: Deperacted
+    /// Deperacted
     /// This function is only used for testing
     /// will be removed in the future
     #[inline]
@@ -414,19 +426,9 @@ impl MitosisSysCallHandler {
                         let desc_buf = RemotePagingService::remote_descriptor_fetch(
                             d,
                             caller,
-                            remote_session_id,
+                            machine_id,
                         );
-                        // {
-                        //     let server_service_id = SERVICE_ID_BASE;
-                        //     let ctx = unsafe { crate::get_rdma_context_ref(0).unwrap() };
-                        //     let client_factory = os_network::rdma::rc::RCFactory::new(ctx);
-                        //     let conn_meta = os_network::rdma::ConnMeta {
-                        //         gid: ctx.get_gid_as_string(),
-                        //         service_id: server_service_id,
-                        //         qd_hint: 0,
-                        //     };
-                        //     let mut rc = client_factory.create(conn_meta);
-                        // }
+
                         crate::log::debug!("sanity check fetched desc_buf {:?}", desc_buf.is_ok());
                         if desc_buf.is_err() {
                             crate::log::error!("failed to fetch descriptor {:?}", desc_buf.err());
@@ -435,15 +437,6 @@ impl MitosisSysCallHandler {
 
                         // deserialize
                         let des = {
-                            // legacy version
-                            // let des = ParentDescriptor::deserialize(desc_buf.unwrap().get_bytes());
-                            // if des.is_none() {
-                            //     crate::log::error!("failed to deserialize descriptor");
-                            //     None
-                            // } else {
-                            //     Some(des.unwrap().to_descriptor())
-                            // }
-
                             // optimized version
                             ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
                         };
@@ -524,6 +517,31 @@ impl MitosisSysCallHandler {
                 -1
             }
         }
+    }
+
+    #[cfg(feature = "use_rc")]
+    #[inline]
+    fn syscall_connect_rc(
+        &mut self,
+        machine_id: usize,
+        gid: &alloc::string::String,
+        nic_idx: usize,
+    ) -> c_long {
+        let info = RCConnectInfo::create(gid, nic_idx as _ );
+        let len = unsafe { *crate::max_caller_num::get_ref() };
+        for i in 0..len {
+            let rc_pool = unsafe { crate::get_rc_conn_pool_mut(i).expect("failed get rc conn pool") };
+            match rc_pool.create_rc_connection(i, machine_id, info.clone()) {
+                Some(_) => {
+                    crate::log::debug!("create rc connection success");
+                }
+                _ => {
+                    crate::log::debug!("failed create rc connection");
+                    return -1
+                }
+            }
+        }
+        0
     }
 
     #[inline]
@@ -655,17 +673,18 @@ impl MitosisSysCallHandler {
                         miss_page_cache = true;
                         resume_related
                             .descriptor
-                            .read_remote_page(fault_addr, &resume_related.access_info)
+                            .read_remote_page(fault_addr, 
+                                &resume_related.access_info,
+                            )
                     }
                 }
                 #[cfg(not(feature = "page-cache"))]
                 {
-                    // resume_related
-                    //     .descriptor
-                    //     .read_remote_page(fault_addr, &resume_related.access_info);
                     resume_related
                         .descriptor
-                        .read_remote_page(fault_addr, &resume_related.access_info)
+                        .read_remote_page(fault_addr, 
+                            &resume_related.access_info,
+                        )
                 }
             }
         };
