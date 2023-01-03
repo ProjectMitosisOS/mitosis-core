@@ -181,7 +181,7 @@ rustup toolchain list
 
 #### 3.3 Python related
 
-Setup miniconda based on your OS (Peak [miniconda](https://docs.conda.io/en/latest/miniconda.html) for more information). Take **linux x86_64** as the example:
+We use python scripts to manage build, test and benchmarking process. For simplicity, we assume the python environment is set using `conda` or `miniconda` (e.g., see   [miniconda](https://docs.conda.io/en/latest/miniconda.html) ) . After installing the conda tools, please using the following instructions to setup MITOSIS python environment: 
 
 ```shell
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
