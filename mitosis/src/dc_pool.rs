@@ -8,10 +8,11 @@ use hashbrown::HashMap;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
+use crate::lock_bundler::{BoxedLockBundler, LockBundler};
 
 /// The clients(children)-side DCQP pool
 pub struct DCPool {
-    pool: Vec<DCConn>,
+    pool: Vec<BoxedLockBundler<DCConn>>,
     nic_idxs: Vec<usize>,
 }
 
@@ -55,7 +56,7 @@ impl Drop for AccessInfoPool {
 }
 
 impl DCPool {
-    pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&mut DCConn> {
+    pub fn get_dc_qp(&mut self, idx: usize) -> core::option::Option<&mut BoxedLockBundler<DCConn>> {
         self.pool.get_mut(idx)
     }
 
@@ -64,28 +65,27 @@ impl DCPool {
     }
 
     /// Pop the DCQP and the lkey corresponding to it
-    /// This function is not **thread-safe**,
-    /// must be used by a single thread / protected by a mutex
     #[inline]
-    pub fn pop_one_qp(&mut self) -> core::option::Option<DCConn> {
+    pub fn pop_one_qp(&mut self) -> core::option::Option<BoxedLockBundler<DCConn>> {
         self.pool.pop()
     }
 
     #[inline]
     pub fn create_one_qp(&mut self) {
         let nic_idx = 0;
+        let qp = unsafe { crate::get_dc_factory_ref(nic_idx) }
+            .expect("fatal, should not fail to create dc factory")
+            .create(DCCreationMeta { port: 1 }) // WTX: port is default to 1
+            .expect("Failed to create DC QP");
         self.pool.push(
-            unsafe { crate::get_dc_factory_ref(nic_idx) }
-                .expect("fatal, should not fail to create dc factory")
-                .create(DCCreationMeta { port: 1 }) // WTX: port is default to 1
-                .expect("Failed to create DC QP")
+            LockBundler::new(qp)
         );
     }
 
     /// Arg: DCQP, its corresponding lkey
     #[inline]
     pub fn push_one_qp(&mut self, qp: DCConn) {
-        self.pool.push(qp)
+        self.pool.push(LockBundler::new(qp))
     }
 }
 
@@ -100,13 +100,14 @@ impl DCPool {
 
         for i in 0..config.max_core_cnt {
             let nic_idx = i % config.num_nics_used;
+            let qp = unsafe { crate::get_dc_factory_ref(nic_idx) }
+                .expect("fatal, should not fail to create dc factory")
+                .create(
+                    DCCreationMeta { port: config.default_nic_port }
+                )
+                .expect("Failed to create DC QP");
             res.push(
-                unsafe { crate::get_dc_factory_ref(nic_idx) }
-                    .expect("fatal, should not fail to create dc factory")
-                    .create(
-                        DCCreationMeta { port: config.default_nic_port }
-                    )
-                    .expect("Failed to create DC QP")
+                LockBundler::new(qp)
             );
             nic_idxs.push(nic_idx);
         }

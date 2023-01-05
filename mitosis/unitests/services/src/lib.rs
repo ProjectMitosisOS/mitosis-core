@@ -68,24 +68,26 @@ fn test_rpc_two() {
 
     crate::log::info!("now start to test RPC caller");
 
-    caller
-        .sync_call(
-            0xdeadbeaf,                              // remote session ID
-            0xdeadbeaf,                              // local session ID
-            mitosis::rpc_handlers::RPCId::Echo as _, // RPC ID
-            0xffffffff as u64,                       // send an arg of u64
-        )
-        .unwrap();
+    caller.lock(|caller| {
+        caller
+            .sync_call(
+                0xdeadbeaf,                              // remote session ID
+                0xdeadbeaf,                              // local session ID
+                mitosis::rpc_handlers::RPCId::Echo as _, // RPC ID
+                0xffffffff as u64,                       // send an arg of u64
+            )
+            .unwrap();
 
-    let res = block_on(caller);
-    match res {
-        Ok(v) => {
-            let (_, reply) = v; // msg, reply
-            log::debug!("sanity check rpc two call result: {:?}", reply);
-            // Note that in real benchmark, we need to register the _ to the caller
-        }
-        Err(e) => log::error!("client call error: {:?}", e),
-    };
+        let res = block_on(caller);
+        match res {
+            Ok(v) => {
+                let (_, reply) = v; // msg, reply
+                log::debug!("sanity check rpc two call result: {:?}", reply);
+                // Note that in real benchmark, we need to register the _ to the caller
+            }
+            Err(e) => log::error!("client call error: {:?}", e),
+        };
+    })
 }
 
 fn test_rpc() {
