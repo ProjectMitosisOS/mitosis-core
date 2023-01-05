@@ -63,11 +63,13 @@ impl ParentDescriptor {
             }
         }
 
+        // TODO: `LinuxMutex` should needs to have `into_inner` to get the underlying data.
         #[cfg(feature = "prefetch")]
         let prefetch_conn = unsafe {
             crate::get_dc_pool_async_service_ref()
                 .lock(|p| p.pop_one_qp())
                 .expect("failed to create prefetcher")
+                .lock(|conn| conn.clone())
         };
 
         #[cfg(feature = "prefetch")]

@@ -92,43 +92,45 @@ impl RemotePagingService {
     ) -> Result<RMemory, <DCRemoteDevice as Future>::Error> {
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
         let dc_qp = unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
-            .expect("failed to get DCQP").clone();
+            .expect("failed to get DCQP");
 
-        let descriptor_buf = RMemory::new(d.sz, 0, dc_qp.get_qp().ctx().clone());
-        let point = DatagramEndpoint::new(
-            dc_qp.get_qp().ctx(),
-            1, // local port is default to 1
-            d.lid,
-            d.gid,
-            0, // qpn, meaningless in dct
-            0, // qkey, meaningless in dct
-            d.dct_num,
-            d.dc_key,
-        ).unwrap();
+        dc_qp.lock(|dc_qp| {
+            let descriptor_buf = RMemory::new(d.sz, 0, dc_qp.get_qp().ctx().clone());
+            let point = DatagramEndpoint::new(
+                dc_qp.get_qp().ctx(),
+                1, // local port is default to 1
+                d.lid,
+                d.gid,
+                0, // qpn, meaningless in dct
+                0, // qkey, meaningless in dct
+                d.dct_num,
+                d.dc_key,
+            ).unwrap();
 
-        // read the descriptor from remote machine
-        let mut remote_device = DCRemoteDevice::new(dc_qp);
-        unsafe {
-            remote_device.read(
-                &point,
-                &d.pa,
-                &DCKeys::new(d.rkey),
-                &mut descriptor_buf.get_pa(),
-                &d.sz)
-        }?;
-        
-        // wait for the request to complete
-        let mut timeout_device = Timeout::new(remote_device, 10 * TIMEOUT_USEC);
-        match block_on(&mut timeout_device) {
-            Ok(_) => Ok(descriptor_buf),
-            Err(e) => {
-                if e.is_elapsed() {
-                    // The fallback path? DC cannot distinguish from failures
-                    unimplemented!();
+            // read the descriptor from remote machine
+            let mut remote_device = DCRemoteDevice::new(dc_qp.clone());
+            unsafe {
+                remote_device.read(
+                    &point,
+                    &d.pa,
+                    &DCKeys::new(d.rkey),
+                    &mut descriptor_buf.get_pa(),
+                    &d.sz)
+            }?;
+            
+            // wait for the request to complete
+            let mut timeout_device = Timeout::new(remote_device, 10 * TIMEOUT_USEC);
+            match block_on(&mut timeout_device) {
+                Ok(_) => Ok(descriptor_buf),
+                Err(e) => {
+                    if e.is_elapsed() {
+                        // The fallback path? DC cannot distinguish from failures
+                        unimplemented!();
+                    }
+                    Err(e.into_inner().unwrap())
                 }
-                Err(e.into_inner().unwrap())
             }
-        }
+        })
     }
 
     #[cfg(not(feature = "use_rc"))]
@@ -142,35 +144,37 @@ impl RemotePagingService {
     ) -> Result<(), <DCRemoteDevice as Future>::Error> {
         let pool_idx = unsafe { crate::bindings::pmem_get_current_cpu() } as usize;
         let dc_qp = unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
-            .expect("failed to get DCQP").clone();
+            .expect("failed to get DCQP");
 
-        // read the requested memory region from remote machine
-        let mut remote_device = DCRemoteDevice::new(dc_qp);
-        unsafe {
-            remote_device.read(
-                &access_info.access_handler,
-                &PhysAddr::decode(src), // copy from src into dst
-                &DCKeys::new(access_info.rkey),
-                &mut dst,
-                &sz,
-            )
-        }?;
+        dc_qp.lock(|dc_qp| {
+            // read the requested memory region from remote machine
+            let mut remote_device = DCRemoteDevice::new(dc_qp.clone());
+            unsafe {
+                remote_device.read(
+                    &access_info.access_handler,
+                    &PhysAddr::decode(src), // copy from src into dst
+                    &DCKeys::new(access_info.rkey),
+                    &mut dst,
+                    &sz,
+                )
+            }?;
 
-        // wait for the request to complete
-        let mut timeout_device = Timeout::new(remote_device, TIMEOUT_USEC);
-        match block_on(&mut timeout_device) {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                if e.is_elapsed() {
-                    // The fallback path? DC cannot distinguish from failures
-                    // unimplemented!();
-                    crate::log::error!("fatal, timeout on reading the DC QP");
-                    Err(os_network::rdma::Err::DatapathError(DatapathError::TimeoutError))
-                } else {
-                    Err(e.into_inner().unwrap())
+            // wait for the request to complete
+            let mut timeout_device = Timeout::new(remote_device, TIMEOUT_USEC);
+            match block_on(&mut timeout_device) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    if e.is_elapsed() {
+                        // The fallback path? DC cannot distinguish from failures
+                        // unimplemented!();
+                        crate::log::error!("fatal, timeout on reading the DC QP");
+                        Err(os_network::rdma::Err::DatapathError(DatapathError::TimeoutError))
+                    } else {
+                        Err(e.into_inner().unwrap())
+                    }
                 }
             }
-        }
+        })
     }
 
     #[cfg(feature = "use_rc")]
