@@ -12,6 +12,8 @@ use os_network::KRdmaKit::context::Context;
 
 #[allow(unused_imports)]
 use crate::linux_kernel_module;
+use crate::lock_bundler::BoxedLockBundler;
+use crate::lock_bundler::LockBundler;
 
 pub(crate) type UDCaller = Caller<UDReceiver, UDSession>;
 
@@ -20,7 +22,7 @@ pub(crate) type UDCaller = Caller<UDReceiver, UDSession>;
 #[derive(Default)]
 pub struct CallerPool<'a> {
     // the major caller that is used by the clients
-    pool: Vec<UDCaller>,
+    pool: Vec<BoxedLockBundler<UDCaller>>,
 
     // each entry stored the caller to create the corresponding caller
     factories: Vec<&'a UDFactory>,
@@ -37,7 +39,7 @@ impl<'a> CallerPool<'a> {
     #[inline(always)]
     pub unsafe fn get_global_caller(
         idx: usize,
-    ) -> core::option::Option<&'static mut UDCaller> {
+    ) -> core::option::Option<&'static mut BoxedLockBundler<UDCaller>> {
         crate::service_caller_pool::get_mut().get_caller(idx)
     }
 
@@ -47,7 +49,7 @@ impl<'a> CallerPool<'a> {
     }
 
     #[inline(always)]
-    pub fn get_caller(&'a mut self, idx: usize) -> core::option::Option<&'a mut UDCaller> {
+    pub fn get_caller(&'a mut self, idx: usize) -> core::option::Option<&'a mut BoxedLockBundler<UDCaller>> {
         self.pool.get_mut(idx)
     }
 
@@ -70,37 +72,39 @@ impl<'a> CallerPool<'a> {
         let (hint, service_id) = self.metas.get(idx).unwrap().clone();
 
         let caller = self.get_caller(idx)?;
-        if caller.session_connected(session_id) {
-            crate::log::warn!("The session {} has already connected.", session_id);
-            return None;
-        }
+        caller.lock(|caller| {
+            if caller.session_connected(session_id) {
+                crate::log::warn!("The session {} has already connected.", session_id);
+                return None;
+            }
+    
+            let client_session = caller.get_transport_mut().create(meta).unwrap();
+            let local_port_num = client_session.get_inner().get_qp().port_num();
+    
+            // send the connect message
+            caller
+                .connect(
+                    session_id,
+                    my_session_id,
+                    client_session,
+                    UDHyperMeta {
+                        gid: my_gid,
+                        service_id: service_id as _,
+                        qd_hint: hint as _,
+                        local_port: local_port_num,
+                    },
+                )
+                .unwrap();
+    
+            // wait for the completion
+            let (msg, _reply) = os_network::block_on(caller).expect("should succeed");
+    
+            // TODO: check the_reply is correct
+    
+            caller.register_recv_buf(msg).unwrap();
 
-        let client_session = caller.get_transport_mut().create(meta).unwrap();
-        let local_port_num = client_session.get_inner().get_qp().port_num();
-
-        // send the connect message
-        caller
-            .connect(
-                session_id,
-                my_session_id,
-                client_session,
-                UDHyperMeta {
-                    gid: my_gid,
-                    service_id: service_id as _,
-                    qd_hint: hint as _,
-                    local_port: local_port_num,
-                },
-            )
-            .unwrap();
-
-        // wait for the completion
-        let (msg, _reply) = os_network::block_on(caller).expect("should succeed");
-
-        // TODO: check the_reply is correct
-
-        caller.register_recv_buf(msg).unwrap();
-
-        Some(())
+            Some(())
+        })
     }
 
     #[inline]
@@ -158,6 +162,7 @@ impl<'a> CallerPool<'a> {
                     .expect("failed to register receive buffer for the RPC caller");
                 // should succeed
             }
+            let caller = LockBundler::new(caller);
 
             pool.push(caller);
             factories.push(factory);
