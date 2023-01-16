@@ -201,42 +201,43 @@ impl ChildDescriptor {
                 let dc_qp =
                     unsafe { crate::get_dc_pool_service_mut().get_dc_qp(pool_idx) }
                         .expect("failed to get DCQP");
-
-                // now sending the RDMA request
-                let payload = DCReqPayload::new(
-                    unsafe{ Arc::new(MemoryRegion::new_from_raw(dc_qp.get_qp().ctx().clone(), new_page_va as _, sz).unwrap()) },
-                    0..sz as u64,
-                    signaled,
-                    RDMAOp::READ,
-                    access_info.rkey,
-                    src,
-                    access_info.access_handler.clone()
-                );
-                let res = dc_qp.post(&payload);
-                if res.is_err() {
-                    crate::log::error!("failed to batch read pages {:?}", res);
-                }
-
-                if i == addr_list.len() - 1 {
-                    // wait for the request to complete
-                    let mut timeout_dc = TimeoutWRef::new(
-                        dc_qp,
-                        crate::remote_paging::TIMEOUT_USEC,
+                dc_qp.lock(|dc_qp| {
+                    // now sending the RDMA request
+                    let payload = DCReqPayload::new(
+                        unsafe{ Arc::new(MemoryRegion::new_from_raw(dc_qp.get_qp().ctx().clone(), new_page_va as _, sz).unwrap()) },
+                        0..sz as u64,
+                        signaled,
+                        RDMAOp::READ,
+                        access_info.rkey,
+                        src,
+                        access_info.access_handler.clone()
                     );
-                    match os_network::block_on(&mut timeout_dc) {
-                        Ok(_) => Ok(()),
-                        Err(e) => {
-                            if e.is_elapsed() {
-                                crate::log::error!("fatal, timeout on reading the DC QP");
-                                Err(DatapathError::TimeoutError)
-                            } else {
-                                Err(e.into_inner().unwrap())
+                    let res = dc_qp.post(&payload);
+                    if res.is_err() {
+                        crate::log::error!("failed to batch read pages {:?}", res);
+                    }
+
+                    if i == addr_list.len() - 1 {
+                        // wait for the request to complete
+                        let mut timeout_dc = TimeoutWRef::new(
+                            dc_qp,
+                            crate::remote_paging::TIMEOUT_USEC,
+                        );
+                        match os_network::block_on(&mut timeout_dc) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                if e.is_elapsed() {
+                                    crate::log::error!("fatal, timeout on reading the DC QP");
+                                    Err(DatapathError::TimeoutError)
+                                } else {
+                                    Err(e.into_inner().unwrap())
+                                }
                             }
                         }
+                    } else {
+                        Ok(())
                     }
-                } else {
-                    Ok(())
-                }
+                })
             };
 
             match result {
@@ -386,9 +387,6 @@ impl ChildDescriptor {
         let new_page_va = crate::bindings::pmem_page_to_virt(new_page_p) as u64;
 
         let pool_idx = crate::bindings::pmem_get_current_cpu() as usize;
-        // hold the lock 
-        crate::global_locks::get_ref()[pool_idx].lock();
-
 
         // FIXME: currently this code is from the remote_mapping.rs
         // But we need to use this piece of code
@@ -399,51 +397,50 @@ impl ChildDescriptor {
             let dc_qp = crate::get_dc_pool_service_mut()
                 .get_dc_qp(pool_idx)
                 .expect("failed to get DCQP");
-
-            let payload = DCReqPayload::new(
-                Arc::new(
-                    MemoryRegion::new_from_raw(dc_qp.get_qp().ctx().clone(), new_page_va as _, 4096).unwrap()
-                ),
-                0..4096,
-                true,
-                RDMAOp::READ,
-                access_info.rkey,
-                PhysAddr::decode(remote_pa), // copy remote to local
-                access_info.access_handler.clone(),
-            );
-
-            dc_qp.post(&payload).unwrap(); // FIXME: it should never fail
-
-            // Note, we do the prefetch things here
-            // This can overlap with the networking requests latency
-            // find prefetch pages
-            let pte_iter = RemotePageTableIter::new_from_l1(pt, idx);
-            self.prefetcher.execute_reqs(
-                pte_iter,
-                StepPrefetcher::<PageEntry, { crate::PREFETCH_STEP }>::new(),
-            );
-            self.poll_prefetcher();
-
-            // wait for the request to complete
-            let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
-            #[cfg(feature = "resume-profile")]
-            self.incr_fetched_remote_count(crate::PREFETCH_STEP + 1);
-            match block_on(&mut timeout_dc) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    if e.is_elapsed() {
-                        // The fallback path? DC cannot distinguish from failures
-                        // unimplemented!();
-                        crate::log::error!("fatal, timeout on reading the DC QP");
-                        Err(os_network::rdma::Err::DatapathError(DatapathError::TimeoutError))
-                    } else {
-                        Err(os_network::rdma::Err::DatapathError(e.into_inner().unwrap()))
+            dc_qp.lock(|dc_qp| {
+                let payload = DCReqPayload::new(
+                    Arc::new(
+                        MemoryRegion::new_from_raw(dc_qp.get_qp().ctx().clone(), new_page_va as _, 4096).unwrap()
+                    ),
+                    0..4096,
+                    true,
+                    RDMAOp::READ,
+                    access_info.rkey,
+                    PhysAddr::decode(remote_pa), // copy remote to local
+                    access_info.access_handler.clone(),
+                );
+    
+                dc_qp.post(&payload).unwrap(); // FIXME: it should never fail
+    
+                // Note, we do the prefetch things here
+                // This can overlap with the networking requests latency
+                // find prefetch pages
+                let pte_iter = RemotePageTableIter::new_from_l1(pt, idx);
+                self.prefetcher.execute_reqs(
+                    pte_iter,
+                    StepPrefetcher::<PageEntry, { crate::PREFETCH_STEP }>::new(),
+                );
+                self.poll_prefetcher();
+    
+                // wait for the request to complete
+                let mut timeout_dc = TimeoutWRef::new(dc_qp, TIMEOUT_USEC);
+                #[cfg(feature = "resume-profile")]
+                self.incr_fetched_remote_count(crate::PREFETCH_STEP + 1);
+                match block_on(&mut timeout_dc) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        if e.is_elapsed() {
+                            // The fallback path? DC cannot distinguish from failures
+                            // unimplemented!();
+                            crate::log::error!("fatal, timeout on reading the DC QP");
+                            Err(os_network::rdma::Err::DatapathError(DatapathError::TimeoutError))
+                        } else {
+                            Err(os_network::rdma::Err::DatapathError(e.into_inner().unwrap()))
+                        }
                     }
                 }
-            }
+            })
         };
-
-        crate::global_locks::get_ref()[pool_idx].unlock();
 
         return match res {
             Ok(_) => Some(new_page_p),
@@ -556,9 +553,11 @@ impl os_network::serialize::Serialize for ChildDescriptor {
 
         let machine_info = RDMADescriptor::deserialize(&cur)?;
 
+        // TODO: `LinuxMutex` should needs to have `into_inner` to get the underlying data.
         #[cfg(feature = "prefetch")]
         let prefetch_conn =
-            unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.pop_one_qp())? };
+            unsafe { crate::get_dc_pool_async_service_ref().lock(|p| p.pop_one_qp())? }
+                .lock(|conn| conn.clone());
 
         #[cfg(feature = "prefetch")]
         let access_info = AccessInfo::new(&machine_info);

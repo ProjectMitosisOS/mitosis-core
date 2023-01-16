@@ -175,6 +175,34 @@ rustup toolchain list
 #   nightly-2022-02-04-x86_64-unknown-linux-gnu (default)
 ```
 
+
+
+---
+
+#### 3.3 Python related
+
+We use python scripts to manage build, test and benchmarking process. For simplicity, we assume the python environment is set using `conda` or `miniconda` (e.g., see   [miniconda](https://docs.conda.io/en/latest/miniconda.html) ) . After installing the conda tools, please using the following instructions to setup MITOSIS python environment: 
+
+```shell
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+sh Miniconda3-latest-Linux-x86_64.sh
+```
+
+You can use `conda -h` to verify whether the miniconda has been successfully installed. Next you can install one python environment with version `3.8`:
+
+```shell
+conda create --name mitosis python=3.8
+conda activate mitosis
+```
+
+Then you can install all of the python requirements at once:
+
+```shell
+(mitosis) pip install -r exp_scripts/requirements.txt
+```
+
+
+
 ## 4. Validate if preparations are all done
 
 Now we can run `make km` to build the kernel module in the root directory of the project without error.
