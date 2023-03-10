@@ -42,6 +42,12 @@ pub fn check_global_configurations() {
         crate::log::info!("[check]: Use RDMA's dynamic connected transport for communications.")
     }
 
+    if cfg!(feature = "histogram-profile") {
+        crate::log::info!("[check]: Enable histogram profile")
+    } else {
+        crate::log::info!("[check]: Disable histogram profile.")
+    }
+
     crate::log::info!("********* All configuration check passes !*********");
 }
 
@@ -152,6 +158,10 @@ pub fn init_mitosis(config: &crate::Config) -> core::option::Option<()> {
         crate::global_pt_cache::init(crate::remote_pt_cache::RemotePageTableCache::default())
     };
 
+    #[cfg(feature = "histogram-profile")]
+    unsafe {
+        crate::histogram_registry::init(crate::histogram::HistogramRegistry::new())
+    }
 
     unsafe {
         crate::service_rpc::init(Default::default());
@@ -250,6 +260,9 @@ pub fn end_instance() {
         crate::global_pt_cache::drop();
 
         crate::global_locks::drop();
+        
+        #[cfg(feature = "histogram-profile")]
+        crate::histogram_registry::drop();
     };
     end_rdma();
 

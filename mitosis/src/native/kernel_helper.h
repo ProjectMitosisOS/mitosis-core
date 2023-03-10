@@ -181,4 +181,6 @@ unsigned int pmem_check_pte_write(pte_t *pte);
 struct page *
 pmem_pte_to_page(pte_t *pte);
 
+void pmem_getnstimeofday(struct timespec *ts);
+
 #endif

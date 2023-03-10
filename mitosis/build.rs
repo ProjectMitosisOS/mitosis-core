@@ -22,6 +22,7 @@ const INCLUDED_KERNEL_TYPES: &[&str] = &[
     "vm_flags_t",
     "pgprot_t",
     "file_system_type",
+    "timespec",
 ];
 const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     "print_file_path",
@@ -84,6 +85,8 @@ const INCLUDED_KERNEL_FUNCS: &[&str] = &[
     // malloc
     "vmalloc",
     "vfree",
+
+    "pmem_getnstimeofday",
 ];
 
 const INCLUDED_VARS: &[&str] = &[

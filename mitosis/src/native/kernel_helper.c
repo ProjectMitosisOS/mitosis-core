@@ -7,6 +7,7 @@
 #include <linux/ptrace.h>
 #include <linux/cpumask.h>
 #include <linux/smp.h>
+#include <linux/timekeeping.h>
 
 struct thread_info *
 pmem_get_current_thread_info(void)
@@ -370,4 +371,9 @@ void print_file_path(struct file *file)
   printk("path: %s\n", path);
 out:
   free_page((unsigned long)tmp);
+}
+
+void pmem_getnstimeofday(struct timespec *ts)
+{
+  getnstimeofday(ts);
 }
