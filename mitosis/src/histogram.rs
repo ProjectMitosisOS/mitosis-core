@@ -8,6 +8,7 @@ use hashbrown::HashMap;
 use rust_kernel_linux_util::timer::KTimer;
 
 use crate::bindings::{pmem_getnstimeofday, timespec};
+use crate::lock_bundler::{BoxedLockBundler, LockBundler};
 
 pub type HistogramId = &'static str;
 
@@ -38,21 +39,30 @@ impl HistogramRegistry {
     }
 }
 
-#[derive(Default)]
 pub struct Histogram {
-    durations: Vec<Duration>,
+    durations: BoxedLockBundler<Vec<Duration>>,
+}
+
+impl Default for Histogram {
+    fn default() -> Self {
+        Self {
+            durations: LockBundler::new(Default::default()),
+        }
+    }
 }
 
 impl Histogram {
     pub fn avg(&self) -> Duration {
-        if self.durations.is_empty() {
-            Duration::ZERO
-        } else {
-            self.durations
-                .iter()
-                .sum::<Duration>()
-                .div(self.durations.len() as u32)
-        }
+        self.durations.lock(|durations| {
+            if durations.is_empty() {
+                Duration::ZERO
+            } else {
+                durations
+                    .iter()
+                    .sum::<Duration>()
+                    .div(durations.len() as u32)
+            }
+        })
     }
 }
 
@@ -78,8 +88,8 @@ impl<'a> ScopedTimer<'a> {
 
 impl<'a> Drop for ScopedTimer<'a> {
     fn drop(&mut self) {
-        self.histogram
-            .durations
-            .push(Duration::from_micros(self.timer.get_passed_usec() as u64));
+        self.histogram.durations.lock(|durations| {
+            durations.push(Duration::from_micros(self.timer.get_passed_usec() as u64))
+        });
     }
 }

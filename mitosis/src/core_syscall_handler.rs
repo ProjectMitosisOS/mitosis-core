@@ -358,17 +358,7 @@ impl MitosisSysCallHandler {
 
         // let cpu_id = 0;
         let cpu_id = crate::get_calling_cpu_id();
-
-        // hold the lock on this CPU
-        unsafe { crate::global_locks::get_ref()[cpu_id].lock() };
-
         assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref()) });
-
-        // send an RPC to the remote to query the descriptor address
-        let caller = unsafe {
-            crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
-                .expect("the caller should be properly initialized")
-        };
 
         // ourself must have been connected in the startup process
         let remote_session_id = unsafe {
@@ -387,119 +377,120 @@ impl MitosisSysCallHandler {
             )
         };
 
-        let res = caller.sync_call::<usize>(
-            remote_session_id,
-            my_session_id,
-            crate::rpc_handlers::RPCId::Query as _,
-            handler_id as _,
-        );
-
-        if res.is_err() {
-            crate::log::error!("failed to call {:?}", res);
-            crate::log::info!(
-                "sanity check pending reqs {:?}",
-                caller.get_pending_reqs(remote_session_id)
-            );
-            unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
-            return -1;
+        // send an RPC to the remote to query the descriptor address
+        let caller = unsafe {
+            crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
+                .expect("the caller should be properly initialized")
         };
-
-        let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
-
-        use crate::rpc_handlers::DescriptorLookupReply;
-        use os_network::serialize::Serialize;
-
-        let _reply = match block_on(&mut timeout_caller) {
-            Ok((msg, reply)) => {
-                // first re-purpose the data
-                caller
-                    .register_recv_buf(msg)
-                    .expect("register msg buffer cannot fail");
-                match DescriptorLookupReply::deserialize(&reply) {
-                    Some(d) => {
-                        crate::log::debug!("sanity check query descriptor result {:?}", d);
-
-                        if !d.ready {
-                            crate::log::error!("failed to lookup handler id: {:?}", handler_id);
-                            return -1;
-                        }
-                        #[cfg(feature = "resume-profile")]
-                        crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
-
-                        // fetch the descriptor with one-sided RDMA
-                        let desc_buf = RemotePagingService::remote_descriptor_fetch(
-                            d,
-                            caller,
-                            machine_id,
-                        );
-
-                        crate::log::debug!("sanity check fetched desc_buf {:?}", desc_buf.is_ok());
-                        if desc_buf.is_err() {
-                            crate::log::error!("failed to fetch descriptor {:?}", desc_buf.err());
-                            return -1;
-                        }
-
-                        // deserialize
-                        let des = {
-                            // optimized version
-                            ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
-                        };
-
-                        if des.is_none() {
-                            // crate::log::error!("failed to deserialize the child descriptor");
-                            unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
-                            return -1;
-                        }
-
-                        let mut des = des.unwrap();
-
-                        let access_info = AccessInfo::new(&des.machine_info);
-                        //let access_info =
-                        //AccessInfo::new_from_cache(des.machine_info.mac_id, &des.machine_info);
-                        if access_info.is_none() {
-                            crate::log::error!("failed to create access info");
-                            unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
-                            return -1;
-                        }
-
-                        des.apply_to(self.my_file);
-
-                        #[cfg(feature = "page-cache")]
-                        // Read the cache from kernel cache
-                        if let Some(cached_pg_table) = unsafe {
-                            crate::get_pt_cache_ref().lookup(machine_id as _, handler_id as _)
-                        } {
-                            crate::log::debug!(
-                                "Find one cached page cache with mac id: {}, handler id: {}",
+        caller.lock(|caller| {
+            let res = caller.sync_call::<usize>(
+                remote_session_id,
+                my_session_id,
+                crate::rpc_handlers::RPCId::Query as _,
+                handler_id as _,
+            );
+    
+            if res.is_err() {
+                crate::log::error!("failed to call {:?}", res);
+                crate::log::info!(
+                    "sanity check pending reqs {:?}",
+                    caller.get_pending_reqs(remote_session_id)
+                );
+                return -1;
+            };
+    
+            let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
+    
+            use crate::rpc_handlers::DescriptorLookupReply;
+            use os_network::serialize::Serialize;
+    
+            let _reply = match block_on(&mut timeout_caller) {
+                Ok((msg, reply)) => {
+                    // first re-purpose the data
+                    caller
+                        .register_recv_buf(msg)
+                        .expect("register msg buffer cannot fail");
+                    match DescriptorLookupReply::deserialize(&reply) {
+                        Some(d) => {
+                            crate::log::debug!("sanity check query descriptor result {:?}", d);
+    
+                            if !d.ready {
+                                crate::log::error!("failed to lookup handler id: {:?}", handler_id);
+                                return -1;
+                            }
+                            #[cfg(feature = "resume-profile")]
+                            crate::log::info!("meta descriptor size:{} KB", d.sz / 1024);
+    
+                            // fetch the descriptor with one-sided RDMA
+                            let desc_buf = RemotePagingService::remote_descriptor_fetch(
+                                d,
+                                caller,
                                 machine_id,
-                                handler_id
                             );
-                            des.page_table = cached_pg_table.copy();
-                        }
 
-                        self.caller_status.resume_related = Some(ResumeDataStruct {
-                            handler_id: handler_id as _,
-                            remote_mac_id: machine_id as _,
-                            descriptor: des,
-                            // access info cannot failed to create
-                            access_info: access_info.unwrap(),
-                        });
-                        unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
-                        return 0;
-                    }
-                    None => {
-                        unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
-                        crate::log::error!("Deserialize error");
-                        return -1;
+                            crate::log::debug!("sanity check fetched desc_buf {:?}", desc_buf.is_ok());
+                            if desc_buf.is_err() {
+                                crate::log::error!("failed to fetch descriptor {:?}", desc_buf.err());
+                                return -1;
+                            }
+    
+                            // deserialize
+                            let des = {
+                                // optimized version
+                                ChildDescriptor::deserialize(desc_buf.unwrap().get_bytes())
+                            };
+    
+                            if des.is_none() {
+                                // crate::log::error!("failed to deserialize the child descriptor");
+                                return -1;
+                            }
+    
+                            let mut des = des.unwrap();
+    
+                            let access_info = AccessInfo::new(&des.machine_info);
+                            //let access_info =
+                            //AccessInfo::new_from_cache(des.machine_info.mac_id, &des.machine_info);
+                            if access_info.is_none() {
+                                crate::log::error!("failed to create access info");
+                                return -1;
+                            }
+    
+                            des.apply_to(self.my_file);
+    
+                            #[cfg(feature = "page-cache")]
+                            // Read the cache from kernel cache
+                            if let Some(cached_pg_table) = unsafe {
+                                crate::get_pt_cache_ref().lookup(machine_id as _, handler_id as _)
+                            } {
+                                crate::log::debug!(
+                                    "Find one cached page cache with mac id: {}, handler id: {}",
+                                    machine_id,
+                                    handler_id
+                                );
+                                des.page_table = cached_pg_table.copy();
+                            }
+    
+                            self.caller_status.resume_related = Some(ResumeDataStruct {
+                                handler_id: handler_id as _,
+                                remote_mac_id: machine_id as _,
+                                descriptor: des,
+                                // access info cannot failed to create
+                                access_info: access_info.unwrap(),
+                            });
+                            return 0;
+                        }
+                        None => {
+                            crate::log::error!("Deserialize error");
+                            return -1;
+                        }
                     }
                 }
-            }
-            Err(e) => {
-                crate::log::error!("client receiver reply err {:?}", e);
-                unsafe { crate::global_locks::get_ref()[cpu_id].unlock() };
-                return -1;
-            }
-        };
+                Err(e) => {
+                    crate::log::error!("client receiver reply err {:?}", e);
+                    return -1;
+                }
+            };
+        })
     }
 
     #[inline]
@@ -553,12 +544,6 @@ impl MitosisSysCallHandler {
         let cpu_id = crate::get_calling_cpu_id();
         assert!(cpu_id < unsafe { *(crate::max_caller_num::get_ref()) });
 
-        // send an RPC to the remote to query the descriptor address
-        let caller = unsafe {
-            crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
-                .expect("the caller should be properly initialized")
-        };
-
         // ourself must have been connected in the startup process
         let remote_session_id = unsafe {
             crate::startup::calculate_session_id(
@@ -576,37 +561,44 @@ impl MitosisSysCallHandler {
             )
         };
 
-        let res = caller.sync_call::<usize>(
-            remote_session_id,
-            my_session_id,
-            crate::rpc_handlers::RPCId::Nil as _,
-            handler_id as _,
-        );
-        if res.is_err() {
-            crate::log::error!("failed to call {:?}", res);
-            crate::log::info!(
-                "sanity check pending reqs {:?}",
-                caller.get_pending_reqs(remote_session_id)
+        // send an RPC to the remote to query the descriptor address
+        let caller = unsafe {
+            crate::rpc_caller_pool::CallerPool::get_global_caller(cpu_id)
+                .expect("the caller should be properly initialized")
+        };
+        caller.lock(|caller| {
+            let res = caller.sync_call::<usize>(
+                remote_session_id,
+                my_session_id,
+                crate::rpc_handlers::RPCId::Nil as _,
+                handler_id as _,
             );
-            return -1;
-        };
-
-        let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
-
-        use os_network::serialize::Serialize;
-        let _reply = match block_on(&mut timeout_caller) {
-            Ok((msg, _reply)) => {
-                // first re-purpose the data
-                caller
-                    .register_recv_buf(msg)
-                    .expect("register msg buffer cannot fail");
-                return 0;
-            }
-            Err(e) => {
-                crate::log::error!("client receiver reply err {:?}", e);
+            if res.is_err() {
+                crate::log::error!("failed to call {:?}", res);
+                crate::log::info!(
+                    "sanity check pending reqs {:?}",
+                    caller.get_pending_reqs(remote_session_id)
+                );
                 return -1;
-            }
-        };
+            };
+    
+            let mut timeout_caller = TimeoutWRef::new(caller, 10 * TIMEOUT_USEC);
+    
+            use os_network::serialize::Serialize;
+            let _reply = match block_on(&mut timeout_caller) {
+                Ok((msg, _reply)) => {
+                    // first re-purpose the data
+                    caller
+                        .register_recv_buf(msg)
+                        .expect("register msg buffer cannot fail");
+                    return 0;
+                }
+                Err(e) => {
+                    crate::log::error!("client receiver reply err {:?}", e);
+                    return -1;
+                }
+            };
+        })
     }
 }
 
