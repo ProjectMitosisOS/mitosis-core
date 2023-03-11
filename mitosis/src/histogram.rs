@@ -7,7 +7,6 @@ use alloc::vec::Vec;
 use hashbrown::HashMap;
 use rust_kernel_linux_util::timer::KTimer;
 
-use crate::bindings::{pmem_getnstimeofday, timespec};
 use crate::lock_bundler::{BoxedLockBundler, LockBundler};
 
 pub type HistogramId = &'static str;
