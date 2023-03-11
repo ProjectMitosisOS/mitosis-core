@@ -19,6 +19,7 @@ prefetch = ["mitosis/prefetch"]
 eager-resume = ["mitosis/eager-resume"]
 resume-profile = ["mitosis/resume-profile"]
 use_rc = ["mitosis/use_rc"]
+histogram-profile = ["mitosis/histogram-profile"]
 
 [dependencies]
 krdma-test = {path="../../deps/krcore/rust-kernel-rdma/krdma-test",optional = true}

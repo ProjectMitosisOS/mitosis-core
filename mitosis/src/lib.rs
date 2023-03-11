@@ -435,6 +435,13 @@ pub unsafe fn get_pt_cache_mut() -> &'static mut crate::remote_pt_cache::RemoteP
     crate::global_pt_cache::get_mut()
 }
 
+declare_global!(histogram_registry, crate::histogram::HistogramRegistry);
+
+#[inline]
+pub unsafe fn get_histogram_registry() -> &'static mut crate::histogram::HistogramRegistry {
+    crate::histogram_registry::get_mut()
+}
+
 // pub mod resume;
 pub mod core_syscall_handler;
 pub mod syscalls;
@@ -454,3 +461,5 @@ pub mod prefetcher;
 pub mod lock_bundler;
 
 pub mod remote_pt_cache;
+
+pub mod histogram;

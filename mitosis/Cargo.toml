@@ -21,6 +21,7 @@ resume-profile = [] # peak resume running profile
 prefetch = [] # whether to open prefetch
 page-cache=[]
 use_rc = []
+histogram-profile = []
 
 [dependencies]
 mitosis-protocol = { path = "../mitosis-user-libs/mitosis-protocol" }

@@ -366,7 +366,7 @@ The column `trace` is the memory area size in byte. The `latency` is the latency
 The function benchmark measures the `fork_resume` latency of a Python program which executes a custom function.
 
 ```bash
-make micro-function-prepare
+make micro-function-startup
 ```
 
 Output:

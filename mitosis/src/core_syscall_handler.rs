@@ -124,6 +124,10 @@ impl Drop for MitosisSysCallHandler {
                 }
             }
         }
+        #[cfg(feature = "histogram-profile")]
+        {
+            unsafe { crate::get_histogram_registry() }.dump();
+        }
     }
 }
 
