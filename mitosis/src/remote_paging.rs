@@ -15,11 +15,11 @@ pub const TIMEOUT_USEC: i64 = 1000_000; // 1s
 /// This structure is aimed for global usage
 #[derive(Debug)]
 pub struct AccessInfo {
-    pub(crate) ah: os_network::rdma::IBAddressHandler,
-    pub(crate) rkey: u32,
-    pub(crate) dct_num: u32,
-    pub(crate) dct_key: usize,
-    pub(crate) mac_id : usize,
+    pub ah: os_network::rdma::IBAddressHandler,
+    pub rkey: u32,
+    pub dct_num: u32,
+    pub dct_key: usize,
+    pub mac_id : usize,
 }
 
 impl AccessInfo {
@@ -87,7 +87,7 @@ pub struct RemotePagingService;
 use crate::remote_mapping::PhysAddr;
 use os_network::msg::UDMsg as RMemory;
 
-pub(crate) type DCReqPayload = os_network::rdma::payload::Payload<ib_dc_wr>;
+pub type DCReqPayload = os_network::rdma::payload::Payload<ib_dc_wr>;
 
 impl RemotePagingService {
     #[inline]
