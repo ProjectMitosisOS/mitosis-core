@@ -435,7 +435,6 @@ pub unsafe fn get_pt_cache_mut() -> &'static mut crate::remote_pt_cache::RemoteP
     crate::global_pt_cache::get_mut()
 }
 
-// pub mod resume;
 pub mod core_syscall_handler;
 pub mod syscalls;
 
