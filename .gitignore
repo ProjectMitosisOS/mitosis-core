@@ -1,6 +1,5 @@
 **/target
 **/target-test
-Cargo.lock
 Module.symvers
 .cache.mk
 .tmp_versions
