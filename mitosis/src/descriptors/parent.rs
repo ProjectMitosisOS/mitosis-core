@@ -2,6 +2,7 @@ use crate::descriptors::{ChildDescriptor, RDMADescriptor, RegDescriptor, VMADesc
 use crate::kern_wrappers::mm::{PhyAddrType, VirtAddrType};
 use crate::{linux_kernel_module, VmallocAllocator};
 use alloc::vec::Vec;
+use core::intrinsics::size_of;
 use os_network::bytes::BytesMut;
 use os_network::serialize::Serialize;
 
@@ -98,6 +99,14 @@ impl ParentDescriptor {
             result += vma_pg_table.serialization_buf_len();
         }
         result
+    }
+
+    pub fn get_size(&self) -> usize {
+        let mut size =  size_of::<RegDescriptor>() + self.vma.len() * size_of::<VMADescriptor>() + size_of::<RDMADescriptor>();
+                for item in &self.page_table {
+                    size += item.get_size();
+                }
+        return size;
     }
 }
 
@@ -298,5 +307,10 @@ impl CompactPageTable {
     #[inline(always)]
     pub fn table_len(&self) -> usize {
         self.inner_pg_table.len()
+    }
+
+    #[inline(always)]
+    pub fn get_size(&self)->usize {
+        return self.table_len() * size_of::<PageEntry>();
     }
 }
