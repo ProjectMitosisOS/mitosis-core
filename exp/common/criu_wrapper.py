@@ -47,12 +47,12 @@ def tick_execution_time(handler):
     """
     @wraps(handler)
     def wrapper(*args, **kwargs):
-        start = time.time()
+        # start = time.time()
         result = handler(*args, **kwargs)
-        end = time.time()
-        if profile == 1:
-            print("before start python handler: %f" % (start))
-            bench.report("%s-execution" % app_name, start, end)
+        # end = time.time()
+        # if profile == 1:
+        #     print("before start python handler: %f" % (start))
+        #     bench.report("%s-execution" % app_name, start, end)
         return result
 
     return wrapper

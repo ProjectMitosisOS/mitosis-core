@@ -6,6 +6,8 @@ def export_image(image_name, path):
     print('exporting docker image %s to %s' % (image_name, path))
     from pathlib import Path
     Path(path).mkdir(parents=True, exist_ok=True)
+    path0 = path + "/*"
+    subprocess.run(["rm", "-rf", path0])
     # prepare the docker container
     subprocess.run(['docker', 'rm', '-f', image_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(['docker', 'create', '--name', image_name, image_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
