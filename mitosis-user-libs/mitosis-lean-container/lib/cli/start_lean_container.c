@@ -77,18 +77,22 @@ static inline int test_setup_lean_container(char *name, int namespace, char *roo
 
 
 int main(int argc, char* argv[]) {
-    if (argc < 4) {
+    if (argc < 5) {
         printf("Usage: %s [container name] [/path/to/rootfs] [command (absolute path)] [command opts]\n", argv[0]);
         return -1;
     }
     
-    char* name = argv[1];
-    char* rootfs_path = argv[2];
-    char* command = argv[3];
+    int container_count = atoi(argv[1]);
+    char* name = argv[2];
+    char* rootfs_path = argv[3];
+    char* command = argv[4];
+
+    printf("start %d\n", container_count);
+    
     int argv_index = 0;
 
     // setup argv array
-    for (int i = 3; i < argc && argv_index < MAX_COMMAND_LENGTH; i++, argv_index++)
+    for (int i = 4; i < argc && argv_index < MAX_COMMAND_LENGTH; i++, argv_index++)
         execve_argv[argv_index] = argv[i];
     execve_argv[argv_index] = NULL;
 
@@ -124,7 +128,7 @@ int main(int argc, char* argv[]) {
 
     clock_gettime(CLOCK_REALTIME, &start);
 
-    while (count < 100) {
+    while (count < container_count) {
         test_setup_lean_container(name, cached_namespace, rootfs_path, command);
 //        usleep(500 * 1000);
         count++;
