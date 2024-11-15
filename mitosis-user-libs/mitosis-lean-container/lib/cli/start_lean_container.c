@@ -86,8 +86,6 @@ int main(int argc, char* argv[]) {
     char* name = argv[2];
     char* rootfs_path = argv[3];
     char* command = argv[4];
-
-    printf("start %d\n", container_count);
     
     int argv_index = 0;
 
