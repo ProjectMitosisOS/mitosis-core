@@ -33,7 +33,7 @@ def criu_bench(handler):
 
     @wraps(handler)
     def wrapper(*args, **kwargs):
-        handler(*args, **kwargs)
+        # handler(*args, **kwargs)
         wait()
         if not ret_imm:
             handler(*args, **kwargs)

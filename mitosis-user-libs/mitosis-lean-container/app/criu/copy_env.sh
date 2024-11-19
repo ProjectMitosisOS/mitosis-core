@@ -15,6 +15,7 @@ cp -r lock $1/${PWD}/ && echo -n 1 > $1/${PWD}/lock
 
 # copy share libraries
 cp -r /usr/bin/python3.5 $1/usr/bin/python3.5
+cp -r /usr/bin/python* $1/usr/bin/
 cp -r /usr/lib/python3.5/lib-dynload/_ctypes.cpython-35m-x86_64-linux-gnu.so $1/usr/lib/python3.5/lib-dynload/_ctypes.cpython-35m-x86_64-linux-gnu.so
 cp -r /usr/lib/python3.5/lib-dynload/mmap.cpython-35m-x86_64-linux-gnu.so $1/usr/lib/python3.5/lib-dynload/mmap.cpython-35m-x86_64-linux-gnu.so
 cp -r /usr/lib/locale/locale-archive $1/usr/lib/locale/locale-archive

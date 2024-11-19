@@ -15,6 +15,8 @@ RUN cd criu && rm images/google/protobuf/descriptor.proto && ln -s /usr/include/
 
 RUN apt update && apt install -y python3 wget && wget https://bootstrap.pypa.io/pip/3.5/get-pip.py && python3 get-pip.py && rm -rf /var/lib/apt/lists/*
 
+RUN apt update && apt install -y criu
+
 RUN apt update && apt install -y bc && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
