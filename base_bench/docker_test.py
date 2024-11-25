@@ -16,6 +16,13 @@ def main():
     image_name = args.image
     container_count = args.n
 
+    # Check if the Docker image exists
+    check_image_command = f"docker inspect {image_name}"
+    check_result = exec(check_image_command)
+    if "Error: No such object" in check_result:
+        print(f"Error: No such image: {image_name}")
+        exit(1)
+
     container_ids = []
     print("start docker run containers")
     start_time = time.time()
@@ -45,15 +52,15 @@ def main():
     total = int(time.time() - start_time)
     res = total_ms / container_count
 
-    print(f"Start {container_count} containers, total time: {total} sec")
+    print(f"Run {container_count} containers, total time: {total} sec")
+
+    print(f"Clean containers...")
 
     for id in container_ids:
         stop_command = f"docker stop {id}"
         exec(stop_command)
         rm_command = f"docker rm {id}"
         exec(rm_command)
-
-    print("Finish benchmarking container!")
 
 if __name__ == "__main__":
     main()
