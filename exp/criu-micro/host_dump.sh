@@ -1,6 +1,6 @@
 echo -n 0 > lock
 # setsid python3 test_.py < /dev/null > execution.log 2>&1 &
-setsid /home/xhr/miniconda3/bin/python3 test_.py < /dev/null > execution.log 2>&1 &
+setsid python3 test_.py < /dev/null > execution.log 2>&1 &
 export TARGET_PID=$(pgrep python3)
 echo "TARGET_PID=${TARGET_PID}"
 rm -rf imgs && mkdir imgs
