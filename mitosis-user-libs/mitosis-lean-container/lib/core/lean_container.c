@@ -21,8 +21,8 @@
 #define DEFAULT_PERMISSION S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH
 
 // TODO: dynamicly assign these values
-#define DEFAULT_NUMA_COUNT 2
-#define DEFAULT_CPU_COUNT 48
+#define DEFAULT_NUMA_COUNT 1
+#define DEFAULT_CPU_COUNT 8
 
 static long get_passed_nanosecond(struct timespec* start, struct timespec* end) {
     return 1e9*(end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
