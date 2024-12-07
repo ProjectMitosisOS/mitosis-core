@@ -1,7 +1,7 @@
 # START=$(date +%s.%N)
 # echo "before start lean container: $START"
 echo -n 1 > lock
-../../mitosis-user-libs/mitosis-lean-container/lib/build/start_lean_container $1 $2 $3 /bin/bash ./restore.sh
+../../mitosis-user-libs/mitosis-lean-container/lib/build/start_lean_container $1 $2 $3 /bin/bash /restore.sh
 # END=$(date +%s.%N)
 # TOTAL_TIME=$(echo "($END-$START)*1000" | bc) # uncomment this to calculate the full end-to-end time
 # tail -n 2 $2/$(pwd)/execution.log
