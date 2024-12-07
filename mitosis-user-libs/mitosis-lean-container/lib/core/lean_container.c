@@ -21,8 +21,8 @@
 #define DEFAULT_PERMISSION S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH
 
 // TODO: dynamicly assign these values
-#define DEFAULT_NUMA_COUNT 2
-#define DEFAULT_CPU_COUNT 48
+#define DEFAULT_NUMA_COUNT 1
+#define DEFAULT_CPU_COUNT 8
 
 static long get_passed_nanosecond(struct timespec* start, struct timespec* end) {
     return 1e9*(end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
@@ -265,6 +265,8 @@ void unshare_and_fork(int* pipefd, char* rootfs) {
     pid_t pid = -1;
     int ret;
 
+    rootfs = NULL;
+
     if (rootfs) {
         ret = chroot(rootfs);
         if (ret < 0) {
@@ -335,6 +337,7 @@ int setup_cached_namespace(char* rootfs) {
 }
 
 int remove_cached_namespace(int _namespace, char* rootfs) {
+    rootfs = NULL;
     if (rootfs) {
         char buf[BUF_SIZE];
         sprintf(buf, "%s%s", rootfs, "/proc");
@@ -418,7 +421,7 @@ int setup_lean_container(char* name, char* rootfs_path, int _namespace) {
     }
 
     if (_namespace < 0) {
-        if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
+        if (unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
             perror("unshare");
             goto err;
         }
@@ -466,11 +469,11 @@ int setup_lean_container(char* name, char* rootfs_path, int _namespace) {
             goto err;
         }
 
-        ret = chroot(".");
-        if (ret != 0) {
-            fprintf(stderr, "chroot failed\n");
-            goto err;
-        }
+        // ret = chroot(".");
+        // if (ret != 0) {
+        //     fprintf(stderr, "chroot failed\n");
+        //     goto err;
+        // }
 
         read(pipefd[0], &sign, sizeof(sign));
         close(pipefd[0]);
