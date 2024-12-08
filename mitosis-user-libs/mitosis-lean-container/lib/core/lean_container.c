@@ -29,21 +29,21 @@ static long get_passed_nanosecond(struct timespec* start, struct timespec* end) 
 }
 
 char* cgroup_directory_prefix[] = {
-    "/sys/fs/cgroup/hugetlb/mitosis/%s",
-    "/sys/fs/cgroup/perf_event/mitosis/%s",
-    "/sys/fs/cgroup/net_cls,net_prio/mitosis/%s",
-    "/sys/fs/cgroup/pids/mitosis/%s",
-    "/sys/fs/cgroup/devices/mitosis/%s",
-    "/sys/fs/cgroup/freezer/mitosis/%s",
-    "/sys/fs/cgroup/cpu,cpuacct/mitosis/%s",
-    "/sys/fs/cgroup/cpuset/mitosis/%s",
-    "/sys/fs/cgroup/blkio/mitosis/%s",
-    "/sys/fs/cgroup/memory/mitosis/%s",
-    "/sys/fs/cgroup/systemd/mitosis/%s",
+    // "/sys/fs/cgroup/hugetlb/mitosis/%s",
+    // "/sys/fs/cgroup/perf_event/mitosis/%s",
+    // "/sys/fs/cgroup/net_cls,net_prio/mitosis/%s",
+    // "/sys/fs/cgroup/pids/mitosis/%s",
+    // "/sys/fs/cgroup/devices/mitosis/%s",
+    // "/sys/fs/cgroup/freezer/mitosis/%s",
+    // "/sys/fs/cgroup/cpu,cpuacct/mitosis/%s",
+    // "/sys/fs/cgroup/cpuset/mitosis/%s",
+    // "/sys/fs/cgroup/blkio/mitosis/%s",
+    // "/sys/fs/cgroup/memory/mitosis/%s",
+    // "/sys/fs/cgroup/systemd/mitosis/%s",
     NULL,
 };
 
-char* cpuset_cgroup_directory_prefix = "/sys/fs/cgroup/cpuset/mitosis/%s";
+char* cpuset_cgroup_directory_prefix = "/sys/fs/cgroup/cpuset.cpus/mitosis/%s";
 char* memory_cgroup_directory_prefix = "/sys/fs/cgroup/memory/mitosis/%s";
 char* freezer_cgroup_directory_prefix = "/sys/fs/cgroup/freezer/mitosis/%s";
 
@@ -357,7 +357,7 @@ int init_cgroup() {
             return -1;
         }
     }
-    set_mitosis_root_cpuset();
+    // set_mitosis_root_cpuset();
     return 0;
 }
 
@@ -388,8 +388,8 @@ int add_lean_container_template(char* name, struct ContainerSpec* spec) {
         }
     }
 
-    set_cpuset_cgroup(name, spec->cpu_start, spec->cpu_end, spec->numa_start, spec->numa_end);
-    set_memory_cgroup(name, spec->memory_in_mb);
+    // set_cpuset_cgroup(name, spec->cpu_start, spec->cpu_end, spec->numa_start, spec->numa_end);
+    // set_memory_cgroup(name, spec->memory_in_mb);
     return 0;
 }
 

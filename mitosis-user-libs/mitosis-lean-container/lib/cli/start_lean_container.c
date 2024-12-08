@@ -56,15 +56,15 @@ static inline int test_setup_lean_container(char *name, int namespace, char *roo
     }
 
     int ret = 0;
-    ret = pause_container(name);
-    if (ret != 0) {
-        printf("unable to pause container");
-    }
+    // ret = pause_container(name);
+    // if (ret != 0) {
+    //     printf("unable to pause container");
+    // }
 
-    ret = unpause_container(name);
-    if (ret != 0) {
-        printf("unable to unpause container");
-    }
+    // ret = unpause_container(name);
+    // if (ret != 0) {
+    //     printf("unable to unpause container");
+    // }
 
     // wait for the containered process to exit
     pid_t child = waitpid(pid, NULL, 0);
