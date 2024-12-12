@@ -56,15 +56,15 @@ static inline int test_setup_lean_container(char *name, int namespace, char *roo
     }
 
     int ret = 0;
-    // ret = pause_container(name);
-    // if (ret != 0) {
-    //     printf("unable to pause container");
-    // }
+    ret = pause_container(name);
+    if (ret != 0) {
+        printf("unable to pause container");
+    }
 
-    // ret = unpause_container(name);
-    // if (ret != 0) {
-    //     printf("unable to unpause container");
-    // }
+    ret = unpause_container(name);
+    if (ret != 0) {
+        printf("unable to unpause container");
+    }
 
     // wait for the containered process to exit
     pid_t child = waitpid(pid, NULL, 0);
@@ -121,7 +121,8 @@ int main(int argc, char* argv[]) {
     ret = add_lean_container_template(name, &spec);
     assert(ret == 0);
 
-    cached_namespace = setup_cached_namespace(rootfs_path);
+    // cached_namespace = setup_cached_namespace(rootfs_path);
+    cached_namespace = -1;
 
 
     clock_gettime(CLOCK_REALTIME, &start);
@@ -137,8 +138,8 @@ int main(int argc, char* argv[]) {
     printf("total: run %ld containers in %.2f second(s)\n", count, elapsed_time / NANOSECONDS_IN_SECOND);
 
 clean:
-    ret = remove_cached_namespace(cached_namespace, rootfs_path);
-    assert(ret == 0);
+    // ret = remove_cached_namespace(cached_namespace, rootfs_path);
+    // assert(ret == 0);
 
     ret = remove_lean_container_template(name);
     assert(ret == 0);

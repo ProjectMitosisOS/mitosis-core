@@ -29,21 +29,21 @@ static long get_passed_nanosecond(struct timespec* start, struct timespec* end) 
 }
 
 char* cgroup_directory_prefix[] = {
-    // "/sys/fs/cgroup/hugetlb/mitosis/%s",
-    // "/sys/fs/cgroup/perf_event/mitosis/%s",
-    // "/sys/fs/cgroup/net_cls,net_prio/mitosis/%s",
-    // "/sys/fs/cgroup/pids/mitosis/%s",
-    // "/sys/fs/cgroup/devices/mitosis/%s",
-    // "/sys/fs/cgroup/freezer/mitosis/%s",
-    // "/sys/fs/cgroup/cpu,cpuacct/mitosis/%s",
-    // "/sys/fs/cgroup/cpuset/mitosis/%s",
-    // "/sys/fs/cgroup/blkio/mitosis/%s",
-    // "/sys/fs/cgroup/memory/mitosis/%s",
-    // "/sys/fs/cgroup/systemd/mitosis/%s",
+    "/sys/fs/cgroup/hugetlb/mitosis/%s",
+    "/sys/fs/cgroup/perf_event/mitosis/%s",
+    "/sys/fs/cgroup/net_cls,net_prio/mitosis/%s",
+    "/sys/fs/cgroup/pids/mitosis/%s",
+    "/sys/fs/cgroup/devices/mitosis/%s",
+    "/sys/fs/cgroup/freezer/mitosis/%s",
+    "/sys/fs/cgroup/cpu,cpuacct/mitosis/%s",
+    "/sys/fs/cgroup/cpuset/mitosis/%s",
+    "/sys/fs/cgroup/blkio/mitosis/%s",
+    "/sys/fs/cgroup/memory/mitosis/%s",
+    "/sys/fs/cgroup/systemd/mitosis/%s",
     NULL,
 };
 
-char* cpuset_cgroup_directory_prefix = "/sys/fs/cgroup/cpuset.cpus/mitosis/%s";
+char* cpuset_cgroup_directory_prefix = "/sys/fs/cgroup/cpuset/mitosis/%s";
 char* memory_cgroup_directory_prefix = "/sys/fs/cgroup/memory/mitosis/%s";
 char* freezer_cgroup_directory_prefix = "/sys/fs/cgroup/freezer/mitosis/%s";
 
@@ -265,6 +265,8 @@ void unshare_and_fork(int* pipefd, char* rootfs) {
     pid_t pid = -1;
     int ret;
 
+    rootfs = NULL;
+
     if (rootfs) {
         ret = chroot(rootfs);
         if (ret < 0) {
@@ -335,6 +337,7 @@ int setup_cached_namespace(char* rootfs) {
 }
 
 int remove_cached_namespace(int _namespace, char* rootfs) {
+    rootfs = NULL;
     if (rootfs) {
         char buf[BUF_SIZE];
         sprintf(buf, "%s%s", rootfs, "/proc");
@@ -357,7 +360,7 @@ int init_cgroup() {
             return -1;
         }
     }
-    // set_mitosis_root_cpuset();
+    set_mitosis_root_cpuset();
     return 0;
 }
 
@@ -388,8 +391,8 @@ int add_lean_container_template(char* name, struct ContainerSpec* spec) {
         }
     }
 
-    // set_cpuset_cgroup(name, spec->cpu_start, spec->cpu_end, spec->numa_start, spec->numa_end);
-    // set_memory_cgroup(name, spec->memory_in_mb);
+    set_cpuset_cgroup(name, spec->cpu_start, spec->cpu_end, spec->numa_start, spec->numa_end);
+    set_memory_cgroup(name, spec->memory_in_mb);
     return 0;
 }
 
@@ -418,7 +421,7 @@ int setup_lean_container(char* name, char* rootfs_path, int _namespace) {
     }
 
     if (_namespace < 0) {
-        if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
+        if (unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
             perror("unshare");
             goto err;
         }
@@ -466,11 +469,11 @@ int setup_lean_container(char* name, char* rootfs_path, int _namespace) {
             goto err;
         }
 
-        ret = chroot(".");
-        if (ret != 0) {
-            fprintf(stderr, "chroot failed\n");
-            goto err;
-        }
+        // ret = chroot(".");
+        // if (ret != 0) {
+        //     fprintf(stderr, "chroot failed\n");
+        //     goto err;
+        // }
 
         read(pipefd[0], &sign, sizeof(sign));
         close(pipefd[0]);
