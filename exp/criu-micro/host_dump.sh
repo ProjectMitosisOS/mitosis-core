@@ -6,6 +6,6 @@ echo "TARGET_PID=${TARGET_PID}"
 rm -rf imgs && mkdir imgs
 sleep 3
 # ~/mitosis/criu/criu/criu dump --images-dir=./imgs -t ${TARGET_PID} -vvvv -o dump.log
-/mitosis/criu/criu/criu dump --images-dir=./imgs -t ${TARGET_PID} -vvvv -o dump.log
+criu dump --images-dir=./imgs -t ${TARGET_PID} -vvvv -o dump.log
 tail -n 1 imgs/dump.log
 echo -n 1 > lock
