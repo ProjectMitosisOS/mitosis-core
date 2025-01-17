@@ -21,8 +21,8 @@
 #define DEFAULT_PERMISSION S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH
 
 // TODO: dynamicly assign these values
-#define DEFAULT_NUMA_COUNT 1
-#define DEFAULT_CPU_COUNT 8
+#define DEFAULT_NUMA_COUNT 2
+#define DEFAULT_CPU_COUNT 48
 
 static long get_passed_nanosecond(struct timespec* start, struct timespec* end) {
     return 1e9*(end->tv_sec - start->tv_sec) + (end->tv_nsec - start->tv_nsec);
@@ -275,7 +275,7 @@ void unshare_and_fork(int* pipefd, char* rootfs) {
         }
     }
 
-    if (unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
+    if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
         perror("unshare");
         goto end;
     }
@@ -337,7 +337,6 @@ int setup_cached_namespace(char* rootfs) {
 }
 
 int remove_cached_namespace(int _namespace, char* rootfs) {
-    rootfs = NULL;
     if (rootfs) {
         char buf[BUF_SIZE];
         sprintf(buf, "%s%s", rootfs, "/proc");
@@ -421,7 +420,7 @@ int setup_lean_container(char* name, char* rootfs_path, int _namespace) {
     }
 
     if (_namespace < 0) {
-        if (unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
+        if (unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS) < 0) {
             perror("unshare");
             goto err;
         }
