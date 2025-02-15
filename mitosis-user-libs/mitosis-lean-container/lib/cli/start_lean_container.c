@@ -34,7 +34,7 @@ static long get_passed_nanosecond(struct timespec *start, struct timespec *end) 
 /**
  * Body function for starting lean container
  * */
-static inline int test_setup_lean_container(char *name, int namespace, char *rootfs_path, char *command) {
+static inline int test_setup_lean_container(char *name, int namespace, char *rootfs_path, char *command, int parallel) {
     pid_t pid = setup_lean_container_w_double_fork(name,
                                                    rootfs_path,
                                                    namespace);
@@ -67,30 +67,43 @@ static inline int test_setup_lean_container(char *name, int namespace, char *roo
     }
 
     // wait for the containered process to exit
-    pid_t child = waitpid(pid, NULL, 0);
-    if (child != pid) {
-        printf("child pid: %d, expected: %d\n", child, pid);
-        return -1;
+    if (parallel == 0) {
+        pid_t child = waitpid(pid, NULL, 0);
+        if (child != pid) {
+            printf("child pid: %d, expected: %d\n", child, pid);
+            return -1;
+        }
     }
-    return 0;
+
+    return pid;
 }
 
 
 int main(int argc, char* argv[]) {
-    if (argc < 5) {
+    if (argc < 6) {
         printf("Usage: %s [container name] [/path/to/rootfs] [command (absolute path)] [command opts]\n", argv[0]);
         return -1;
     }
     
     int container_count = atoi(argv[1]);
-    char* name = argv[2];
-    char* rootfs_path = argv[3];
-    char* command = argv[4];
+    int parallel = atoi(argv[2]);
     
-    int argv_index = 0;
+    char* name = argv[3];
+    char* rootfs_path = argv[4];
+    char* command = argv[5];
 
+    sleep(1);
+    
+    int* pid_array;
+    int* ns_array;
+    if (parallel == 1) {
+        pid_array = (int*)malloc(container_count * sizeof(int));
+        ns_array = (int*)malloc(container_count * sizeof(int));
+    }
+
+    int argv_index = 0;
     // setup argv array
-    for (int i = 4; i < argc && argv_index < MAX_COMMAND_LENGTH; i++, argv_index++)
+    for (int i = 5; i < argc && argv_index < MAX_COMMAND_LENGTH; i++, argv_index++)
         execve_argv[argv_index] = argv[i];
     execve_argv[argv_index] = NULL;
 
@@ -121,16 +134,36 @@ int main(int argc, char* argv[]) {
     ret = add_lean_container_template(name, &spec);
     assert(ret == 0);
 
-    cached_namespace = setup_cached_namespace(rootfs_path);
-    // cached_namespace = -1;
-
+    if (parallel == 0) {
+        cached_namespace = setup_cached_namespace(rootfs_path);
+    }
 
     clock_gettime(CLOCK_REALTIME, &start);
 
     while (count < container_count) {
-        test_setup_lean_container(name, cached_namespace, rootfs_path, command);
-//        usleep(500 * 1000);
+        if (parallel == 1) {
+            cached_namespace = setup_cached_namespace(rootfs_path);
+            if(cached_namespace == -1) {
+                printf("create ns failed\n");
+            }
+            ns_array[count] = cached_namespace;
+        }
+
+        int pid = test_setup_lean_container(name, cached_namespace, rootfs_path, command, parallel);
+        if (parallel == 1) {
+            pid_array[count] = pid;
+        }
+
         count++;
+    }
+    if (parallel == 1) {
+        for (int i = 0; i < container_count; i++) {
+            pid_t child = waitpid(pid_array[i], NULL, 0);
+            if (child != pid_array[i]) {
+                printf("child pid: %d, expected: %d\n", child, pid_array[i]);
+                return -1;
+            }
+        }
     }
     clock_gettime(CLOCK_REALTIME, &now);
 
@@ -138,8 +171,15 @@ int main(int argc, char* argv[]) {
     printf("total: run %ld containers in %.2f second(s)\n", count, elapsed_time / NANOSECONDS_IN_SECOND);
 
 clean:
-    ret = remove_cached_namespace(cached_namespace, rootfs_path);
-    assert(ret == 0);
+    if (parallel == 0) {
+        ret = remove_cached_namespace(cached_namespace, rootfs_path);
+        assert(ret == 0);
+    } else {
+        for (int i = 0; i < container_count; i++) {
+            ret = remove_cached_namespace(ns_array[i], rootfs_path);
+            assert(ret == 0);
+        }
+    }
 
     ret = remove_lean_container_template(name);
     assert(ret == 0);

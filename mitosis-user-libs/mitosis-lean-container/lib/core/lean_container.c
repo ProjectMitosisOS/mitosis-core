@@ -265,8 +265,6 @@ void unshare_and_fork(int* pipefd, char* rootfs) {
     pid_t pid = -1;
     int ret;
 
-    rootfs = NULL;
-
     if (rootfs) {
         ret = chroot(rootfs);
         if (ret < 0) {
@@ -468,11 +466,11 @@ int setup_lean_container(char* name, char* rootfs_path, int _namespace) {
             goto err;
         }
 
-        // ret = chroot(".");
-        // if (ret != 0) {
-        //     fprintf(stderr, "chroot failed\n");
-        //     goto err;
-        // }
+        ret = chroot(".");
+        if (ret != 0) {
+            fprintf(stderr, "chroot failed\n");
+            goto err;
+        }
 
         read(pipefd[0], &sign, sizeof(sign));
         close(pipefd[0]);
